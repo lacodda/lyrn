@@ -1,0 +1,16 @@
+#!/usr/bin/env node
+
+const yargs = require('yargs');
+const lyrn = require('../lib/lyrn');
+const parsed = yargs.argv;
+const cmd = parsed._.shift();
+
+lyrn.load().then(() => {
+  lyrn.cli[cmd]
+    .apply(null, parsed._)
+    .catch((err) => {
+      console.error(err);
+    });
+}).catch((err) => {
+  console.error(err);
+});

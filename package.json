@@ -1,0 +1,42 @@
+{
+  "name": "lyrn",
+  "version": "0.0.1",
+  "description": "Command line tool for rapid start your web project",
+  "license": "MIT",
+  "main": "index.js",
+  "homepage": "https://github.com/lacodda/lyrn",
+  "author": {
+    "name": "Kirill Lahtachev",
+    "email": "lahtachev@gmail.com",
+    "url": "http://lacodda.com"
+  },
+  "repository": {
+    "type": "git",
+    "url": "git@github.com:Lacodda/lyrn.git"
+  },
+  "bugs": {
+    "url": "https://github.com/Lacodda/lyrn/issues"
+  },
+  "keywords": [
+    "cli",
+    "docker"
+  ],
+  "scripts": {
+    "test": "mocha -R spec"
+  },
+  "preferGlobal": true,
+  "bin": {
+    "lyrn": "./bin/lyrn"
+  },
+  "engines": {
+    "node": ">=6"
+  },
+  "devDependencies": {
+    "mocha": "^5.0.5"
+  },
+  "dependencies": {
+    "fs-extra": "^5.0.0",
+    "nodegit": "^0.21.2",
+    "yargs": "^11.0.0"
+  }
+}

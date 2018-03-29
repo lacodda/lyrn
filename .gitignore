@@ -1,0 +1,25 @@
+dist/
+node_modules/
+.nyc_output/
+*.log
+npm-debug.log*
+yarn-error.log*
+
+# Test
+test/repos/
+
+# IDEs
+.idea/
+jsconfig.json
+.vscode/
+
+# Typings file.
+typings/
+
+# Misc
+tmp/
+temp/
+
+# Mac OSX Finder files.
+**/.DS_Store
+.DS_Store
