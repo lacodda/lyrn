@@ -1,9 +1,7 @@
-<section class="center">
-  <figure>
-    <img src="/lyrn.svg" width="320" alt="lyrn">
-  </figure>
-  <h1>Rapid start your web project</h1>
-</section>
+<p align="center">
+  <img src="/lyrn.svg" width="320" alt="lyrn">
+</p>
+<h1 align="center">Rapid start your web project</h1>
 <br>
 
 ## Description
