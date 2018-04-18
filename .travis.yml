@@ -1,10 +1,30 @@
 sudo: false
+compiler: clang
 language: node_js
+
 node_js:
   - "9"
   - "8"
   - "6"
+
+os:
+  - linux
+  - osx
+
+addons:
+  apt:
+    sources:
+      - ubuntu-toolchain-r-test
+    packages:
+      - build-essential
+      - libssl-dev
+      - gcc-4.9-multilib
+      - g++-4.9-multilib
+      - lcov
+
 install:
-  - npm install
+  - travis_retry npm install;
+
 script:
-  - npm test
+  - travis_retry npm test;
+
