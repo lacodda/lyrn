@@ -1,6 +1,6 @@
 {
   "name": "lyrn",
-  "version": "0.0.2",
+  "version": "0.0.3",
   "description": "Command line tool for rapid starting the development of your web application",
   "license": "MIT",
   "main": "index.js",
@@ -22,7 +22,7 @@
     "docker"
   ],
   "scripts": {
-    "test": "mocha -R spec"
+    "test": "mocha -R spec --timeout 10000"
   },
   "preferGlobal": true,
   "bin": {
