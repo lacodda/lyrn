@@ -21,7 +21,7 @@ npm i -g lyrn
 ## Usage
 
 ```bash
-lyrn clone https://github.com/Lacodda/lyrn.git
+lyrn clone https://github.com/lacodda/lyrn.git project-name
 ```
 
 ## Tests
@@ -36,5 +36,5 @@ The code is available under the [MIT License](LICENSE.md).
 [npm-image]: https://img.shields.io/npm/v/lyrn.svg?style=flat-square
 [npm-url]: https://npmjs.org/package/lyrn
 
-[travis-image]: https://img.shields.io/travis/Lacodda/lyrn/master.svg?style=flat-square
-[travis-url]: https://travis-ci.org/Lacodda/lyrn
+[travis-image]: https://img.shields.io/travis/lacodda/lyrn/master.svg?style=flat-square
+[travis-url]: https://travis-ci.org/lacodda/lyrn

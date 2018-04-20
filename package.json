@@ -12,10 +12,10 @@
   },
   "repository": {
     "type": "git",
-    "url": "git@github.com:Lacodda/lyrn.git"
+    "url": "git@github.com:lacodda/lyrn.git"
   },
   "bugs": {
-    "url": "https://github.com/Lacodda/lyrn/issues"
+    "url": "https://github.com/lacodda/lyrn/issues"
   },
   "keywords": [
     "cli",
