@@ -28,6 +28,10 @@
   "bin": {
     "lyrn": "./bin/lyrn"
   },
+  "files": [
+    "bin/",
+    "lib/"
+  ],
   "engines": {
     "node": ">=8"
   },
