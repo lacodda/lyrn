@@ -2,7 +2,6 @@
 const assert = require('assert');
 const fs = require('fs-extra');
 const spawn = require('child_process').spawn;
-const git = require('nodegit');
 const Repository = git.Repository;
 const path = require('path');
 const local = path.join.bind(path, __dirname);
@@ -23,7 +22,7 @@ describe('clone repo when it exists', () => {
 
   describe('cli', (done) => {
     it('can clone', (done) => {
-      const url = 'https://github.com/lacodda/lyrn.git';
+      const url = 'https://github.com/lacodda/test.git';
       let buffer = '';
 
       const child = spawn('node', [
@@ -36,7 +35,7 @@ describe('clone repo when it exists', () => {
 
       child.on('close', () => {
         assert.equal(
-          'Repository https://github.com/lacodda/lyrn.git successfully cloned\n',
+          'Repository https://github.com/lacodda/test.git successfully cloned\n',
           buffer,
         );
         done();
@@ -47,7 +46,7 @@ describe('clone repo when it exists', () => {
   describe('api', (done) => {
     it('can clone', () => {
       const test = this;
-      const url = 'https://github.com/lacodda/lyrn.git';
+      const url = 'https://github.com/lacodda/test.git';
       const opts = {
         fetchOpts: {
           callbacks: {
