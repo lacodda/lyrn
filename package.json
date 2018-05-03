@@ -22,7 +22,7 @@
     "docker"
   ],
   "scripts": {
-    "test": "mocha -R spec --timeout 10000"
+    "test": "mocha"
   },
   "preferGlobal": true,
   "bin": {
