@@ -4,13 +4,13 @@ const fse = require('fs-extra');
 const spawn = require('child_process').spawn;
 const path = require('path');
 
-const clone = require('../lib/clone').api;
+const download = require('../lib/download').api;
 
 const TMP_PATH = path.join(__dirname, '..', 'tmp');
-const OUT_PATH = path.join(TMP_PATH, 'clone');
+const OUT_PATH = path.join(TMP_PATH, 'download');
 const REPO_URL = 'https://github.com/lacodda/test.git';
 
-describe('clone repo when it exists', () => {
+describe('download repo when it exists', () => {
 
   beforeEach(() => {
     return fse.remove(OUT_PATH).catch(err => {
@@ -21,11 +21,11 @@ describe('clone repo when it exists', () => {
   });
 
   describe('cli', (done) => {
-    it('can clone', (done) => {
+    it('can download', (done) => {
       let buffer = '';
 
       const child = spawn('node', [
-        './bin/lyrn', 'clone', REPO_URL, OUT_PATH,
+        './bin/lyrn', 'download', REPO_URL, OUT_PATH,
       ], { cwd: __dirname + '/..' });
 
       child.stdout.on('data', (b) => {
@@ -34,7 +34,7 @@ describe('clone repo when it exists', () => {
 
       child.on('close', () => {
         assert.equal(
-          `Repository ${REPO_URL} successfully cloned\n`,
+          `Repository ${REPO_URL} successfully downloaded\n`,
           buffer,
         );
         done();
@@ -43,8 +43,8 @@ describe('clone repo when it exists', () => {
   });
 
   describe('api', (done) => {
-    it('can clone', () => {
-      return clone(REPO_URL, OUT_PATH).then(results => {
+    it('can download', () => {
+      return download(REPO_URL, OUT_PATH).then(results => {
         for (let entry in results) {
           assert.equal(REPO_URL, entry);
         }
