@@ -1,6 +1,6 @@
 {
   "name": "lyrn",
-  "version": "0.0.6",
+  "version": "0.0.7",
   "description": "Command line tool for rapid starting the development of your web application",
   "license": "MIT",
   "main": "index.js",
