@@ -4,7 +4,7 @@ const fse = require('fs-extra');
 const spawn = require('child_process').spawn;
 const path = require('path');
 
-const download = require('../lib/download').api;
+const download = require('../lib/commands/download').api;
 
 const TMP_PATH = path.join(__dirname, '..', 'tmp');
 const OUT_PATH = path.join(TMP_PATH, 'download');

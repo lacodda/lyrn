@@ -4,7 +4,7 @@ const fse = require('fs-extra');
 const spawn = require('child_process').spawn;
 const path = require('path');
 
-const clone = require('../lib/clone').api;
+const clone = require('../lib/util/clone').api;
 
 const TMP_PATH = path.join(__dirname, '..', 'tmp');
 const OUT_PATH = path.join(TMP_PATH, 'clone');
