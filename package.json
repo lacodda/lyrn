@@ -22,7 +22,7 @@
     "docker"
   ],
   "scripts": {
-    "test": "mocha -R spec ./test/**/*.spec.js && npm run test:clean",
+    "test": "mocha -R spec ./test/setup.js ./test/**/*.spec.js && npm run test:clean",
     "test:clean": "rm -rf ./test/tmp"
   },
   "preferGlobal": true,
