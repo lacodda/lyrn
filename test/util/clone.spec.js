@@ -9,8 +9,8 @@ describe('clone repo when it exists', () => {
     return removeFolder(tmpPath);
   });
 
-  describe('api', () => {
-    it('can clone', async () => {
+  describe('test clone function', () => {
+    it('clone', async () => {
       const results = await clone(repoUrl, tmpPath);
       for (let entry in results) {
         expect(repoUrl).to.equal(entry);
