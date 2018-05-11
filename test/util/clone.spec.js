@@ -12,9 +12,10 @@ describe('clone repo when it exists', () => {
   describe('test clone function', () => {
     it('clone', async () => {
       const results = await clone(repoUrl, tmpPath);
-      for (let entry in results) {
-        expect(repoUrl).to.equal(entry);
-      }
+      expect(repoUrl).to.equal(results);
+      // for (let entry in results) {
+      //   expect(repoUrl).to.equal(entry);
+      // }
     });
   });
 });

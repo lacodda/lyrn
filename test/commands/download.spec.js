@@ -32,9 +32,10 @@ describe('download repo when it exists', () => {
   describe('api', () => {
     it('can download', async () => {
       const results = await download(repoUrl, tmpPath);
-      for (let entry in results) {
-        expect(repoUrl).to.equal(entry);
-      }
+      expect(repoUrl).to.equal(results);
+      // for (let entry in results) {
+      //   expect(repoUrl).to.equal(entry);
+      // }
     });
   });
 });
