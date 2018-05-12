@@ -11,21 +11,10 @@ describe('download repo when it exists', () => {
   });
 
   describe('cli', () => {
-    it('can download', (done) => {
-      let buffer = '';
+    it('can download', async () => {
+      const { stdout, stderr } = await exec(`./bin/lyrn download ${repoUrl} ${tmpPath}`);
 
-      const child = spawn('node', [
-        './bin/lyrn', 'download', repoUrl, tmpPath,
-      ], { cwd: __dirname + '/../..' });
-
-      child.stdout.on('data', (b) => {
-        buffer += b.toString();
-      });
-
-      child.on('close', () => {
-        expect(`Repository ${repoUrl} successfully downloaded\n`).to.equal(buffer);
-        done();
-      });
+      expect(`Repository ${repoUrl} successfully downloaded\n`).to.equal(stdout);
     });
   });
 
