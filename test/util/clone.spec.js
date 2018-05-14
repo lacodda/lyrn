@@ -1,11 +1,9 @@
 const clone = require('../../lib/util/clone');
-const tmpPath = createFilePath('clone');
 
 describe('clone repo when it exists', () => {
+  const tmpPath = createFilePath('clone');
 
-  beforeEach(() => {
-    return removeFolder(tmpPath);
-  });
+  beforeEach(() => removeFolder(tmpPath));
 
   describe('test clone function', () => {
     it('clone', async () => {

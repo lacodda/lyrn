@@ -1,12 +1,10 @@
 const download = require('../../lib/commands/download').api;
 const exec = require('../../lib/util/exec');
-const tmpPath = createFilePath('download');
 
 describe('download repo when it exists', () => {
+  const tmpPath = createFilePath('download');
 
-  beforeEach(() => {
-    return removeFolder(tmpPath);
-  });
+  beforeEach(() => removeFolder(tmpPath));
 
   describe('cli', () => {
     it('can download', async () => {
