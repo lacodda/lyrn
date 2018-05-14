@@ -10,6 +10,7 @@ const { spawn } = require('child_process');
 // globals
 global.pkg = pkg;
 global.spawn = spawn;
+global.assert = chai.assert;
 global.expect = chai.expect;
 global.chai = chai;
 global.lyrn = './bin/lyrn';
