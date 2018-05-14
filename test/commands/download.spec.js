@@ -1,5 +1,3 @@
-'use strict';
-
 const download = require('../../lib/commands/download').api;
 const exec = require('../../lib/util/exec');
 const tmpPath = createFilePath('download');

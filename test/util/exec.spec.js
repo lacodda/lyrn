@@ -1,5 +1,3 @@
-'use strict';
-
 const exec = require('../../lib/util/exec');
 const execNew = require('../../lib/util/exec').new;
 

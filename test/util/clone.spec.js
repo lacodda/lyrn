@@ -1,5 +1,3 @@
-'use strict';
-
 const clone = require('../../lib/util/clone');
 const tmpPath = createFilePath('clone');
 
