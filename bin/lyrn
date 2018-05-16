@@ -2,6 +2,7 @@
 
 const yargs = require('yargs');
 const lyrn = require('../lib/lyrn');
+
 const parsed = yargs.argv;
 const cmd = parsed._.shift();
 
