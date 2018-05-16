@@ -6,18 +6,25 @@ describe('download repo when it exists', () => {
 
   beforeEach(() => removeFolder(tmpPath));
 
-  describe('cli', () => {
+  describe('api', () => {
     it('can download', async () => {
-      const { stdout, stderr } = await exec(`./bin/lyrn download ${repoUrl} ${tmpPath}`);
-
-      expect(`Repository ${repoUrl} successfully downloaded\n`).to.equal(stdout);
+      try {
+        const result = await download(repoUrl, tmpPath);
+        expect(repoUrl).to.equal(result);
+      } catch (error) {
+        assert.isNotOk('download', error);
+      }
     });
   });
 
-  describe('api', () => {
+  describe('cli', () => {
     it('can download', async () => {
-      const results = await download(repoUrl, tmpPath);
-      expect(repoUrl).to.equal(results);
+      try {
+        const result = await exec(`./bin/lyrn download ${repoUrl} ${tmpPath}`);
+        expect(`Repository ${repoUrl} successfully downloaded\n`).to.equal(result);
+      } catch (error) {
+        assert.isNotOk('download', error);
+      }
     });
   });
 });
