@@ -6,12 +6,11 @@ const lyrn = require('../lib/lyrn');
 const parsed = yargs.argv;
 const cmd = parsed._.shift();
 
-lyrn.load().then(() => {
-  lyrn.cli[cmd]
-    .apply(null, parsed._)
-    .catch((err) => {
-      console.error(err);
-    });
-}).catch((err) => {
-  console.error(err);
-});
+(async () => {
+  try {
+    await lyrn.load();
+    await lyrn.cli[cmd].apply(null, parsed._);
+  } catch (error) {
+    console.error(error);
+  }
+})();
