@@ -8,8 +8,8 @@ describe('clone repo when it exists', () => {
   describe('test clone function', () => {
     it('can clone', async () => {
       try {
-        const results = await clone(repoUrl, tmpPath);
-        expect(repoUrl).to.equal(results);
+        const result = await clone(repoUrl, tmpPath);
+        expect(repoUrl).to.equal(result);
       } catch (error) {
         assert.isNotOk('clone', 'clone failed');
       }
@@ -17,8 +17,8 @@ describe('clone repo when it exists', () => {
 
     it('catch error in clone', async () => {
       try {
-        const results = await clone(repoUrl + 'badExt', tmpPath);
-        expect(repoUrl).to.equal(results);
+        const result = await clone(repoUrl + 'badExt', tmpPath);
+        expect(repoUrl).to.equal(result);
       } catch (error) {
         assert.isOk('clone', 'error was caught');
       }
