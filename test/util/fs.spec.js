@@ -35,7 +35,7 @@ describe('test fs functions', () => {
     it('catch error in access', async () => {
       try {
         await access('./error');
-        assert.isNotOk(`access', 'error wasn't caught`);
+        assert.isNotOk('access', `error wasn't caught`);
       } catch (error) {
         assert.isOk('access', 'error was caught');
       }
