@@ -21,7 +21,7 @@ npm i -g lyrn
 ## Usage
 
 ```bash
-lyrn clone https://github.com/lacodda/lyrn.git project-name
+lyrn download https://github.com/lacodda/lyrn.git project-name
 ```
 
 ## Tests
