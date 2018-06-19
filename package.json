@@ -19,7 +19,8 @@
   },
   "keywords": [
     "cli",
-    "docker"
+    "tool",
+    "template"
   ],
   "scripts": {
     "test": "mocha -R spec ./test/setup.js ./test/**/*.spec.js && npm run test:clean",
