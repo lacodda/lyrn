@@ -3,7 +3,7 @@
   "version": "0.0.8",
   "description": "Command line tool for rapid starting the development of your web application",
   "license": "MIT",
-  "main": "index.js",
+  "main": "./lib/lyrn.js",
   "homepage": "https://github.com/lacodda/lyrn",
   "author": {
     "name": "Kirill Lahtachev",
