@@ -23,8 +23,8 @@
     "template"
   ],
   "scripts": {
-    "test": "mocha -R spec ./test/setup.js ./test/**/*.spec.js && npm run test:clean",
-    "test:clean": "rm -rf ./test/tmp"
+    "test": "nyc --reporter=html --reporter=text mocha -R spec ./test/setup.js ./test/*.spec.js ./test/**/*.spec.js --timeout=3000",
+    "coverage": "nyc report --reporter=text-lcov | coveralls"
   },
   "preferGlobal": true,
   "bin": {
@@ -40,10 +40,12 @@
   "devDependencies": {
     "babel-eslint": "^8.2.6",
     "chai": "^4.1.2",
+    "coveralls": "^3.0.2",
     "eslint": "^5.2.0",
     "eslint-config-airbnb-base": "^13.0.0",
     "eslint-plugin-import": "^2.13.0",
-    "mocha": "^5.2.0"
+    "mocha": "^5.2.0",
+    "nyc": "^12.0.2"
   },
   "dependencies": {
     "fs-extra": "^7.0.0",

@@ -6,6 +6,7 @@
 
 [![NPM Version][npm-image]][npm-url]
 [![Build Status][travis-image]][travis-url]
+[![Coverage Status][coveralls-image]][coveralls-url]
 
 ## Description
 Lyrn is command line tool for rapid starting the development of your web application
@@ -38,3 +39,6 @@ npm test
 
 [travis-image]: https://img.shields.io/travis/lacodda/lyrn/master.svg?style=flat-square
 [travis-url]: https://travis-ci.org/lacodda/lyrn
+
+[coveralls-image]: https://img.shields.io/coveralls/lacodda/lyrn/master.svg?style=flat-square
+[coveralls-url]: https://coveralls.io/github/lacodda/lyrn?branch=master

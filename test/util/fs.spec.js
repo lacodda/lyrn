@@ -1,7 +1,6 @@
 const { readdir, access } = require('../../lib/util/fs');
 
 describe('test fs functions', () => {
-
   describe('readdir', () => {
     it('readdir worked', async () => {
       try {
