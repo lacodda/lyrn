@@ -1,15 +1,23 @@
 #!/usr/bin/env node
 
-const args = require('yargs').argv._;
-const lyrn = require('../lib/lyrn');
+require('yargs')
+  .commandDir('../lib/commands')
+  .demandCommand()
+  .help()
+  .alias('h', 'help')
+  .alias('v', 'version')
+  .argv;
 
-const cmd = args.shift();
+// const args = require('yargs').argv._;
+// const lyrn = require('../lib/lyrn');
 
-(async () => {
-  try {
-    await lyrn.load();
-    await lyrn.cli[cmd].apply(null, args);
-  } catch (error) {
-    console.error(error.message);
-  }
-})();
+// const cmd = args.shift();
+
+// (async () => {
+//   try {
+//     await lyrn.load();
+//     await lyrn.cli[cmd].apply(null, args);
+//   } catch (error) {
+//     console.error(error.message);
+//   }
+// })();
