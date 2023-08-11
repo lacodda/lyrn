@@ -54,3 +54,6 @@ lib-cov/
 
 # Optional REPL history
 .node_repl_history
+
+# Added by cargo
+/target
