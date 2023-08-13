@@ -1,5 +1,5 @@
 <p align="center">
-  <img src="/lyrn.png" width="320" alt="lyrn">
+  <img src="https://raw.githubusercontent.com/lacodda/lyrn/main/lyrn.webp" width="320" alt="lyrn">
 </p>
 <h1 align="center">Rapid start of your web application</h1>
 <br>
