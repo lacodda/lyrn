@@ -1,35 +1,25 @@
-// fn main() {
-//     if let Err(e) = lyrn::get_args().and_then(lyrn::run) {
-//         eprintln!("{}", e);
-//         std::process::exit(1);
-//     }
-// }
-
-use ::clap::{Parser, Subcommand};
+use clap::{Parser, Subcommand};
+use std::error::Error;
 
 mod commands;
 
-#[derive(Parser)]
-#[command(author, version)]
-#[command(
-    about = "📦✨ Command line tool for rapid starting the development of your web application",
-    long_about = "📦✨ Command line tool for rapid starting the development of your web application"
-)]
+#[derive(Debug, Parser)]
+#[command(author, version, about, long_about = None)]
+#[command(arg_required_else_help(true))]
 struct Cli {
     #[command(subcommand)]
-    command: Option<Commands>,
+    command: Commands,
 }
 
-#[derive(Subcommand)]
+#[derive(Debug, Subcommand)]
 enum Commands {
-    CreateProject(commands::create::CreateProject),
+    Create(commands::create::Create),
 }
 
-fn main() {
+fn main() -> Result<(), Box<dyn Error>> {
     let cli = Cli::parse();
 
     match &cli.command {
-        Some(Commands::CreateProject(project)) => commands::create::project(project),
-        None => {}
+        Commands::Create(project) => commands::create::project(project),
     }
 }
