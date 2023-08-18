@@ -1,3 +1,4 @@
+use crate::templates::common;
 use clap::Args;
 use serde::{Deserialize, Serialize};
 use std::collections::HashMap;
@@ -16,6 +17,7 @@ pub struct CreateProjectArgs {
 }
 
 #[derive(Serialize, Deserialize)]
+#[serde(rename_all = "camelCase")]
 struct Package {
     name: String,
     version: String,
@@ -26,6 +28,7 @@ struct Package {
     author: String,
     license: String,
     dependencies: HashMap<String, String>,
+    dev_dependencies: HashMap<String, String>,
 }
 
 pub fn create_project(args: CreateProjectArgs) -> Result<(), Box<dyn Error>> {
@@ -41,15 +44,23 @@ fn create_package(_name: &String) -> Result<(), Box<dyn Error>> {
         version: "0.0.1".to_string(),
         description: "".to_string(),
         main: "src/main.ts".to_string(),
-        scripts: HashMap::from([("start".to_string(), "lyrn start".to_string())]),
+        scripts: to_hash_map(common::SCRIPTS),
         keywords: vec!["app".to_string()],
         author: "author".to_string(),
         license: "MIT".to_string(),
-        dependencies: HashMap::from([("lyrn".to_string(), "^1.0.0".to_string())]),
+        dependencies: to_hash_map(common::DEPENDENCIES),
+        dev_dependencies: to_hash_map(common::DEV_DEPENDENCIES),
     };
 
     let file_path = PathBuf::from(_name).join("package.json");
     let mut file = File::create(file_path)?;
     serde_json::to_writer_pretty(&mut file, &package)?;
     Ok(())
+}
+
+fn to_hash_map(value: &[(&str, &str)]) -> HashMap<String, String> {
+    return value
+        .into_iter()
+        .map(|(p, v)| (p.to_string(), v.to_string()))
+        .collect::<HashMap<_, _>>();
 }

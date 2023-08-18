@@ -1,5 +1,6 @@
 mod commands;
 mod libs;
+mod templates;
 use clap::{Parser, Subcommand};
 use commands::create;
 use std::error::Error;
