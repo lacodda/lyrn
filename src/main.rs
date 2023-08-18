@@ -1,7 +1,8 @@
-use clap::{Parser, Subcommand};
-use std::error::Error;
-
 mod commands;
+mod libs;
+use clap::{Parser, Subcommand};
+use commands::create;
+use std::error::Error;
 
 #[derive(Debug, Parser)]
 #[command(author, version, about, long_about = None)]
@@ -13,13 +14,14 @@ struct Cli {
 
 #[derive(Debug, Subcommand)]
 enum Commands {
-    Create(commands::create::Create),
+    #[command(arg_required_else_help = true)]
+    Create(create::CreateArgs),
 }
 
 fn main() -> Result<(), Box<dyn Error>> {
     let cli = Cli::parse();
 
-    match &cli.command {
-        Commands::Create(project) => commands::create::project(project),
+    match cli.command {
+        Commands::Create(args) => create::cmd(args),
     }
 }
