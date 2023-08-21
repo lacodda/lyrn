@@ -1,7 +1,7 @@
 use crate::templates;
 use clap::{Args, ValueEnum};
-use serde::{Deserialize, Serialize};
-use std::collections::HashMap;
+use serde::{Deserialize, Serialize, Serializer};
+use std::collections::{BTreeMap, HashMap};
 use std::error::Error;
 use std::fs::{create_dir, File};
 use std::path::PathBuf;
@@ -27,10 +27,19 @@ enum Framework {
     React,
 }
 
-#[derive(Debug, Default)]
+#[derive(Debug, Default, Clone)]
 struct Template {
     dependencies: HashMap<String, String>,
     dev_dependencies: HashMap<String, String>,
+}
+
+impl Template {
+    fn merge(self, common: &Template) -> Template {
+        let mut template: Template = common.clone();
+        template.dependencies.extend(self.dependencies.into_iter());
+        template.dev_dependencies.extend(self.dev_dependencies.into_iter());
+        template
+    }
 }
 
 #[derive(Debug, Default)]
@@ -43,7 +52,7 @@ impl Templates {
     fn get(self, framework: &Framework) -> Template {
         match framework {
             Framework::None => self.common,
-            Framework::React => self.react,
+            Framework::React => self.react.merge(&self.common),
         }
     }
 }
@@ -59,8 +68,18 @@ struct Package {
     keywords: Vec<String>,
     author: String,
     license: String,
+    #[serde(serialize_with = "ordered_map")]
     dependencies: HashMap<String, String>,
+    #[serde(serialize_with = "ordered_map")]
     dev_dependencies: HashMap<String, String>,
+}
+
+fn ordered_map<S, K: Ord + Serialize, V: Serialize>(value: &HashMap<K, V>, serializer: S) -> Result<S::Ok, S::Error>
+where
+    S: Serializer,
+{
+    let ordered: BTreeMap<_, _> = value.iter().collect();
+    ordered.serialize(serializer)
 }
 
 pub fn create_project(args: CreateProjectArgs) -> Result<(), Box<dyn Error>> {
@@ -86,11 +105,7 @@ fn create_package(_name: &String, _framework: &Framework) -> Result<(), Box<dyn 
         ..Template::default()
     };
 
-    let templates = Templates {
-        common: common,
-        react: react,
-    }
-    .get(_framework);
+    let templates = Templates { common: common, react: react }.get(_framework);
 
     let package = Package {
         name: _name.to_string(),
@@ -112,8 +127,5 @@ fn create_package(_name: &String, _framework: &Framework) -> Result<(), Box<dyn 
 }
 
 fn to_hash_map(value: &[(&str, &str)]) -> HashMap<String, String> {
-    return value
-        .into_iter()
-        .map(|(p, v)| (p.to_string(), v.to_string()))
-        .collect::<HashMap<_, _>>();
+    return value.into_iter().map(|(p, v)| (p.to_string(), v.to_string())).collect::<HashMap<_, _>>();
 }
