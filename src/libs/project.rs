@@ -1,7 +1,8 @@
-use crate::templates;
-use clap::{Args, ValueEnum};
-use serde::{Deserialize, Serialize, Serializer};
-use std::collections::{BTreeMap, HashMap};
+use super::helpers::ordered_map;
+use crate::templates::{self, Framework, Template};
+use clap::Args;
+use serde::{Deserialize, Serialize};
+use std::collections::HashMap;
 use std::error::Error;
 use std::fs::{create_dir, File};
 use std::path::PathBuf;
@@ -21,42 +22,6 @@ pub struct CreateProjectArgs {
     tool: Option<String>,
 }
 
-#[derive(ValueEnum, Copy, Clone, Debug, PartialEq, Eq)]
-enum Framework {
-    None,
-    React,
-}
-
-#[derive(Debug, Default, Clone)]
-struct Template {
-    dependencies: HashMap<String, String>,
-    dev_dependencies: HashMap<String, String>,
-}
-
-impl Template {
-    fn merge(self, common: &Template) -> Template {
-        let mut template: Template = common.clone();
-        template.dependencies.extend(self.dependencies.into_iter());
-        template.dev_dependencies.extend(self.dev_dependencies.into_iter());
-        template
-    }
-}
-
-#[derive(Debug, Default)]
-struct Templates {
-    common: Template,
-    react: Template,
-}
-
-impl Templates {
-    fn get(self, framework: &Framework) -> Template {
-        match framework {
-            Framework::None => self.common,
-            Framework::React => self.react.merge(&self.common),
-        }
-    }
-}
-
 #[derive(Serialize, Deserialize)]
 #[serde(rename_all = "camelCase")]
 struct Package {
@@ -74,58 +39,32 @@ struct Package {
     dev_dependencies: HashMap<String, String>,
 }
 
-fn ordered_map<S, K: Ord + Serialize, V: Serialize>(value: &HashMap<K, V>, serializer: S) -> Result<S::Ok, S::Error>
-where
-    S: Serializer,
-{
-    let ordered: BTreeMap<_, _> = value.iter().collect();
-    ordered.serialize(serializer)
-}
-
 pub fn create_project(args: CreateProjectArgs) -> Result<(), Box<dyn Error>> {
     let name = args.name.to_string();
-    let framework = args.framework;
+    let template = templates::get(&args.framework);
 
     create_dir(&name)?;
-    create_package(&name, &framework)?;
+    create_package(&name, &template)?;
 
     Ok(())
 }
 
-fn create_package(_name: &String, _framework: &Framework) -> Result<(), Box<dyn Error>> {
-    let common = Template {
-        dependencies: to_hash_map(templates::common::DEPENDENCIES),
-        dev_dependencies: to_hash_map(templates::common::DEV_DEPENDENCIES),
-        ..Template::default()
-    };
-
-    let react = Template {
-        dependencies: to_hash_map(templates::react::DEPENDENCIES),
-        dev_dependencies: to_hash_map(templates::react::DEV_DEPENDENCIES),
-        ..Template::default()
-    };
-
-    let templates = Templates { common: common, react: react }.get(_framework);
-
+fn create_package(name: &String, template: &Template) -> Result<(), Box<dyn Error>> {
     let package = Package {
-        name: _name.to_string(),
+        name: name.to_string(),
         version: "0.0.1".to_string(),
         description: "".to_string(),
         main: "src/main.ts".to_string(),
-        scripts: to_hash_map(templates::common::SCRIPTS),
+        scripts: template.scripts.to_owned(),
         keywords: vec!["app".to_string()],
         author: "author".to_string(),
         license: "MIT".to_string(),
-        dependencies: templates.dependencies,
-        dev_dependencies: templates.dev_dependencies,
+        dependencies: template.dependencies.to_owned(),
+        dev_dependencies: template.dev_dependencies.to_owned(),
     };
 
-    let file_path = PathBuf::from(_name).join("package.json");
+    let file_path = PathBuf::from(name).join("package.json");
     let mut file = File::create(file_path)?;
     serde_json::to_writer_pretty(&mut file, &package)?;
     Ok(())
-}
-
-fn to_hash_map(value: &[(&str, &str)]) -> HashMap<String, String> {
-    return value.into_iter().map(|(p, v)| (p.to_string(), v.to_string())).collect::<HashMap<_, _>>();
 }

@@ -1,8 +1,20 @@
-pub const SCRIPTS: &[(&str, &str)] = &[("start", "lyrn start")];
+use super::Template;
+use crate::libs::helpers::to_hash_map;
 
-pub const DEPENDENCIES: &[(&str, &str)] = &[("lyrn", "^1.0.0")];
+pub fn get() -> Template {
+    Template {
+        scripts: to_hash_map(SCRIPTS),
+        dependencies: to_hash_map(DEPENDENCIES),
+        dev_dependencies: to_hash_map(DEV_DEPENDENCIES),
+        ..Template::default()
+    }
+}
 
-pub const DEV_DEPENDENCIES: &[(&str, &str)] = &[
+const SCRIPTS: &[(&str, &str)] = &[("start", "lyrn start")];
+
+const DEPENDENCIES: &[(&str, &str)] = &[("lyrn", "^1.0.0")];
+
+const DEV_DEPENDENCIES: &[(&str, &str)] = &[
     ("@types/node", "^20.4.2"),
     ("@types/webpack-env", "^1.18.1"),
     ("@typescript-eslint/eslint-plugin", "^6.0.0"),

@@ -1,11 +1,22 @@
-pub const DEPENDENCIES: &[(&str, &str)] = &[
+use super::Template;
+use crate::libs::helpers::to_hash_map;
+
+pub fn get() -> Template {
+    Template {
+        dependencies: to_hash_map(DEPENDENCIES),
+        dev_dependencies: to_hash_map(DEV_DEPENDENCIES),
+        ..Template::default()
+    }
+}
+
+const DEPENDENCIES: &[(&str, &str)] = &[
     ("react", "^18.2.0"),
     ("react-dom", "^18.2.0"),
     ("react-router-dom", "^6.13.0"),
     ("styled-components", "^6.0.7"),
 ];
 
-pub const DEV_DEPENDENCIES: &[(&str, &str)] = &[
+const DEV_DEPENDENCIES: &[(&str, &str)] = &[
     ("@pmmmwh/react-refresh-webpack-plugin", "^0.5.10"),
     ("@types/react", "^18.2.7"),
     ("@types/react-dom", "^18.2.4"),
