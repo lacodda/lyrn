@@ -1,11 +1,9 @@
-use super::helpers::ordered_map;
 use crate::templates::{self, Framework, Template};
 use clap::Args;
-use serde::{Deserialize, Serialize};
-use std::collections::HashMap;
 use std::error::Error;
 use std::fs::{create_dir, File};
 use std::path::PathBuf;
+use super::types::Package;
 
 #[derive(Debug, Args)]
 pub struct CreateProjectArgs {
@@ -22,29 +20,13 @@ pub struct CreateProjectArgs {
     tool: Option<String>,
 }
 
-#[derive(Serialize, Deserialize)]
-#[serde(rename_all = "camelCase")]
-struct Package {
-    name: String,
-    version: String,
-    description: String,
-    main: String,
-    scripts: HashMap<String, String>,
-    keywords: Vec<String>,
-    author: String,
-    license: String,
-    #[serde(serialize_with = "ordered_map")]
-    dependencies: HashMap<String, String>,
-    #[serde(serialize_with = "ordered_map")]
-    dev_dependencies: HashMap<String, String>,
-}
-
 pub fn create_project(args: CreateProjectArgs) -> Result<(), Box<dyn Error>> {
     let name = args.name.to_string();
     let template = templates::get(&args.framework);
 
     create_dir(&name)?;
     create_package(&name, &template)?;
+    create_tsconfig(&name, &template)?;
 
     Ok(())
 }
@@ -66,5 +48,12 @@ fn create_package(name: &String, template: &Template) -> Result<(), Box<dyn Erro
     let file_path = PathBuf::from(name).join("package.json");
     let mut file = File::create(file_path)?;
     serde_json::to_writer_pretty(&mut file, &package)?;
+    Ok(())
+}
+
+fn create_tsconfig(name: &String, template: &Template) -> Result<(), Box<dyn Error>> {
+    let file_path = PathBuf::from(name).join("tsconfig.json");
+    let mut file = File::create(file_path)?;
+    serde_json::to_writer_pretty(&mut file, &&template.tsconfig)?;
     Ok(())
 }

@@ -1,11 +1,17 @@
+use std::collections::HashMap;
+
 use super::Template;
-use crate::libs::helpers::to_hash_map;
+use crate::libs::{
+    helpers::to_hash_map,
+    types::{Tsconfig, TsconfigCompilerOptions},
+};
 
 pub fn get() -> Template {
     Template {
         scripts: to_hash_map(SCRIPTS),
         dependencies: to_hash_map(DEPENDENCIES),
         dev_dependencies: to_hash_map(DEV_DEPENDENCIES),
+        tsconfig: tsconfig(),
         ..Template::default()
     }
 }
@@ -45,3 +51,35 @@ const DEV_DEPENDENCIES: &[(&str, &str)] = &[
     ("webpack-shell-plugin-next", "^2.3.1"),
     ("zx", "^7.2.3"),
 ];
+
+fn tsconfig() -> Tsconfig {
+    Tsconfig {
+        compile_on_save: Some(false),
+        compiler_options: TsconfigCompilerOptions {
+            root_dir: Some(".".into()),
+            source_map: Some(true),
+            declaration: Some(false),
+            module_resolution: Some("node".into()),
+            emit_decorator_metadata: Some(true),
+            experimental_decorators: Some(true),
+            import_helpers: Some(true),
+            target: Some("ESNext".into()),
+            module: Some("ESNext".into()),
+            lib: vec!["ESNext".into(), "dom".into()],
+            skip_lib_check: Some(true),
+            skip_default_lib_check: Some(true),
+            es_module_interop: Some(true),
+            no_implicit_any: Some(true),
+            resolve_json_module: Some(true),
+            base_url: Some(".".into()),
+            out_dir: Some("dist".into()),
+            paths: HashMap::from([
+                ("@/*".into(), vec!["src/*".into()]),
+                ("@libs/ui".into(), vec!["../../libs/ui/src".into(), "libs/ui/src".into()]),
+                ("@libs/utils".into(), vec!["../../libs/utils/src".into(), "libs/utils/src".into()]),
+            ]),
+            exclude: vec!["node_modules".into(), "dist".into()],
+            ..TsconfigCompilerOptions::default()
+        },
+    }
+}

@@ -1,3 +1,4 @@
+use crate::libs::types::Tsconfig;
 use clap::ValueEnum;
 use std::collections::HashMap;
 
@@ -15,6 +16,7 @@ pub struct Template {
     pub scripts: HashMap<String, String>,
     pub dependencies: HashMap<String, String>,
     pub dev_dependencies: HashMap<String, String>,
+    pub tsconfig: Tsconfig,
 }
 
 impl Template {
@@ -23,6 +25,7 @@ impl Template {
         template.scripts.extend(self.scripts.into_iter());
         template.dependencies.extend(self.dependencies.into_iter());
         template.dev_dependencies.extend(self.dev_dependencies.into_iter());
+        template.tsconfig = self.tsconfig.merge(&common.tsconfig);
         template
     }
 }
