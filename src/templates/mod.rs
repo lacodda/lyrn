@@ -1,4 +1,4 @@
-use crate::libs::types::Tsconfig;
+use crate::libs::types::{Tsconfig, User};
 use clap::ValueEnum;
 use std::collections::HashMap;
 
@@ -17,6 +17,7 @@ pub struct Template {
     pub dependencies: HashMap<String, String>,
     pub dev_dependencies: HashMap<String, String>,
     pub tsconfig: Tsconfig,
+    pub mit_license: String,
 }
 
 impl Template {
@@ -45,9 +46,9 @@ impl Templates {
     }
 }
 
-pub fn get(framework: &Framework) -> Template {
+pub fn get(user: &User, framework: &Framework) -> Template {
     Templates {
-        common: common::get(),
+        common: common::get(user),
         react: react::get(),
     }
     .get(framework)

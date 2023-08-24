@@ -2,8 +2,10 @@ use crate::templates::{self, Framework, Template};
 use clap::Args;
 use std::error::Error;
 use std::fs::{create_dir, File};
+use std::io::Write;
 use std::path::PathBuf;
-use super::types::Package;
+use super::helpers::get_git_user;
+use super::types::{Package, User};
 
 #[derive(Debug, Args)]
 pub struct CreateProjectArgs {
@@ -21,12 +23,14 @@ pub struct CreateProjectArgs {
 }
 
 pub fn create_project(args: CreateProjectArgs) -> Result<(), Box<dyn Error>> {
+    let user: User = get_git_user()?;
     let name = args.name.to_string();
-    let template = templates::get(&args.framework);
+    let template = templates::get(&user, &args.framework);
 
     create_dir(&name)?;
     create_package(&name, &template)?;
     create_tsconfig(&name, &template)?;
+    create_license(&name, &template)?;
 
     Ok(())
 }
@@ -54,6 +58,13 @@ fn create_package(name: &String, template: &Template) -> Result<(), Box<dyn Erro
 fn create_tsconfig(name: &String, template: &Template) -> Result<(), Box<dyn Error>> {
     let file_path = PathBuf::from(name).join("tsconfig.json");
     let mut file = File::create(file_path)?;
-    serde_json::to_writer_pretty(&mut file, &&template.tsconfig)?;
+    serde_json::to_writer_pretty(&mut file, &template.tsconfig)?;
+    Ok(())
+}
+
+fn create_license(name: &String, template: &Template) -> Result<(), Box<dyn Error>> {
+    let file_path = PathBuf::from(name).join("LICENSE");
+    let mut file = File::create(file_path)?;
+    file.write_all(template.mit_license.as_bytes())?;
     Ok(())
 }

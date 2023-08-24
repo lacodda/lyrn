@@ -2,6 +2,12 @@ use super::helpers::ordered_map;
 use serde::{Deserialize, Serialize};
 use std::collections::HashMap;
 
+#[derive(Debug)]
+pub struct User {
+    pub name: String,
+    pub email: String,
+}
+
 #[derive(Serialize, Deserialize)]
 #[serde(rename_all = "camelCase")]
 pub struct Package {

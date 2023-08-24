@@ -11,6 +11,7 @@ keywords = ["cli", "tool", "template"]
 categories = ["cli"]
 
 [dependencies]
+chrono = "0.4.26"
 clap = { version = "4.3.21", features = ["derive"] }
 inquire = "0.6.2"
 serde = { version = "1.0.183", features = ["derive"] }
