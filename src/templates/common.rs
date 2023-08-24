@@ -1,9 +1,10 @@
 use super::Template;
 use crate::libs::{
     helpers::to_hash_map,
-    types::{Tsconfig, TsconfigCompilerOptions, User},
+    types::{Eslintrc, Tsconfig, TsconfigCompilerOptions, User},
 };
 use chrono::Datelike;
+use serde_json::json;
 use std::collections::HashMap;
 
 pub fn get(user: &User) -> Template {
@@ -12,6 +13,7 @@ pub fn get(user: &User) -> Template {
         dependencies: to_hash_map(DEPENDENCIES),
         dev_dependencies: to_hash_map(DEV_DEPENDENCIES),
         tsconfig: tsconfig(),
+        eslintrc: eslintrc(),
         mit_license: mit_license(user),
         ..Template::default()
     }
@@ -82,6 +84,71 @@ fn tsconfig() -> Tsconfig {
             exclude: vec!["node_modules".into(), "dist".into()],
             ..TsconfigCompilerOptions::default()
         },
+    }
+}
+
+fn eslintrc() -> Eslintrc {
+    Eslintrc {
+        extends: Some(vec!["eslint:recommended".into(), "standard-with-typescript".into()]),
+        rules: Some(HashMap::from([
+            ("arrow-body-style".into(), json!(1)),
+            ("camelcase".into(), json!(1)),
+            ("comma-dangle".into(), json!(["error", "always-multiline"])),
+            ("import/no-extraneous-dependencies".into(), json!(["off", { "devDependencies": false }])),
+            ("import/prefer-default-export".into(), json!(0)),
+            ("indent".into(), json!(["error", 2, { "SwitchCase": 1 }])),
+            ("linebreak-style".into(), json!(["error", "unix"])),
+            ("object-curly-spacing".into(), json!(["warn", "always"])),
+            ("prefer-template".into(), json!("off")),
+            ("semi".into(), json!(["error", "always"])),
+            ("quotes".into(), json!(["error", "single"])),
+            ("no-var".into(), json!(1)),
+            ("no-unused-vars".into(), json!(1)),
+            ("no-nested-ternary".into(), json!(1)),
+            ("no-console".into(), json!(1)),
+            ("no-template-curly-in-string".into(), json!(1)),
+            ("no-self-compare".into(), json!(1)),
+            ("no-async-promise-executor".into(), json!("warn")),
+            ("no-debugger".into(), json!("warn")),
+            ("no-multi-spaces".into(), json!("error")),
+            ("no-prototype-builtins".into(), json!("off")),
+            ("no-undef".into(), json!("warn")),
+            ("@typescript-eslint/comma-dangle".into(), json!(["error", "always-multiline"])),
+            ("@typescript-eslint/indent".into(), json!(["error", 2, { "SwitchCase": 1 } ])),
+            (
+                "@typescript-eslint/no-unused-vars".into(),
+                json!(["warn", { "vars": "all", "args": "none", "ignoreRestSiblings": false }]),
+            ),
+            ("@typescript-eslint/no-inferrable-types".into(), json!("off")),
+            ("@typescript-eslint/semi".into(), json!(["error", "always"])),
+            ("@typescript-eslint/space-before-function-paren".into(), json!("off")),
+            ("@typescript-eslint/strict-boolean-expressions".into(), json!("off")),
+            (
+                "@typescript-eslint/member-delimiter-style".into(),
+                json!(["error",
+                  { "multiline": { "delimiter": "semi" }, "singleline": { "delimiter": "comma", "requireLast": false } }
+                ]),
+            ),
+            ("@typescript-eslint/no-empty-interface".into(), json!(["error", { "allowSingleExtends": true }])),
+            ("@typescript-eslint/no-extraneous-class".into(), json!("off")),
+            ("@typescript-eslint/prefer-nullish-coalescing".into(), json!("off")),
+        ])),
+        ignore_patterns: Some(vec!["dist".into(), "node_modules".into()]),
+        env: Some(HashMap::from([("browser".into(), true), ("es6".into(), true), ("node".into(), true)])),
+        parser_options: Some(HashMap::from([
+            ("project".into(), "./tsconfig.json".into()),
+            ("ecmaVersion".into(), "latest".into()),
+            ("sourceType".into(), "module".into()),
+        ])),
+        settings: Some(HashMap::from([(
+            "import/resolver".into(),
+            json!({
+              "node": {
+                "extensions": [".js", ".jsx", ".ts", ".tsx"]
+              }
+            }),
+        )])),
+        ..Eslintrc::default()
     }
 }
 

@@ -1,14 +1,17 @@
 use super::Template;
 use crate::libs::{
     helpers::to_hash_map,
-    types::{Tsconfig, TsconfigCompilerOptions},
+    types::{Eslintrc, Tsconfig, TsconfigCompilerOptions},
 };
+use serde_json::json;
+use std::collections::HashMap;
 
 pub fn get() -> Template {
     Template {
         dependencies: to_hash_map(DEPENDENCIES),
         dev_dependencies: to_hash_map(DEV_DEPENDENCIES),
         tsconfig: tsconfig(),
+        eslintrc: eslintrc(),
         ..Template::default()
     }
 }
@@ -35,5 +38,13 @@ fn tsconfig() -> Tsconfig {
             ..TsconfigCompilerOptions::default()
         },
         ..Tsconfig::default()
+    }
+}
+
+fn eslintrc() -> Eslintrc {
+    Eslintrc {
+        extends: Some(vec!["plugin:react/recommended".into()]),
+        rules: Some(HashMap::from([("react/prop-types".into(), json!("off"))])),
+        ..Eslintrc::default()
     }
 }

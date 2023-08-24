@@ -1,4 +1,4 @@
-use crate::libs::types::{Tsconfig, User};
+use crate::libs::types::{Tsconfig, User, Eslintrc};
 use clap::ValueEnum;
 use std::collections::HashMap;
 
@@ -17,6 +17,7 @@ pub struct Template {
     pub dependencies: HashMap<String, String>,
     pub dev_dependencies: HashMap<String, String>,
     pub tsconfig: Tsconfig,
+    pub eslintrc: Eslintrc,
     pub mit_license: String,
 }
 
@@ -27,6 +28,7 @@ impl Template {
         template.dependencies.extend(self.dependencies.into_iter());
         template.dev_dependencies.extend(self.dev_dependencies.into_iter());
         template.tsconfig = self.tsconfig.merge(&common.tsconfig);
+        template.eslintrc = self.eslintrc.merge(&common.eslintrc);
         template
     }
 }

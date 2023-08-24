@@ -1,11 +1,11 @@
+use super::helpers::get_git_user;
+use super::types::{Package, User};
 use crate::templates::{self, Framework, Template};
 use clap::Args;
 use std::error::Error;
 use std::fs::{create_dir, File};
 use std::io::Write;
 use std::path::PathBuf;
-use super::helpers::get_git_user;
-use super::types::{Package, User};
 
 #[derive(Debug, Args)]
 pub struct CreateProjectArgs {
@@ -20,16 +20,22 @@ pub struct CreateProjectArgs {
     framework: Framework,
     #[arg(short, long)]
     tool: Option<String>,
+    #[arg(short, long)]
+    show: bool,
 }
 
 pub fn create_project(args: CreateProjectArgs) -> Result<(), Box<dyn Error>> {
     let user: User = get_git_user()?;
     let name = args.name.to_string();
     let template = templates::get(&user, &args.framework);
+    if args.show {
+        return Ok(());
+    }
 
     create_dir(&name)?;
     create_package(&name, &template)?;
     create_tsconfig(&name, &template)?;
+    create_eslintrc(&name, &template)?;
     create_license(&name, &template)?;
 
     Ok(())
@@ -59,6 +65,13 @@ fn create_tsconfig(name: &String, template: &Template) -> Result<(), Box<dyn Err
     let file_path = PathBuf::from(name).join("tsconfig.json");
     let mut file = File::create(file_path)?;
     serde_json::to_writer_pretty(&mut file, &template.tsconfig)?;
+    Ok(())
+}
+
+fn create_eslintrc(name: &String, template: &Template) -> Result<(), Box<dyn Error>> {
+    let file_path = PathBuf::from(name).join(".eslintrc.json");
+    let mut file = File::create(file_path)?;
+    serde_json::to_writer_pretty(&mut file, &template.eslintrc)?;
     Ok(())
 }
 
