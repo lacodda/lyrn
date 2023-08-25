@@ -1,4 +1,5 @@
 use super::Template;
+use crate::libs::types::Content;
 use serde_json::{json, Value};
 use std::collections::HashMap;
 
@@ -51,8 +52,8 @@ fn eslintrc() -> Value {
     })
 }
 
-fn app() -> HashMap<String, String> {
-    HashMap::from([("src/components/About.tsx".into(), component_page("About".into()))])
+fn app() -> HashMap<String, Content> {
+    HashMap::from([("src/components/About.tsx".into(), Content::Str(component_page("About".into())))])
 }
 
 fn component_page(name: String) -> String {

@@ -7,7 +7,7 @@ pub struct User {
     pub email: String,
 }
 
-#[derive(Serialize, Deserialize)]
+#[derive(Debug, Clone, Serialize, Deserialize)]
 #[serde(rename_all = "camelCase")]
 pub struct Package {
     pub name: String,
@@ -20,4 +20,11 @@ pub struct Package {
     pub license: String,
     pub dependencies: Value,
     pub dev_dependencies: Value,
+}
+
+#[derive(Debug, Clone)]
+pub enum Content {
+    Str(String),
+    Val(Value),
+    Pkg(Package),
 }

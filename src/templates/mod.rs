@@ -1,4 +1,4 @@
-use crate::libs::types::User;
+use crate::libs::types::{Content, User};
 use clap::ValueEnum;
 use json_value_merge::Merge;
 use serde_json::Value;
@@ -21,7 +21,7 @@ pub struct Template {
     pub tsconfig: Value,
     pub eslintrc: Value,
     pub mit_license: String,
-    pub app: HashMap<String, String>,
+    pub app: HashMap<String, Content>,
 }
 
 impl Template {
