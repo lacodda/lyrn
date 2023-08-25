@@ -3,7 +3,7 @@ use super::types::{Package, User};
 use crate::templates::{self, Framework, Template};
 use clap::Args;
 use std::error::Error;
-use std::fs::{create_dir, File};
+use std::fs::{create_dir, create_dir_all, File};
 use std::io::Write;
 use std::path::PathBuf;
 
@@ -31,12 +31,13 @@ pub fn create_project(args: CreateProjectArgs) -> Result<(), Box<dyn Error>> {
     if args.show {
         return Ok(());
     }
-
+    
     create_dir(&name)?;
     create_package(&name, &template)?;
     create_tsconfig(&name, &template)?;
     create_eslintrc(&name, &template)?;
     create_license(&name, &template)?;
+    create_app(&name, &template)?;
 
     Ok(())
 }
@@ -79,5 +80,20 @@ fn create_license(name: &String, template: &Template) -> Result<(), Box<dyn Erro
     let file_path = PathBuf::from(name).join("LICENSE");
     let mut file = File::create(file_path)?;
     file.write_all(template.mit_license.as_bytes())?;
+    Ok(())
+}
+
+fn create_app(name: &String, template: &Template) -> Result<(), Box<dyn Error>> {
+    for (key, value) in template.app.clone().into_iter() {
+        let mut path_vec: Vec<String> =  key.split("/").map(|s| s.to_string()).collect();
+        let file_name = path_vec.pop().unwrap();
+        path_vec.insert(0, name.to_string());
+        let path = path_vec.join("/");
+        create_dir_all(&path)?;
+        let file_path = PathBuf::from(&path).join(&file_name);
+        let mut file = File::create(file_path)?;
+        file.write_all(value.as_bytes())?;
+    }
+
     Ok(())
 }

@@ -2,6 +2,7 @@ use crate::libs::types::User;
 use clap::ValueEnum;
 use json_value_merge::Merge;
 use serde_json::Value;
+use std::collections::HashMap;
 
 pub mod common;
 pub mod react;
@@ -20,6 +21,7 @@ pub struct Template {
     pub tsconfig: Value,
     pub eslintrc: Value,
     pub mit_license: String,
+    pub app: HashMap<String, String>,
 }
 
 impl Template {
@@ -30,6 +32,7 @@ impl Template {
         template.dev_dependencies.merge(self.dev_dependencies);
         template.tsconfig.merge(self.tsconfig);
         template.eslintrc.merge(self.eslintrc);
+        template.app = self.app;
         template
     }
 }

@@ -1,5 +1,6 @@
 use super::Template;
 use serde_json::{json, Value};
+use std::collections::HashMap;
 
 pub fn get() -> Template {
     Template {
@@ -7,6 +8,7 @@ pub fn get() -> Template {
         dev_dependencies: dev_dependencies(),
         tsconfig: tsconfig(),
         eslintrc: eslintrc(),
+        app: app(),
         ..Template::default()
     }
 }
@@ -47,4 +49,49 @@ fn eslintrc() -> Value {
           "react/prop-types": "off"
         }
     })
+}
+
+fn app() -> HashMap<String, String> {
+    HashMap::from([("src/components/About.tsx".into(), component_page("About".into()))])
+}
+
+fn component_page(name: String) -> String {
+    format!(
+        r###"import React from 'react';
+import styled from 'styled-components';
+
+const Container = styled.div`
+  display: grid;
+  justify-content: center;
+  align-content: center;
+  background: var(--gr-lime-blue);
+  width: 100%;
+  height: 100%;
+`;
+
+const Title = styled.div`
+  display: flex;
+  h1 {{
+    font-size: var(--font-size-h1);
+    width: max-content;
+    text-transform: uppercase;
+    background: var(--teal);
+    background: var(--gr-teal-blue);
+    -webkit-background-clip: text;
+    -webkit-text-fill-color: transparent;
+  }}
+`;
+
+export const {}: React.FC = () => (
+  <Container>
+    <Title>
+      <h1>{}</h1>
+    </Title>
+  </Container>
+);
+
+export default {};
+"###,
+        name, name, name,
+    )
 }
