@@ -1,5 +1,4 @@
 use super::Template;
-use crate::libs::types::{Tsconfig, TsconfigCompilerOptions};
 use serde_json::{json, Value};
 
 pub fn get() -> Template {
@@ -31,14 +30,12 @@ fn dev_dependencies() -> Value {
     })
 }
 
-fn tsconfig() -> Tsconfig {
-    Tsconfig {
-        compiler_options: TsconfigCompilerOptions {
-            jsx: Some("react".into()),
-            ..TsconfigCompilerOptions::default()
-        },
-        ..Tsconfig::default()
-    }
+fn tsconfig() -> Value {
+    json!({
+        "compilerOptions": {
+          "jsx": "react"
+        }
+    })
 }
 
 fn eslintrc() -> Value {

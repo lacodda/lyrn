@@ -1,4 +1,4 @@
-use crate::libs::types::{Tsconfig, User};
+use crate::libs::types::User;
 use clap::ValueEnum;
 use json_value_merge::Merge;
 use serde_json::Value;
@@ -17,7 +17,7 @@ pub struct Template {
     pub scripts: Value,
     pub dependencies: Value,
     pub dev_dependencies: Value,
-    pub tsconfig: Tsconfig,
+    pub tsconfig: Value,
     pub eslintrc: Value,
     pub mit_license: String,
 }
@@ -28,8 +28,8 @@ impl Template {
         template.scripts.merge(self.scripts);
         template.dependencies.merge(self.dependencies);
         template.dev_dependencies.merge(self.dev_dependencies);
+        template.tsconfig.merge(self.tsconfig);
         template.eslintrc.merge(self.eslintrc);
-        template.tsconfig = self.tsconfig.merge(&common.tsconfig);
         template
     }
 }
