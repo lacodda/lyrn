@@ -1,4 +1,4 @@
-use super::helpers::{merge_opt_hashmaps, merge_opt_vectors, opt_ordered_map, ordered_map};
+use super::helpers::{merge_opt_hashmaps, merge_opt_vectors, opt_ordered_map};
 use serde::{Deserialize, Serialize};
 use serde_json::Value;
 use std::collections::HashMap;
@@ -16,14 +16,12 @@ pub struct Package {
     pub version: String,
     pub description: String,
     pub main: String,
-    pub scripts: HashMap<String, String>,
+    pub scripts: Value,
     pub keywords: Vec<String>,
     pub author: String,
     pub license: String,
-    #[serde(serialize_with = "ordered_map")]
-    pub dependencies: HashMap<String, String>,
-    #[serde(serialize_with = "ordered_map")]
-    pub dev_dependencies: HashMap<String, String>,
+    pub dependencies: Value,
+    pub dev_dependencies: Value,
 }
 
 #[derive(Debug, Default, Clone, Serialize, Deserialize)]

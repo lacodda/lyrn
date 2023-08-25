@@ -4,7 +4,7 @@ use std::collections::{BTreeMap, HashMap};
 use std::error::Error;
 use std::process::Command;
 
-pub fn ordered_map<S, K: Ord + Serialize, V: Serialize>(value: &HashMap<K, V>, serializer: S) -> Result<S::Ok, S::Error>
+pub fn _ordered_map<S, K: Ord + Serialize, V: Serialize>(value: &HashMap<K, V>, serializer: S) -> Result<S::Ok, S::Error>
 where
     S: Serializer,
 {
@@ -21,7 +21,7 @@ where
     ordered.serialize(serializer)
 }
 
-pub fn to_hash_map(value: &[(&str, &str)]) -> HashMap<String, String> {
+pub fn _to_hash_map(value: &[(&str, &str)]) -> HashMap<String, String> {
     return value.into_iter().map(|(p, v)| (p.to_string(), v.to_string())).collect::<HashMap<_, _>>();
 }
 

@@ -1,6 +1,7 @@
 use crate::libs::types::{Tsconfig, User, Eslintrc};
 use clap::ValueEnum;
-use std::collections::HashMap;
+use serde_json::Value;
+use json_value_merge::Merge;
 
 pub mod common;
 pub mod react;
@@ -13,9 +14,9 @@ pub enum Framework {
 
 #[derive(Debug, Default, Clone)]
 pub struct Template {
-    pub scripts: HashMap<String, String>,
-    pub dependencies: HashMap<String, String>,
-    pub dev_dependencies: HashMap<String, String>,
+    pub scripts: Value,
+    pub dependencies: Value,
+    pub dev_dependencies: Value,
     pub tsconfig: Tsconfig,
     pub eslintrc: Eslintrc,
     pub mit_license: String,
@@ -24,9 +25,9 @@ pub struct Template {
 impl Template {
     fn merge(self, common: &Template) -> Template {
         let mut template: Template = common.clone();
-        template.scripts.extend(self.scripts.into_iter());
-        template.dependencies.extend(self.dependencies.into_iter());
-        template.dev_dependencies.extend(self.dev_dependencies.into_iter());
+        template.scripts.merge(self.scripts);
+        template.dependencies.merge(self.dependencies);
+        template.dev_dependencies.merge(self.dev_dependencies);
         template.tsconfig = self.tsconfig.merge(&common.tsconfig);
         template.eslintrc = self.eslintrc.merge(&common.eslintrc);
         template
