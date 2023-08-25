@@ -1,4 +1,3 @@
-use super::helpers::{merge_opt_hashmaps, merge_opt_vectors, opt_ordered_map};
 use serde::{Deserialize, Serialize};
 use serde_json::Value;
 use std::collections::HashMap;
@@ -110,40 +109,6 @@ impl Tsconfig {
         Tsconfig {
             compile_on_save: self.compile_on_save.or(common.compile_on_save),
             compiler_options: self.compiler_options.merge(&common.compiler_options),
-        }
-    }
-}
-
-#[derive(Debug, Default, Clone, Serialize, Deserialize)]
-#[serde(rename_all = "camelCase")]
-pub struct Eslintrc {
-    #[serde(skip_serializing_if = "Option::is_none")]
-    pub extends: Option<Vec<String>>,
-    #[serde(skip_serializing_if = "Option::is_none", serialize_with = "opt_ordered_map")]
-    pub rules: Option<HashMap<String, Value>>,
-    #[serde(skip_serializing_if = "Option::is_none")]
-    pub ignore_patterns: Option<Vec<String>>,
-    #[serde(skip_serializing_if = "Option::is_none", serialize_with = "opt_ordered_map")]
-    pub env: Option<HashMap<String, bool>>,
-    #[serde(skip_serializing_if = "Option::is_none", serialize_with = "opt_ordered_map")]
-    pub parser_options: Option<HashMap<String, String>>,
-    #[serde(skip_serializing_if = "Option::is_none", serialize_with = "opt_ordered_map")]
-    pub settings: Option<HashMap<String, Value>>,
-    #[serde(skip_serializing_if = "Option::is_none")]
-    pub plugins: Option<Vec<String>>,
-}
-
-impl Eslintrc {
-    pub fn merge(self, common: &Eslintrc) -> Eslintrc {
-        let _eslintrc: Eslintrc = common.clone();
-        Eslintrc {
-            extends: merge_opt_vectors(_eslintrc.extends, self.extends),
-            rules: merge_opt_hashmaps(_eslintrc.rules, self.rules),
-            ignore_patterns: merge_opt_vectors(_eslintrc.ignore_patterns, self.ignore_patterns),
-            env: merge_opt_hashmaps(_eslintrc.env, self.env),
-            parser_options: merge_opt_hashmaps(_eslintrc.parser_options, self.parser_options),
-            settings: merge_opt_hashmaps(_eslintrc.settings, self.settings),
-            plugins: merge_opt_vectors(_eslintrc.plugins, self.plugins),
         }
     }
 }

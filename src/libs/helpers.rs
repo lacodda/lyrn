@@ -12,7 +12,7 @@ where
     ordered.serialize(serializer)
 }
 
-pub fn opt_ordered_map<S, K: Ord + Serialize, V: Serialize>(value: &Option<HashMap<K, V>>, serializer: S) -> Result<S::Ok, S::Error>
+pub fn _opt_ordered_map<S, K: Ord + Serialize, V: Serialize>(value: &Option<HashMap<K, V>>, serializer: S) -> Result<S::Ok, S::Error>
 where
     S: Serializer,
 {
@@ -25,7 +25,7 @@ pub fn _to_hash_map(value: &[(&str, &str)]) -> HashMap<String, String> {
     return value.into_iter().map(|(p, v)| (p.to_string(), v.to_string())).collect::<HashMap<_, _>>();
 }
 
-pub fn merge_opt_hashmaps<T>(a: Option<HashMap<String, T>>, b: Option<HashMap<String, T>>) -> Option<HashMap<String, T>> {
+pub fn _merge_opt_hashmaps<T>(a: Option<HashMap<String, T>>, b: Option<HashMap<String, T>>) -> Option<HashMap<String, T>> {
     if a.is_some() && b.is_some() {
         let mut base = a.unwrap();
         base.extend(b.unwrap().into_iter());
@@ -34,7 +34,7 @@ pub fn merge_opt_hashmaps<T>(a: Option<HashMap<String, T>>, b: Option<HashMap<St
     b.or(a)
 }
 
-pub fn merge_opt_vectors<T>(a: Option<Vec<T>>, b: Option<Vec<T>>) -> Option<Vec<T>> {
+pub fn _merge_opt_vectors<T>(a: Option<Vec<T>>, b: Option<Vec<T>>) -> Option<Vec<T>> {
     if a.is_some() && b.is_some() {
         let mut base = a.unwrap();
         base.extend(b.unwrap());

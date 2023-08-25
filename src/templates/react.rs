@@ -1,7 +1,6 @@
 use super::Template;
-use crate::libs::types::{Eslintrc, Tsconfig, TsconfigCompilerOptions};
+use crate::libs::types::{Tsconfig, TsconfigCompilerOptions};
 use serde_json::{json, Value};
-use std::collections::HashMap;
 
 pub fn get() -> Template {
     Template {
@@ -42,10 +41,13 @@ fn tsconfig() -> Tsconfig {
     }
 }
 
-fn eslintrc() -> Eslintrc {
-    Eslintrc {
-        extends: Some(vec!["plugin:react/recommended".into()]),
-        rules: Some(HashMap::from([("react/prop-types".into(), json!("off"))])),
-        ..Eslintrc::default()
-    }
+fn eslintrc() -> Value {
+    json!({
+        "extends": [
+          "plugin:react/recommended"
+        ],
+        "rules": {
+          "react/prop-types": "off"
+        }
+    })
 }

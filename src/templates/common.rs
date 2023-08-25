@@ -1,5 +1,5 @@
 use super::Template;
-use crate::libs::types::{Eslintrc, Tsconfig, TsconfigCompilerOptions, User};
+use crate::libs::types::{Tsconfig, TsconfigCompilerOptions, User};
 use chrono::Datelike;
 use serde_json::{json, Value};
 use std::collections::HashMap;
@@ -90,69 +90,71 @@ fn tsconfig() -> Tsconfig {
     }
 }
 
-fn eslintrc() -> Eslintrc {
-    Eslintrc {
-        extends: Some(vec!["eslint:recommended".into(), "standard-with-typescript".into()]),
-        rules: Some(HashMap::from([
-            ("arrow-body-style".into(), json!(1)),
-            ("camelcase".into(), json!(1)),
-            ("comma-dangle".into(), json!(["error", "always-multiline"])),
-            ("import/no-extraneous-dependencies".into(), json!(["off", { "devDependencies": false }])),
-            ("import/prefer-default-export".into(), json!(0)),
-            ("indent".into(), json!(["error", 2, { "SwitchCase": 1 }])),
-            ("linebreak-style".into(), json!(["error", "unix"])),
-            ("object-curly-spacing".into(), json!(["warn", "always"])),
-            ("prefer-template".into(), json!("off")),
-            ("semi".into(), json!(["error", "always"])),
-            ("quotes".into(), json!(["error", "single"])),
-            ("no-var".into(), json!(1)),
-            ("no-unused-vars".into(), json!(1)),
-            ("no-nested-ternary".into(), json!(1)),
-            ("no-console".into(), json!(1)),
-            ("no-template-curly-in-string".into(), json!(1)),
-            ("no-self-compare".into(), json!(1)),
-            ("no-async-promise-executor".into(), json!("warn")),
-            ("no-debugger".into(), json!("warn")),
-            ("no-multi-spaces".into(), json!("error")),
-            ("no-prototype-builtins".into(), json!("off")),
-            ("no-undef".into(), json!("warn")),
-            ("@typescript-eslint/comma-dangle".into(), json!(["error", "always-multiline"])),
-            ("@typescript-eslint/indent".into(), json!(["error", 2, { "SwitchCase": 1 } ])),
-            (
-                "@typescript-eslint/no-unused-vars".into(),
-                json!(["warn", { "vars": "all", "args": "none", "ignoreRestSiblings": false }]),
-            ),
-            ("@typescript-eslint/no-inferrable-types".into(), json!("off")),
-            ("@typescript-eslint/semi".into(), json!(["error", "always"])),
-            ("@typescript-eslint/space-before-function-paren".into(), json!("off")),
-            ("@typescript-eslint/strict-boolean-expressions".into(), json!("off")),
-            (
-                "@typescript-eslint/member-delimiter-style".into(),
-                json!(["error",
-                  { "multiline": { "delimiter": "semi" }, "singleline": { "delimiter": "comma", "requireLast": false } }
-                ]),
-            ),
-            ("@typescript-eslint/no-empty-interface".into(), json!(["error", { "allowSingleExtends": true }])),
-            ("@typescript-eslint/no-extraneous-class".into(), json!("off")),
-            ("@typescript-eslint/prefer-nullish-coalescing".into(), json!("off")),
-        ])),
-        ignore_patterns: Some(vec!["dist".into(), "node_modules".into()]),
-        env: Some(HashMap::from([("browser".into(), true), ("es6".into(), true), ("node".into(), true)])),
-        parser_options: Some(HashMap::from([
-            ("project".into(), "./tsconfig.json".into()),
-            ("ecmaVersion".into(), "latest".into()),
-            ("sourceType".into(), "module".into()),
-        ])),
-        settings: Some(HashMap::from([(
-            "import/resolver".into(),
-            json!({
-              "node": {
-                "extensions": [".js", ".jsx", ".ts", ".tsx"]
-              }
-            }),
-        )])),
-        ..Eslintrc::default()
-    }
+fn eslintrc() -> Value {
+    json!({
+        "extends": [
+          "eslint:recommended",
+          "standard-with-typescript"
+        ],
+        "rules": {
+          "arrow-body-style": 1,
+          "camelcase": 1,
+          "comma-dangle": ["error", "always-multiline"],
+          "import/no-extraneous-dependencies": ["off", { "devDependencies": false }],
+          "import/prefer-default-export": 0,
+          "indent": ["error", 2, { "SwitchCase": 1 }],
+          "linebreak-style": ["error", "unix"],
+          "object-curly-spacing": ["warn", "always"],
+          "prefer-template": "off",
+          "semi": ["error", "always"],
+          "quotes": ["error", "single"],
+          "no-var": 1,
+          "no-unused-vars": 1,
+          "no-nested-ternary": 1,
+          "no-console": 1,
+          "no-template-curly-in-string": 1,
+          "no-self-compare": 1,
+          "no-async-promise-executor": "warn",
+          "no-debugger": "warn",
+          "no-multi-spaces": ["error"],
+          "no-prototype-builtins": "off",
+          "no-undef": "warn",
+          "@typescript-eslint/comma-dangle": ["error", "always-multiline"],
+          "@typescript-eslint/indent": ["error", 2, { "SwitchCase": 1 } ],
+          "@typescript-eslint/no-unused-vars": ["warn", { "vars": "all", "args": "none", "ignoreRestSiblings": false }],
+          "@typescript-eslint/no-inferrable-types": "off",
+          "@typescript-eslint/semi": ["error", "always"],
+          "@typescript-eslint/space-before-function-paren": "off",
+          "@typescript-eslint/strict-boolean-expressions": "off",
+          "@typescript-eslint/member-delimiter-style": ["error",
+            {
+              "multiline": { "delimiter": "semi" },
+              "singleline": { "delimiter": "comma", "requireLast": false }
+            }
+          ],
+          "@typescript-eslint/no-empty-interface": ["error", { "allowSingleExtends": true }],
+          "@typescript-eslint/no-extraneous-class": "off",
+          "@typescript-eslint/prefer-nullish-coalescing": "off"
+        },
+        "ignorePatterns": ["dist", "node_modules"],
+        "env": {
+          "browser": true,
+          "es6": true,
+          "node": true
+        },
+        "parserOptions": {
+          "ecmaVersion": "latest",
+          "sourceType": "module",
+          "project": "./tsconfig.json"
+        },
+        "settings": {
+          "import/resolver": {
+            "node": {
+              "extensions": [".js", ".jsx", ".ts", ".tsx"]
+            }
+          }
+        }
+    })
 }
 
 fn mit_license(user: &User) -> String {
