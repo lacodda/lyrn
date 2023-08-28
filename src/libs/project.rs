@@ -1,6 +1,6 @@
 use super::helpers::get_git_user;
-use super::types::{Content, Package, User};
-use crate::templates::{self, Framework, Template};
+use super::types::{Content, Package};
+use crate::templates::{Framework, ProjectProps, Template};
 use clap::Args;
 use std::collections::HashMap;
 use std::error::Error;
@@ -26,9 +26,13 @@ pub struct CreateProjectArgs {
 }
 
 pub fn create_project(args: CreateProjectArgs) -> Result<(), Box<dyn Error>> {
-    let user: User = get_git_user()?;
-    let name = args.name.to_string();
-    let template = templates::get(&user, &args.framework);
+    let project_props: ProjectProps = ProjectProps {
+        name: args.name,
+        framework: args.framework,
+        user: get_git_user()?,
+    };
+    let name = project_props.name.clone();
+    let template = project_props.get_template();
     let mut project: HashMap<String, Content> = HashMap::new();
     project.insert("package.json".into(), Content::Pkg(package(&name, &template)));
     project.insert("tsconfig.json".into(), Content::Val(template.tsconfig));
@@ -43,7 +47,7 @@ pub fn create_project(args: CreateProjectArgs) -> Result<(), Box<dyn Error>> {
     for (key, value) in project.clone().into_iter() {
         let mut path_vec: Vec<String> = key.split("/").map(|s| s.to_string()).collect();
         let file_name = path_vec.pop().unwrap();
-        path_vec.insert(0, name.to_string());
+        path_vec.insert(0, name.clone());
         let path = path_vec.join("/");
         let file_path = PathBuf::from(&path).join(&file_name);
         create_dir_all(&path)?;

@@ -1,16 +1,16 @@
-use super::Template;
+use super::{ProjectProps, Template};
 use crate::libs::types::User;
 use chrono::Datelike;
 use serde_json::{json, Value};
 
-pub fn get(user: &User) -> Template {
+pub fn get(project: &ProjectProps) -> Template {
     Template {
         scripts: scripts(),
         dependencies: dependencies(),
         dev_dependencies: dev_dependencies(),
         tsconfig: tsconfig(),
         eslintrc: eslintrc(),
-        mit_license: mit_license(user),
+        mit_license: mit_license(&project.user),
         ..Template::default()
     }
 }

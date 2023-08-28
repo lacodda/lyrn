@@ -52,10 +52,19 @@ impl Templates {
     }
 }
 
-pub fn get(user: &User, framework: &Framework) -> Template {
-    Templates {
-        common: common::get(user),
-        react: react::get(),
+#[derive(Debug, Clone)]
+pub struct ProjectProps {
+    pub name: String,
+    pub framework: Framework,
+    pub user: User,
+}
+
+impl ProjectProps {
+    pub fn get_template(self) -> Template {
+        Templates {
+            common: common::get(&self),
+            react: react::get(&self),
+        }
+        .get(&self.framework)
     }
-    .get(framework)
 }
