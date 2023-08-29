@@ -52,10 +52,9 @@ fn eslintrc() -> Value {
     })
 }
 
-fn app(project: &ProjectProps) -> HashMap<String, Content> {
+fn app(_project: &ProjectProps) -> HashMap<String, Content> {
     HashMap::from([
         ("src/bootstrap.tsx".into(), Content::Str(bootstrap())),
-        ("src/index.html".into(), Content::Str(index(&project.name))),
         ("src/components/App.tsx".into(), Content::Str(container_component("App".into()))),
         ("src/components/Home.tsx".into(), Content::Str(home_page("Home".into()))),
         ("src/components/About.tsx".into(), Content::Str(component_page("About".into()))),
@@ -78,29 +77,6 @@ createRoot(document.getElementById('app')).render(
 );
 "###
     .into()
-}
-
-fn index(name: &String) -> String {
-    format!(
-        r###"<!DOCTYPE html>
-<html lang="en">
-  <head>
-    <meta charset="utf-8">
-    <meta http-equiv="X-UA-Compatible" content="IE=edge">
-    <meta name="viewport" content="width=device-width,initial-scale=1.0">
-    <title>{}</title>
-  </head>
-  <body>
-    <noscript>
-      <strong>We're sorry but {} doesn't work properly without JavaScript enabled. Please enable it to continue.</strong>
-    </noscript>
-    <div id="app"></div>
-    <!-- built files will be auto injected -->
-  </body>
-</html>
-"###,
-        name, name
-    )
 }
 
 fn component_page(name: String) -> String {

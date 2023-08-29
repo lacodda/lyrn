@@ -20,7 +20,9 @@ pub struct Template {
     pub dev_dependencies: Value,
     pub tsconfig: Value,
     pub eslintrc: Value,
+    pub readme: String,
     pub mit_license: String,
+    pub index: String,
     pub app: HashMap<String, Content>,
 }
 

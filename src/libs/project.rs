@@ -37,7 +37,9 @@ pub fn create_project(args: CreateProjectArgs) -> Result<(), Box<dyn Error>> {
     project.insert("package.json".into(), Content::Pkg(package(&name, &template)));
     project.insert("tsconfig.json".into(), Content::Val(template.tsconfig));
     project.insert(".eslintrc.json".into(), Content::Val(template.eslintrc));
+    project.insert("README.md".into(), Content::Str(template.readme));
     project.insert("LICENSE".into(), Content::Str(template.mit_license));
+    project.insert("src/index.html".into(), Content::Str(template.index));
     project.extend(template.app);
 
     if args.show {

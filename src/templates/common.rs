@@ -10,7 +10,9 @@ pub fn get(project: &ProjectProps) -> Template {
         dev_dependencies: dev_dependencies(),
         tsconfig: tsconfig(),
         eslintrc: eslintrc(),
+        readme: readme(&project),
         mit_license: mit_license(&project.user),
+        index: index(&project.name),
         ..Template::default()
     }
 }
@@ -153,6 +155,51 @@ fn eslintrc() -> Value {
     })
 }
 
+fn readme(project: &ProjectProps) -> String {
+    format!(
+        r###"# {}
+
+[![License: MIT](https://img.shields.io/badge/License-MIT-blue.svg)](https://opensource.org/licenses/MIT)
+
+## Project setup
+```
+npm install
+```
+
+## Usage
+
+### Development server
+```
+npm start
+```
+
+### Production build
+```
+npm run build
+```
+
+You can view the deploy by creating a server in `dist`
+```
+npm run serve
+```
+
+### Lints and fixes files
+```
+npm run lint
+```
+
+## Author
+
+- [{}](https://my-site.com)
+
+## License
+
+This project is open source and available under the [MIT License](LICENSE).
+"###,
+        project.name, project.user.name
+    )
+}
+
 fn mit_license(user: &User) -> String {
     let now = chrono::Utc::now();
     format!(
@@ -181,5 +228,28 @@ SOFTWARE.
         now.year(),
         user.name,
         user.email,
+    )
+}
+
+fn index(name: &String) -> String {
+    format!(
+        r###"<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta http-equiv="X-UA-Compatible" content="IE=edge">
+  <meta name="viewport" content="width=device-width,initial-scale=1.0">
+  <title>{}</title>
+</head>
+<body>
+  <noscript>
+    <strong>We're sorry but {} doesn't work properly without JavaScript enabled. Please enable it to continue.</strong>
+  </noscript>
+  <div id="app"></div>
+  <!-- built files will be auto injected -->
+</body>
+</html>
+"###,
+        name, name
     )
 }
