@@ -22,6 +22,9 @@ pub struct Template {
     pub eslintrc: Value,
     pub readme: String,
     pub mit_license: String,
+    pub gitignore: String,
+    pub postcss_config: String,
+    pub index_d: String,
     pub index: String,
     pub app: HashMap<String, Content>,
 }

@@ -54,6 +54,7 @@ fn eslintrc() -> Value {
 
 fn app(_project: &ProjectProps) -> HashMap<String, Content> {
     HashMap::from([
+        ("src/main.ts".into(), Content::Str(main())),
         ("src/bootstrap.tsx".into(), Content::Str(bootstrap())),
         ("src/components/App.tsx".into(), Content::Str(container_component("App".into()))),
         ("src/components/Home.tsx".into(), Content::Str(home_page("Home".into()))),
@@ -61,6 +62,12 @@ fn app(_project: &ProjectProps) -> HashMap<String, Content> {
         ("src/components/Info.tsx".into(), Content::Str(component_page("Info".into()))),
         ("src/images/logo.svg".into(), Content::Str(logo("React".into()))),
     ])
+}
+
+fn main() -> String {
+    r###"import('./bootstrap'); 
+"###
+    .into()
 }
 
 fn bootstrap() -> String {

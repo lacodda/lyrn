@@ -12,6 +12,9 @@ pub fn get(project: &ProjectProps) -> Template {
         eslintrc: eslintrc(),
         readme: readme(&project),
         mit_license: mit_license(&project.user),
+        gitignore: gitignore(),
+        postcss_config: postcss_config(),
+        index_d: index_d(),
         index: index(&project.name),
         ..Template::default()
     }
@@ -229,6 +232,72 @@ SOFTWARE.
         user.name,
         user.email,
     )
+}
+
+fn gitignore() -> String {
+    r###"# See http://help.github.com/ignore-files/ for more about ignoring files.
+
+# compiled output
+dist
+tmp
+/out-tsc
+
+# dependencies
+node_modules
+
+# IDEs and editors
+/.idea
+.project
+.classpath
+.c9/
+*.launch
+.settings/
+*.sublime-workspace
+
+# IDE - VSCode
+.vscode/*
+!.vscode/settings.json
+!.vscode/tasks.json
+!.vscode/launch.json
+!.vscode/extensions.json
+
+# misc
+/.sass-cache
+/connect.lock
+/coverage
+/libpeerconnection.log
+npm-debug.log
+yarn-error.log
+testem.log
+/typings
+
+# System Files
+.DS_Store
+Thumbs.db
+"###
+    .into()
+}
+
+fn postcss_config() -> String {
+    r###"module.exports = {
+  plugins: {
+    'postcss-preset-env': {
+      browsers: 'last 2 versions',
+    },
+  },
+}; 
+"###
+    .into()
+}
+
+fn index_d() -> String {
+    r###"declare module '*.css';
+declare module '*.png';
+declare module '*.jpg';
+declare module '*.jpeg';
+declare module '*.svg'; 
+"###
+    .into()
 }
 
 fn index(name: &String) -> String {

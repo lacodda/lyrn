@@ -39,6 +39,9 @@ pub fn create_project(args: CreateProjectArgs) -> Result<(), Box<dyn Error>> {
     project.insert(".eslintrc.json".into(), Content::Val(template.eslintrc));
     project.insert("README.md".into(), Content::Str(template.readme));
     project.insert("LICENSE".into(), Content::Str(template.mit_license));
+    project.insert(".gitignore".into(), Content::Str(template.gitignore));
+    project.insert("postcss.config.js".into(), Content::Str(template.postcss_config));
+    project.insert("src/index.d.ts".into(), Content::Str(template.index_d));
     project.insert("src/index.html".into(), Content::Str(template.index));
     project.extend(template.app);
 
