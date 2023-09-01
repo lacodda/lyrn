@@ -32,7 +32,9 @@ pub struct Template {
 impl Template {
     fn merge(self, common: &Template) -> Template {
         let mut template: Template = common.clone();
-        template.scripts.merge(self.scripts);
+        if !self.scripts.is_null() {
+            template.scripts.merge(self.scripts);
+        }
         template.dependencies.merge(self.dependencies);
         template.dev_dependencies.merge(self.dev_dependencies);
         template.tsconfig.merge(self.tsconfig);

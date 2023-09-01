@@ -1,5 +1,6 @@
 use super::types::User;
 use serde::{Serialize, Serializer};
+use spinners::{Spinner, Spinners};
 use std::collections::{BTreeMap, HashMap};
 use std::error::Error;
 use std::process::Command;
@@ -50,4 +51,18 @@ pub fn get_git_user() -> Result<User, Box<dyn Error>> {
         name: String::from_utf8_lossy(&user_name.stdout).trim().to_string(),
         email: String::from_utf8_lossy(&user_email.stdout).trim().to_string(),
     })
+}
+
+pub fn clear_console() -> Result<(), Box<dyn Error>> {
+    if cfg!(windows) {
+        print!("{esc}[2J{esc}[1;1H", esc = 27 as char);
+    } else {
+        print!("{esc}[2J{esc}[1;1H", esc = 155 as char);
+    }
+    Ok(())
+}
+
+pub fn spinner_start(msg: &str) -> Result<Spinner, Box<dyn Error>> {
+    clear_console()?;
+    Ok(Spinner::new(Spinners::Dots12, msg.into()))
 }
