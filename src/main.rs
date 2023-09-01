@@ -1,8 +1,9 @@
 mod commands;
 mod libs;
 mod templates;
+mod tools;
 use clap::{Parser, Subcommand};
-use commands::create;
+use commands::{create, start};
 use std::error::Error;
 
 #[derive(Debug, Parser)]
@@ -17,6 +18,7 @@ struct Cli {
 enum Commands {
     #[command(arg_required_else_help = true)]
     Create(create::CreateArgs),
+    Start(start::StartArgs),
 }
 
 fn main() -> Result<(), Box<dyn Error>> {
@@ -24,5 +26,6 @@ fn main() -> Result<(), Box<dyn Error>> {
 
     match cli.command {
         Commands::Create(args) => create::cmd(args),
+        Commands::Start(args) => start::cmd(args),
     }
 }

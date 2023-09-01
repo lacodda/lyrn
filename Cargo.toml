@@ -15,5 +15,7 @@ chrono = "0.4.26"
 clap = { version = "4.3.21", features = ["derive"] }
 inquire = "0.6.2"
 json_value_merge = "1.1.2"
+local-ip-address = "0.5.4"
 serde = { version = "1.0.183", features = ["derive"] }
 serde_json = "1.0.104"
+spinners = "4.1.0"
