@@ -54,11 +54,13 @@ pub fn get_git_user() -> Result<User, Box<dyn Error>> {
 }
 
 pub fn clear_console() -> Result<(), Box<dyn Error>> {
-    if cfg!(windows) {
-        print!("{esc}[2J{esc}[1;1H", esc = 27 as char);
-    } else {
-        print!("{esc}[2J{esc}[1;1H", esc = 155 as char);
-    }
+    #[cfg(windows)]
+    let mut clear_cmd: Command = Command::new("cmd").arg("/c").arg("cls");
+
+    #[cfg(not(windows))]
+    let mut clear_cmd: Command = Command::new("clear");
+
+    clear_cmd.status().unwrap();
     Ok(())
 }
 
