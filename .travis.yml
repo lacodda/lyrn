@@ -3,7 +3,12 @@ compiler: clang
 language: node_js
 
 node_js:
+  - "9"
   - "8"
+
+os:
+  - linux
+  - osx
 
 branches:
   only:
@@ -14,6 +19,3 @@ install:
 
 script:
   - travis_retry npm test;
-
-after_success: 
-  - travis_retry npm run coverage
