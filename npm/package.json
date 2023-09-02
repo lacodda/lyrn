@@ -1,0 +1,41 @@
+{
+  "name": "lyrn",
+  "version": "0.0.8",
+  "description": "📦✨ Command-line tool for quickly starting the development of your web application",
+  "license": "MIT",
+  "homepage": "https://github.com/lacodda/lyrn",
+  "author": {
+    "name": "Kirill Lakhtachev",
+    "email": "lahtachev@gmail.com",
+    "url": "https://lacodda.com"
+  },
+  "repository": {
+    "type": "git",
+    "url": "git@github.com:lacodda/lyrn.git"
+  },
+  "bugs": {
+    "url": "https://github.com/lacodda/lyrn/issues"
+  },
+  "keywords": [
+    "lyrn",
+    "cli",
+    "tool",
+    "template",
+    "react",
+    "frontend",
+    "webpack",
+    "npm",
+    "package",
+    "rust"
+  ],
+  "main": "binary.js",
+  "scripts": {
+    "postinstall": "node ./install.js"
+  },
+  "bin": {
+    "lyrn": "./run.js"
+  },
+  "dependencies": {
+    "binary-install": "^1.0.1"
+  }
+}
