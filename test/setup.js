@@ -2,22 +2,21 @@
 
 process.env.NODE_ENV = 'test';
 const pkg = require('../package.json');
-const path = require('path');
+const { join, resolve } = require('path');
 const chai = require('chai');
-const { remove } = require('fs-extra');
-const { spawn } = require('child_process');
+
+// settings
+const bin = 'node ./bin/lyrn';
+const tmpDir = 'tmp';
+const repoUrl = 'https://github.com/lacodda/test.git';
 
 // globals
 global.pkg = pkg;
-global.spawn = spawn;
+global.assert = chai.assert;
 global.expect = chai.expect;
 global.chai = chai;
-global.lyrn = './bin/lyrn';
-global.testTempFolder = 'tmp';
-global.testPath = path.join(__dirname, testTempFolder);
-global.createFilePath = (name) => path.join(__dirname, testTempFolder, name);
-global.removeFolder = (name) => remove(name).catch(err => {
-  console.log(err);
-  throw err;
-});
-global.repoUrl = 'https://github.com/lacodda/test.git';
+global.bin = bin;
+global.repoUrl = repoUrl;
+global.tmpPath = resolve(join(__dirname, tmpDir));
+
+global.getTmpPath = (name) => resolve(join(tmpPath, name));
