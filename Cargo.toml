@@ -1,0 +1,21 @@
+[package]
+name = "lyrn"
+version = "1.0.0"
+edition = "2021"
+description = "📦✨ Command-line tool for quickly starting the development of your web application"
+repository = "https://github.com/lacodda/lyrn.git"
+authors = ["Kirill Lakhtachev <lahtachev@gmail.com> (https://lacodda.com)"]
+readme = "README.md"
+license = "MIT"
+keywords = ["cli", "tool", "template"]
+categories = ["cli"]
+
+[dependencies]
+chrono = "0.4.26"
+clap = { version = "4.3.21", features = ["derive"] }
+inquire = "0.6.2"
+json_value_merge = "1.1.2"
+local-ip-address = "0.5.4"
+serde = { version = "1.0.183", features = ["derive"] }
+serde_json = "1.0.104"
+spinners = "4.1.0"
