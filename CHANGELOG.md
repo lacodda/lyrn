@@ -35,10 +35,12 @@
 
 ### 🛟 Miscellaneous Tasks
 
+- Fix github action "release"
 - Add github action "release" and cliff.toml
 
 ### 🛠️ Bug Fixes
 
+- Fix clear_console function for windows
 - Fixed function clear_console
 - Added sorting list of dependencies
 
