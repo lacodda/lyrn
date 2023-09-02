@@ -1,9 +1,8 @@
 {
   "name": "lyrn",
   "version": "0.0.8",
-  "description": "📦✨ Command line tool for rapid starting the development of your web application",
+  "description": "📦✨ Command-line tool for quickly starting the development of your web application",
   "license": "MIT",
-  "main": "npm/binary.js",
   "homepage": "https://github.com/lacodda/lyrn",
   "author": {
     "name": "Kirill Lakhtachev",
@@ -18,20 +17,24 @@
     "url": "https://github.com/lacodda/lyrn/issues"
   },
   "keywords": [
+    "lyrn",
     "cli",
     "tool",
-    "template"
+    "template",
+    "react",
+    "frontend",
+    "webpack",
+    "npm",
+    "package",
+    "rust"
   ],
+  "main": "binary.js",
   "scripts": {
-    "postinstall": "node npm/install.js"
+    "postinstall": "node ./install.js"
   },
-  "preferGlobal": true,
   "bin": {
-    "lyrn": "npm/run.js"
+    "lyrn": "./run.js"
   },
-  "files": [
-    "npm/"
-  ],
   "dependencies": {
     "binary-install": "^1.0.1"
   }

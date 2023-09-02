@@ -2,7 +2,7 @@
 name = "lyrn"
 version = "0.1.0"
 edition = "2021"
-description = "📦✨ Command line tool for rapid starting the development of your web application"
+description = "📦✨ Command-line tool for quickly starting the development of your web application"
 repository = "https://github.com/lacodda/lyrn.git"
 authors = ["Kirill Lakhtachev <lahtachev@gmail.com> (https://lacodda.com)"]
 readme = "README.md"

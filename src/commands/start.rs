@@ -15,7 +15,7 @@ pub struct StartArgs {
 }
 
 pub fn cmd(start_args: StartArgs) -> Result<(), Box<dyn Error>> {
-    let script = start_args.script.or(Some("node_modules/lyrn/npm/webpack.js".into()));
+    let script = start_args.script.or(Some("node_modules/lyrn/tools/webpack.js".into()));
     let mut child = Command::new("node")
         .arg(script.unwrap())
         .stdin(Stdio::piped())
