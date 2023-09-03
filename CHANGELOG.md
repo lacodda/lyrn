@@ -1,5 +1,11 @@
 # Changelog
 
+## 🎉 [1.0.1] - 2023-09-03
+
+### 🛠️ Bug Fixes
+
+- The version of lyrn in the package.json has been changed to 1.0.0
+
 ## 🎉 [1.0.0] - 2023-09-02
 
 ### ✨ Features
