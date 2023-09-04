@@ -79,7 +79,14 @@ jobs:
       - name: Move binaries (Linux/MacOS)
         if: matrix.os == 'ubuntu-latest' || matrix.os == 'macos-latest'
         run: |
-          mv ./target/${{ matrix.target }}/release/${{ env.RELEASE_BIN }} ${{ env.RELEASE_DIR }}/${{ env.RELEASE_BIN }}-${{ steps.get_version.outputs.VERSION }}-${{ matrix.target }}/${{ env.RELEASE_BIN }}
+          mv ./target/${{ matrix.target }}/release/${{ env.RELEASE_BIN }} ./${{ env.RELEASE_DIR }}/${{ env.RELEASE_BIN }}-${{ steps.get_version.outputs.VERSION }}-${{ matrix.target }}/${{ env.RELEASE_BIN }}
+          mv ${{ env.RELEASE_ADDS }} ./${{ env.RELEASE_DIR }}/${{ env.RELEASE_BIN }}-${{ steps.get_version.outputs.VERSION }}-${{ matrix.target }}
+
+      - name: Move binaries (Windows)
+        if: matrix.os == 'windows-latest'
+        shell: bash
+        run: |
+          mv ./target/${{ matrix.target }}/release/${{ env.RELEASE_BIN }}.exe ./${{ env.RELEASE_DIR }}/${{ env.RELEASE_BIN }}-${{ steps.get_version.outputs.VERSION }}-${{ matrix.target }}/${{ env.RELEASE_BIN }}.exe
           mv ${{ env.RELEASE_ADDS }} ./${{ env.RELEASE_DIR }}/${{ env.RELEASE_BIN }}-${{ steps.get_version.outputs.VERSION }}-${{ matrix.target }}
 
       - name: Create tarball
