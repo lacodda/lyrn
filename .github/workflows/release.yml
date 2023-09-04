@@ -15,7 +15,7 @@ env:
   LINUX_ARM64_TARGET: aarch64-unknown-linux-musl
 
   # Space separated paths to include in the archive.
-  RELEASE_ADDS: README.md LICENSE-APACHE LICENSE-MIT
+  RELEASE_ADDS: README.md LICENSE
 
 jobs:
   build:
@@ -40,9 +40,6 @@ jobs:
     steps:
       - uses: actions/checkout@v3
       - uses: dtolnay/rust-toolchain@stable
-        with:
-          toolchain: ${{ matrix.rust }}
-          targets: wasm32-unknown-unknown
 
       - name: Query version number
         id: get_version
@@ -82,7 +79,14 @@ jobs:
       - name: Move binaries (Linux/MacOS)
         if: matrix.os == 'ubuntu-latest' || matrix.os == 'macos-latest'
         run: |
-          mv ./target/${{ matrix.target }}/release/${{ env.RELEASE_BIN }} ${{ env.RELEASE_DIR }}/${{ env.RELEASE_BIN }}-${{ steps.get_version.outputs.VERSION }}-${{ matrix.target }}/${{ env.RELEASE_BIN }}
+          mv ./target/${{ matrix.target }}/release/${{ env.RELEASE_BIN }} ./${{ env.RELEASE_DIR }}/${{ env.RELEASE_BIN }}-${{ steps.get_version.outputs.VERSION }}-${{ matrix.target }}/${{ env.RELEASE_BIN }}
+          mv ${{ env.RELEASE_ADDS }} ./${{ env.RELEASE_DIR }}/${{ env.RELEASE_BIN }}-${{ steps.get_version.outputs.VERSION }}-${{ matrix.target }}
+
+      - name: Move binaries (Windows)
+        if: matrix.os == 'windows-latest'
+        shell: bash
+        run: |
+          mv ./target/${{ matrix.target }}/release/${{ env.RELEASE_BIN }}.exe ./${{ env.RELEASE_DIR }}/${{ env.RELEASE_BIN }}-${{ steps.get_version.outputs.VERSION }}-${{ matrix.target }}/${{ env.RELEASE_BIN }}.exe
           mv ${{ env.RELEASE_ADDS }} ./${{ env.RELEASE_DIR }}/${{ env.RELEASE_BIN }}-${{ steps.get_version.outputs.VERSION }}-${{ matrix.target }}
 
       - name: Create tarball

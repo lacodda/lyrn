@@ -55,7 +55,9 @@ pub fn get_git_user() -> Result<User, Box<dyn Error>> {
 
 pub fn clear_console() -> Result<(), Box<dyn Error>> {
     #[cfg(windows)]
-    let mut clear_cmd: Command = Command::new("cmd").arg("/c").arg("cls");
+    let mut clear_cmd = Command::new("cmd");
+    #[cfg(windows)]
+    clear_cmd.arg("/c").arg("cls");
 
     #[cfg(not(windows))]
     let mut clear_cmd: Command = Command::new("clear");

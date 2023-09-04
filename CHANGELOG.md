@@ -1,5 +1,11 @@
 # Changelog
 
+## 🎉 [1.0.1] - 2023-09-03
+
+### 🛠️ Bug Fixes
+
+- The version of lyrn in the package.json has been changed to 1.0.0
+
 ## 🎉 [1.0.0] - 2023-09-02
 
 ### ✨ Features
@@ -35,10 +41,12 @@
 
 ### 🛟 Miscellaneous Tasks
 
+- Fix github action "release"
 - Add github action "release" and cliff.toml
 
 ### 🛠️ Bug Fixes
 
+- Fix clear_console function for windows
 - Fixed function clear_console
 - Added sorting list of dependencies
 
