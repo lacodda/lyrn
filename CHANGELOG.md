@@ -1,5 +1,11 @@
 # Changelog
 
+## 🎉 [1.0.2] - 2023-09-04
+
+### 🛟 Miscellaneous Tasks
+
+- Fix github action "release"
+
 ## 🎉 [1.0.1] - 2023-09-03
 
 ### 🛠️ Bug Fixes
