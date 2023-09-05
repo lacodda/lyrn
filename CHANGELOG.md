@@ -1,5 +1,15 @@
 # Changelog
 
+## 🎉 [1.0.3] - 2023-09-05
+
+### 📖 Documentation
+
+- Added information to the README file
+
+### 🛠️ Bug Fixes
+
+- Fixed bug with displaying content not full screen
+
 ## 🎉 [1.0.2] - 2023-09-04
 
 ### 🛟 Miscellaneous Tasks
