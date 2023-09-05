@@ -486,8 +486,10 @@ fn style_scaffolding() -> String {
   color: var(--black);
 }
 
-#app {
-  display: contents;
+body {
+  & > :not(noscript) {
+    display: contents;
+  }
 }
 "###
     .into()
