@@ -9,17 +9,25 @@
 ## Description
 Lyrn is a command-line tool for quickly starting the development of your web application.
 
-## Installation
+## Install
 
-You can install the package from npm
+You can run the application using the `npx` utility:
+
+```bash
+npx lyrn
+```
+
+Or install the package from npm globally
 
 ```bash
 npm i -g lyrn
 ```
 
+This will make the `lyrn` application globally available in your system
+
 ## Usage
 
-To create the application, use the command:
+To create an application, use the command:
 
 ```bash
 lyrn create project your-app-name -f react
