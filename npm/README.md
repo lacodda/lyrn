@@ -14,7 +14,7 @@ Lyrn is a command-line tool for quickly starting the development of your web app
 You can run the application using the `npx` utility:
 
 ```bash
-npx lyrn
+npx lyrn@latest
 ```
 
 Or install the package from npm globally
