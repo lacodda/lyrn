@@ -1,5 +1,15 @@
 # Changelog
 
+## 🎉 [1.0.4] - 2023-09-06
+
+### 📖 Documentation
+
+- Clarified information in README.md
+
+### 🛠️ Bug Fixes
+
+- Added handling of file missing error when executing "start" command
+
 ## 🎉 [1.0.3] - 2023-09-05
 
 ### 📖 Documentation

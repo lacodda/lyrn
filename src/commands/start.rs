@@ -4,6 +4,7 @@ use clap::Args;
 use local_ip_address::local_ip;
 use spinners::Spinner;
 use std::error::Error;
+use std::fs;
 use std::io::{BufRead, Write};
 use std::process::{Command, Stdio};
 use std::thread;
@@ -15,9 +16,12 @@ pub struct StartArgs {
 }
 
 pub fn cmd(start_args: StartArgs) -> Result<(), Box<dyn Error>> {
-    let script = start_args.script.or(Some("node_modules/lyrn/tools/webpack.js".into()));
+    let script = start_args.script.or(Some("node_modules/lyrn/tools/webpack.js".into())).unwrap();
+    if let Err(_) = fs::metadata(&script) {
+        return Err(format!("File {} does not exist! Run the `start` command only in the project folder.", script).into());
+    }
     let mut child = Command::new("node")
-        .arg(script.unwrap())
+        .arg(&script)
         .stdin(Stdio::piped())
         .stdout(Stdio::piped())
         .spawn()
