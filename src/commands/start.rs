@@ -22,6 +22,7 @@ pub fn cmd(start_args: StartArgs) -> Result<(), Box<dyn Error>> {
     }
     let mut child = Command::new("node")
         .arg(&script)
+        .arg("start")
         .stdin(Stdio::piped())
         .stdout(Stdio::piped())
         .spawn()
