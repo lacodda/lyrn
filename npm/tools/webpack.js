@@ -18,7 +18,7 @@ process.stdin.on('data', function (inputData) {
       start({ config, app_config });
       break;
     case process.argv.includes('build'):
-      build({ config, app_config });
+      build({ config });
       break;
     default:
       process.exit(0);
@@ -46,6 +46,19 @@ function start({ config, app_config }) {
   });
 }
 
-function build({ config, app_config }) {
-  process.exit(0);
+function build({ config }) {
+  webpack(config, (err, stats) => {
+    if (err || stats.hasErrors()) {
+      process.exit(0);
+    }
+
+    console.log('done',
+      JSON.stringify(stats.toJson({
+        colors: true,
+        modules: false,
+        children: false,
+        chunks: false,
+        chunkModules: false,
+      })));
+  });
 }

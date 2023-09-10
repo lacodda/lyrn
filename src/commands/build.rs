@@ -1,28 +1,35 @@
 use crate::libs::helpers::{clear_console, spinner_start};
-use crate::tools::webpack::{self, AppConfig};
+use crate::tools::webpack;
 use clap::Args;
-use local_ip_address::local_ip;
+use serde_json::{from_str, to_string_pretty, Value};
 use spinners::Spinner;
 use std::error::Error;
 use std::fs;
-use std::io::{BufRead, Write};
+use std::io::{BufRead, BufReader, Write};
 use std::process::{Command, Stdio};
 use std::thread;
 
 #[derive(Debug, Args)]
 #[command(args_conflicts_with_subcommands = true)]
-pub struct StartArgs {
+pub struct BuildArgs {
     script: Option<String>,
 }
 
-pub fn cmd(start_args: StartArgs) -> Result<(), Box<dyn Error>> {
-    let script = start_args.script.or(Some("node_modules/lyrn/tools/webpack.js".into())).unwrap();
+pub fn cmd(build_args: BuildArgs) -> Result<(), Box<dyn Error>> {
+    let script = build_args.script.or(Some("node_modules/lyrn/tools/webpack.js".into())).unwrap();
+    let dist_dir = "dist";
+
     if let Err(_) = fs::metadata(&script) {
-        return Err(format!("File {} does not exist! Run the `start` command only in the project folder.", script).into());
+        return Err(format!("File {} does not exist! Run the `build` command only in the project folder.", script).into());
     }
+
+    if fs::metadata(&dist_dir).is_ok() {
+        fs::remove_dir_all(&dist_dir)?;
+    }
+
     let mut child = Command::new("node")
         .arg(&script)
-        .arg("start")
+        .arg("build")
         .stdin(Stdio::piped())
         .stdout(Stdio::piped())
         .spawn()
@@ -30,18 +37,17 @@ pub fn cmd(start_args: StartArgs) -> Result<(), Box<dyn Error>> {
 
     let mut child_stdin: std::process::ChildStdin = child.stdin.take().expect("Failed to open stdin for child process");
     let mut spinner = spinner_start("Loading...").unwrap();
-    let webpack = webpack::get_config_dev();
+    let webpack = webpack::get_config_prod();
     let json_string = serde_json::to_string(&webpack).unwrap();
     child_stdin.write_all(&json_string.as_bytes()).expect("Failed to write to child process stdin");
     drop(child_stdin);
     let stdout = child.stdout.take().expect("Failed to open stdout for child process");
 
     thread::spawn(move || {
-        let reader = std::io::BufReader::new(stdout);
+        let reader = BufReader::new(stdout);
         for line in reader.lines() {
             match line.unwrap().as_str() {
-                "compile" => spinner = spinner_start("Loading...").unwrap(),
-                "done" => done(&mut spinner, &webpack.app_config).unwrap(),
+                done_str if done_str.starts_with("done") => done(&mut spinner, &done_str).unwrap(),
                 _ => (),
             }
         }
@@ -50,12 +56,13 @@ pub fn cmd(start_args: StartArgs) -> Result<(), Box<dyn Error>> {
     Ok(())
 }
 
-fn done(spinner: &mut Spinner, app_config: &AppConfig) -> Result<(), Box<dyn Error>> {
+fn done(spinner: &mut Spinner, done_str: &str) -> Result<(), Box<dyn Error>> {
+    let json_str = done_str.replace("done ", "");
+    let json_value: Value = from_str(json_str.as_str())?;
+    let pretty_json = to_string_pretty(&json_value)?;
     spinner.stop();
     clear_console()?;
-    let local_ip = local_ip().unwrap();
-    println!("🚀 Your app running at:");
-    println!("🔗 Local:    {}://{}:{}", &app_config.protocol, &app_config.host, &app_config.port);
-    println!("🔗 Network:  {}://{}:{}", &app_config.protocol, &local_ip, &app_config.port);
+    println!("{}", pretty_json);
+    println!("📦 Application build completed!");
     Ok(())
 }
