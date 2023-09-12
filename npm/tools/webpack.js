@@ -13,6 +13,19 @@ process.stdin.on('data', function (inputData) {
     config.plugins.push(eval(plugin));
   }
 
+  switch (true) {
+    case process.argv.includes('start'):
+      start({ config, app_config });
+      break;
+    case process.argv.includes('build'):
+      build({ config });
+      break;
+    default:
+      process.exit(0);
+  }
+});
+
+function start({ config, app_config }) {
   const devServerOptions = config.devServer;
   const compiler = webpack(config);
   const server = new WebpackDevServer(devServerOptions, compiler);
@@ -22,13 +35,30 @@ process.stdin.on('data', function (inputData) {
       return;
     }
     console.log('done');
-  })
+  });
   compiler.hooks.compile.tap('serve', () => {
     console.log('compile');
-  })
+  });
   server.start(app_config.port, `${app_config.protocol}://${app_config.host}`, (err) => {
     if (err) {
       process.exit(0);
     }
-  })
-});
+  });
+}
+
+function build({ config }) {
+  webpack(config, (err, stats) => {
+    if (err || stats.hasErrors()) {
+      process.exit(0);
+    }
+
+    console.log('done',
+      JSON.stringify(stats.toJson({
+        colors: true,
+        modules: false,
+        children: false,
+        chunks: false,
+        chunkModules: false,
+      })));
+  });
+}
