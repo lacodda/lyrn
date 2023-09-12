@@ -21,7 +21,11 @@ pub fn get(project: &ProjectProps) -> Template {
 }
 
 fn scripts() -> Value {
-    json!({"start": "lyrn start"})
+    json!({
+        "start": "lyrn start",
+        "build": "lyrn build",
+        "serve": "serve dist"
+    })
 }
 
 fn dependencies() -> Value {

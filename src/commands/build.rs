@@ -1,7 +1,7 @@
-use crate::libs::helpers::{clear_console, spinner_start};
+use crate::libs::helpers::{clear_console, spinner_start, convert_bytes};
 use crate::tools::webpack;
 use clap::Args;
-use serde_json::{from_str, to_string_pretty, Value};
+use serde_json::{from_str, Value};
 use spinners::Spinner;
 use std::error::Error;
 use std::fs;
@@ -41,9 +41,9 @@ pub fn cmd(build_args: BuildArgs) -> Result<(), Box<dyn Error>> {
     let json_string = serde_json::to_string(&webpack).unwrap();
     child_stdin.write_all(&json_string.as_bytes()).expect("Failed to write to child process stdin");
     drop(child_stdin);
-    let stdout = child.stdout.take().expect("Failed to open stdout for child process");
+    let stdout = child.stdout.expect("Failed to open stdout for child process");
 
-    thread::spawn(move || {
+    let handle = thread::spawn(move || {
         let reader = BufReader::new(stdout);
         for line in reader.lines() {
             match line.unwrap().as_str() {
@@ -52,17 +52,27 @@ pub fn cmd(build_args: BuildArgs) -> Result<(), Box<dyn Error>> {
             }
         }
     });
-    let _ = child.wait();
+    handle.join().unwrap();
+
     Ok(())
 }
 
 fn done(spinner: &mut Spinner, done_str: &str) -> Result<(), Box<dyn Error>> {
     let json_str = done_str.replace("done ", "");
     let json_value: Value = from_str(json_str.as_str())?;
-    let pretty_json = to_string_pretty(&json_value)?;
+    let assets = json_value["assets"].as_array().unwrap();
+    
     spinner.stop();
     clear_console()?;
-    println!("{}", pretty_json);
-    println!("📦 Application build completed!");
+
+    println!("✔️ Application build completed!");
+    println!("");
+    println!("{:60} {:10}", "File", "Size");
+    println!("");
+
+    for (_index, item) in assets.iter().enumerate() {
+        println!("{:60} {:10}", item["name"].as_str().unwrap(), convert_bytes(item["size"].as_u64().unwrap()));
+    }
+
     Ok(())
 }

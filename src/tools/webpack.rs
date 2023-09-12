@@ -18,6 +18,7 @@ pub struct AppConfig {
     pub port: i32,
     pub app_name: String,
     pub app_title: String,
+    pub public_path: String,
 }
 
 #[derive(Debug, Clone, Serialize, Deserialize)]
@@ -103,6 +104,7 @@ fn app_config() -> AppConfig {
         port: 8085,
         app_name: "react".into(),
         app_title: "React Boilerplate".into(),
+        public_path: "/".into(),
     }
 }
 
@@ -166,7 +168,7 @@ pub fn config_prod() -> Value {
         "entry": [aliases().main],
         "output": {
           "path": aliases().build,
-          "publicPath": format!("{}://{}:{}/", config.protocol, config.host, config.port),
+          "publicPath": config.public_path,
           "filename": "js/[name].[contenthash].bundle.js",
           "assetModuleFilename": "assets/[hash][ext][query]",
           "chunkFilename": "js/[name].[chunkhash].chunk.js",
