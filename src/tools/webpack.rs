@@ -18,6 +18,7 @@ pub struct AppConfig {
     pub port: i32,
     pub app_name: String,
     pub app_title: String,
+    pub public_path: String,
 }
 
 #[derive(Debug, Clone, Serialize, Deserialize)]
@@ -35,7 +36,7 @@ impl Aliases {
     }
 }
 
-pub fn get() -> WebpackConfig {
+pub fn get_config_dev() -> WebpackConfig {
     WebpackConfig {
         app_config: app_config(),
         config: config_dev(),
@@ -43,11 +44,26 @@ pub fn get() -> WebpackConfig {
             fork_ts_checker_webpack_plugin(),
             copy_webpack_plugin(aliases()),
             html_webpack_plugin(),
-            // mini_css_extract_plugin(),
             hot_module_replacement_plugin(),
             react_refresh_webpack_plugin(),
         ],
         rules: vec![tsx_rule(), style_rule(true), images_rule(), inline_rule()],
+    }
+}
+
+pub fn get_config_prod() -> WebpackConfig {
+    WebpackConfig {
+        app_config: app_config(),
+        config: config_prod(),
+        plugins: vec![
+            fork_ts_checker_webpack_plugin(),
+            copy_webpack_plugin(aliases()),
+            html_webpack_plugin(),
+            mini_css_extract_plugin(),
+            hot_module_replacement_plugin(),
+            react_refresh_webpack_plugin(),
+        ],
+        rules: vec![tsx_rule(), style_rule(false), images_rule(), inline_rule()],
     }
 }
 
@@ -88,6 +104,7 @@ fn app_config() -> AppConfig {
         port: 8085,
         app_name: "react".into(),
         app_title: "React Boilerplate".into(),
+        public_path: "/".into(),
     }
 }
 
@@ -108,7 +125,7 @@ pub fn config_dev() -> Value {
           "alias": aliases_json(),
         },
         "module": {
-            "rules": [],
+          "rules": [],
         },
         "plugins": [],
         "stats": "errors-warnings",
@@ -134,11 +151,49 @@ pub fn config_dev() -> Value {
           },
         },
         "infrastructureLogging": {
-            "level": "warn",
+          "level": "warn",
         },
         "stats": {
           "assets": false,
           "modules": false,
+        },
+      }
+    )
+}
+
+pub fn config_prod() -> Value {
+    let config = app_config();
+    json!({
+        "mode": "production",
+        "entry": [aliases().main],
+        "output": {
+          "path": aliases().build,
+          "publicPath": config.public_path,
+          "filename": "js/[name].[contenthash].bundle.js",
+          "assetModuleFilename": "assets/[hash][ext][query]",
+          "chunkFilename": "js/[name].[chunkhash].chunk.js",
+          "clean": true,
+        },
+        "resolve": {
+          "modules": [aliases().src, "node_modules"],
+          "extensions": [".tsx", ".ts", ".mjs", ".js", ".jsx", ".json", ".wasm", ".css"],
+          "alias": aliases_json(),
+        },
+        "module": {
+          "rules": [],
+        },
+        "plugins": [],
+        "stats": "errors-warnings",
+        "devtool": false,
+        "optimization": {
+          "minimize": false,
+          "sideEffects": true,
+          "concatenateModules": true,
+        },
+        "performance": {
+          "hints": false,
+          "maxEntrypointSize": 512000,
+          "maxAssetSize": 512000,
         },
       }
     )
@@ -233,7 +288,7 @@ new HtmlWebpackPlugin({
     .into()
 }
 
-fn _mini_css_extract_plugin() -> String {
+fn mini_css_extract_plugin() -> String {
     r###"const MiniCssExtractPlugin = require('mini-css-extract-plugin');
 new MiniCssExtractPlugin({
     filename: 'styles/[name].[chunkhash].css',
