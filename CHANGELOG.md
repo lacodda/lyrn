@@ -1,5 +1,16 @@
 # Changelog
 
+## 🎉 [1.1.0] - 2023-09-12
+
+### ✨ Features
+
+- Added command to build build on webpack
+- Added an argument to run the "start" script in webpack
+
+### 🛠️ Bug Fixes
+
+- Fixed the message about the end of the build
+
 ## 🎉 [1.0.4] - 2023-09-06
 
 ### 📖 Documentation
