@@ -1,7 +1,7 @@
 use json_value_merge::Merge;
 use serde::{Deserialize, Serialize};
-use serde_json::{json, Value};
-use std::{env, path::PathBuf};
+use serde_json::{from_str, json, Value};
+use std::{env, error::Error, fs, path::PathBuf};
 
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct WebpackConfig {
@@ -91,10 +91,32 @@ fn aliases() -> Aliases {
 
 fn aliases_json() -> Value {
     let mut aliases_json = json!(aliases());
-    aliases_json.merge(json!({
-        "@": aliases().src
-    }));
+    aliases_json.merge(ts_config_paths("tsconfig.json").unwrap());
     aliases_json
+}
+
+fn ts_config_paths(filename: &str) -> Result<Value, Box<dyn Error>> {
+    let mut config_paths = json!({});
+    let data = fs::read_to_string(PathBuf::from(&filename))?;
+    let json: Value = from_str(&data)?;
+    let mut paths: Value = json["compilerOptions"]["paths"].to_owned();
+    if paths.is_null() {
+        paths = json!({});
+    }
+    paths
+        .as_object()
+        .iter()
+        .flat_map(|s| s.iter())
+        .for_each(|(key, value)| config_paths.merge(json!({key.replace("/*", ""): get_abs_path(&value.get(0).unwrap().to_string().replace("/*", ""))})));
+    let extends = &json["extends"];
+    if extends.is_string() {
+        let extends = json["extends"].as_str().unwrap();
+        println!("string {}", extends);
+        let extended_paths = ts_config_paths(extends)?;
+        config_paths.merge(extended_paths);
+    }
+
+    Ok(config_paths)
 }
 
 fn app_config() -> AppConfig {
