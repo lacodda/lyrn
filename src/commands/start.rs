@@ -30,8 +30,8 @@ pub fn cmd(start_args: StartArgs) -> Result<(), Box<dyn Error>> {
 
     let mut child_stdin: std::process::ChildStdin = child.stdin.take().expect("Failed to open stdin for child process");
     let mut spinner = spinner_start("Loading...").unwrap();
-    let webpack = webpack::get_config_dev();
-    let json_string = serde_json::to_string(&webpack).unwrap();
+    let webpack_config = webpack::get_config_dev();
+    let json_string = serde_json::to_string(&webpack_config).unwrap();
     child_stdin.write_all(&json_string.as_bytes()).expect("Failed to write to child process stdin");
     drop(child_stdin);
     let stdout = child.stdout.take().expect("Failed to open stdout for child process");
@@ -41,7 +41,7 @@ pub fn cmd(start_args: StartArgs) -> Result<(), Box<dyn Error>> {
         for line in reader.lines() {
             match line.unwrap().as_str() {
                 "compile" => spinner = spinner_start("Loading...").unwrap(),
-                "done" => done(&mut spinner, &webpack.app_config).unwrap(),
+                "done" => done(&mut spinner, &webpack_config.app_config).unwrap(),
                 _ => (),
             }
         }
