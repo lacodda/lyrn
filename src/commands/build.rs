@@ -37,8 +37,8 @@ pub fn cmd(build_args: BuildArgs) -> Result<(), Box<dyn Error>> {
 
     let mut child_stdin: std::process::ChildStdin = child.stdin.take().expect("Failed to open stdin for child process");
     let mut spinner = spinner_start("Loading...").unwrap();
-    let webpack = webpack::get_config_prod();
-    let json_string = serde_json::to_string(&webpack).unwrap();
+    let webpack_config = webpack::get_config_prod();
+    let json_string = serde_json::to_string(&webpack_config).unwrap();
     child_stdin.write_all(&json_string.as_bytes()).expect("Failed to write to child process stdin");
     drop(child_stdin);
     let stdout = child.stdout.expect("Failed to open stdout for child process");
