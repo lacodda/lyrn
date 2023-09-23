@@ -1,10 +1,28 @@
 # Changelog
 
+## 🎉 [1.1.1] - 2023-09-23
+
+### ✨ Features
+
+- Added function for collecting paths from a tsconfig.json file
+
+### 🎛️ Refactor
+
+- Changed variable name "webpack" to "webpack_config"
+
+### 📖 Documentation
+
+- Added information to the README file
+
+### 🛠️ Bug Fixes
+
+- Fixed generation of paths in tsconfig
+
 ## 🎉 [1.1.0] - 2023-09-12
 
 ### ✨ Features
 
-- Added command to build build on webpack
+- Added command to build on webpack
 - Added an argument to run the "start" script in webpack
 
 ### 🛠️ Bug Fixes
