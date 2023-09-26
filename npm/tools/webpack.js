@@ -4,7 +4,7 @@ const webpack = require('webpack');
 const WebpackDevServer = require('webpack-dev-server');
 
 process.stdin.on('data', function (inputData) {
-  const { config, app_config, plugins, rules } = JSON.parse(inputData);
+  const { config, project_config, plugins, rules } = JSON.parse(inputData);
 
   for (const rule of rules) {
     config.module.rules.push(eval(rule));
@@ -15,7 +15,7 @@ process.stdin.on('data', function (inputData) {
 
   switch (true) {
     case process.argv.includes('start'):
-      start({ config, app_config });
+      start({ config, project_config });
       break;
     case process.argv.includes('build'):
       build({ config });
@@ -25,7 +25,7 @@ process.stdin.on('data', function (inputData) {
   }
 });
 
-function start({ config, app_config }) {
+function start({ config, project_config }) {
   const devServerOptions = config.devServer;
   const compiler = webpack(config);
   const server = new WebpackDevServer(devServerOptions, compiler);
@@ -39,7 +39,7 @@ function start({ config, app_config }) {
   compiler.hooks.compile.tap('serve', () => {
     console.log('compile');
   });
-  server.start(app_config.port, `${app_config.protocol}://${app_config.host}`, (err) => {
+  server.start(project_config.dev.port, `${project_config.dev.protocol}://${project_config.dev.host}`, (err) => {
     if (err) {
       process.exit(0);
     }

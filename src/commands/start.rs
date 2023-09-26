@@ -1,5 +1,5 @@
 use crate::libs::helpers::{clear_console, spinner_start};
-use crate::tools::webpack::{self, AppConfig};
+use crate::tools::webpack::{self, ProjectConfig};
 use clap::Args;
 use local_ip_address::local_ip;
 use spinners::Spinner;
@@ -41,7 +41,7 @@ pub fn cmd(start_args: StartArgs) -> Result<(), Box<dyn Error>> {
         for line in reader.lines() {
             match line.unwrap().as_str() {
                 "compile" => spinner = spinner_start("Loading...").unwrap(),
-                "done" => done(&mut spinner, &webpack_config.app_config).unwrap(),
+                "done" => done(&mut spinner, &webpack_config.project_config).unwrap(),
                 _ => (),
             }
         }
@@ -50,12 +50,12 @@ pub fn cmd(start_args: StartArgs) -> Result<(), Box<dyn Error>> {
     Ok(())
 }
 
-fn done(spinner: &mut Spinner, app_config: &AppConfig) -> Result<(), Box<dyn Error>> {
+fn done(spinner: &mut Spinner, project_config: &ProjectConfig) -> Result<(), Box<dyn Error>> {
     spinner.stop();
     clear_console()?;
     let local_ip = local_ip().unwrap();
     println!("🚀 Your app running at:");
-    println!("🔗 Local:    {}://{}:{}", &app_config.protocol, &app_config.host, &app_config.port);
-    println!("🔗 Network:  {}://{}:{}", &app_config.protocol, &local_ip, &app_config.port);
+    println!("🔗 Local:    {}://{}:{}", &project_config.dev.protocol, &project_config.dev.host, &project_config.dev.port);
+    println!("🔗 Network:  {}://{}:{}", &project_config.dev.protocol, &local_ip, &project_config.dev.port);
     Ok(())
 }

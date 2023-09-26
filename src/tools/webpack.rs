@@ -11,19 +11,35 @@ use std::{
 
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct WebpackConfig {
-    pub app_config: AppConfig,
+    pub project_config: ProjectConfig,
     pub config: Value,
     pub plugins: Vec<String>,
     pub rules: Vec<String>,
 }
 
 #[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct ProjectConfig {
+    pub app: AppConfig,
+    pub dev: DevConfig,
+    pub prod: ProdConfig,
+}
+
+#[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct AppConfig {
+    pub name: String,
+    pub title: String,
+}
+
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct DevConfig {
+    pub public_path: String,
     pub protocol: String,
     pub host: String,
     pub port: i32,
-    pub app_name: String,
-    pub app_title: String,
+}
+
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct ProdConfig {
     pub public_path: String,
 }
 
@@ -44,7 +60,7 @@ impl Aliases {
 
 pub fn get_config_dev() -> WebpackConfig {
     WebpackConfig {
-        app_config: app_config(),
+        project_config: project_config(),
         config: config_dev(),
         plugins: vec![
             fork_ts_checker_webpack_plugin(),
@@ -59,7 +75,7 @@ pub fn get_config_dev() -> WebpackConfig {
 
 pub fn get_config_prod() -> WebpackConfig {
     WebpackConfig {
-        app_config: app_config(),
+        project_config: project_config(),
         config: config_prod(),
         plugins: vec![
             fork_ts_checker_webpack_plugin(),
@@ -127,25 +143,30 @@ fn ts_config_paths(filename: &str) -> Result<Value, Box<dyn Error>> {
     Ok(config_paths)
 }
 
-fn app_config() -> AppConfig {
-    AppConfig {
-        protocol: "http".into(),
-        host: "localhost".into(),
-        port: 8085,
-        app_name: "react".into(),
-        app_title: "React Boilerplate".into(),
-        public_path: "/".into(),
+fn project_config() -> ProjectConfig {
+    ProjectConfig {
+        app: AppConfig {
+            name: "react".into(),
+            title: "React Boilerplate".into(),
+        },
+        dev: DevConfig {
+            public_path: "/".into(),
+            protocol: "http".into(),
+            host: "localhost".into(),
+            port: 8085,
+        },
+        prod: ProdConfig { public_path: "/".into() },
     }
 }
 
 pub fn config_dev() -> Value {
-    let config = app_config();
+    let config = project_config();
     json!({
         "mode": "development",
         "entry": [aliases().main],
         "output": {
           "path": aliases().build,
-          "publicPath": format!("{}://{}:{}/", config.protocol, config.host, config.port),
+          "publicPath": format!("{}://{}:{}/", config.dev.protocol, config.dev.host, config.dev.port),
           "filename": "js/[name].[contenthash].bundle.js",
           "assetModuleFilename": "assets/[hash][ext][query]",
         },
@@ -172,7 +193,7 @@ pub fn config_dev() -> Value {
           "historyApiFallback": true,
           "compress": true,
           "hot": true,
-          "port": config.port,
+          "port": config.dev.port,
           "static": "./",
           "headers": {
             "Access-Control-Allow-Origin": "*",
@@ -192,13 +213,13 @@ pub fn config_dev() -> Value {
 }
 
 pub fn config_prod() -> Value {
-    let config = app_config();
+    let config = project_config();
     json!({
         "mode": "production",
         "entry": [aliases().main],
         "output": {
           "path": aliases().build,
-          "publicPath": config.public_path,
+          "publicPath": config.prod.public_path,
           "filename": "js/[name].[contenthash].bundle.js",
           "assetModuleFilename": "assets/[hash][ext][query]",
           "chunkFilename": "js/[name].[chunkhash].chunk.js",
