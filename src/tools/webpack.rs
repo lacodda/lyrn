@@ -1,3 +1,4 @@
+use crate::templates::{common::project_config as default_project_config, ProjectConfig};
 use json_value_merge::Merge;
 use path_absolutize::*;
 use serde::{Deserialize, Serialize};
@@ -17,42 +18,6 @@ pub struct WebpackConfig {
     pub rules: Vec<String>,
 }
 
-#[derive(Debug, Default, Clone, Serialize, Deserialize)]
-pub struct ProjectConfig {
-    #[serde(default)]
-    pub app: AppConfig,
-    #[serde(default)]
-    pub dev: DevConfig,
-    #[serde(default)]
-    pub prod: ProdConfig,
-}
-
-#[derive(Debug, Default, Clone, Serialize, Deserialize)]
-pub struct AppConfig {
-    #[serde(default, skip_serializing_if = "is_default")]
-    pub name: String,
-    #[serde(default, skip_serializing_if = "is_default")]
-    pub title: String,
-}
-
-#[derive(Debug, Default, Clone, Serialize, Deserialize)]
-pub struct DevConfig {
-    #[serde(default, skip_serializing_if = "is_default")]
-    pub public_path: String,
-    #[serde(default, skip_serializing_if = "is_default")]
-    pub protocol: String,
-    #[serde(default, skip_serializing_if = "is_default")]
-    pub host: String,
-    #[serde(default, skip_serializing_if = "is_default")]
-    pub port: i32,
-}
-
-#[derive(Debug, Default, Clone, Serialize, Deserialize)]
-pub struct ProdConfig {
-    #[serde(default, skip_serializing_if = "is_default")]
-    pub public_path: String,
-}
-
 #[derive(Debug, Clone, Serialize, Deserialize)]
 struct Aliases {
     src: String,
@@ -66,10 +31,6 @@ impl Aliases {
     fn iter_mut(&mut self) -> impl Iterator<Item = &mut String> {
         IntoIterator::into_iter([&mut self.src, &mut self.build, &mut self.public, &mut self.images, &mut self.main])
     }
-}
-
-fn is_default<T: Default + PartialEq>(t: &T) -> bool {
-    t == &T::default()
 }
 
 pub fn get_config_dev() -> WebpackConfig {
@@ -169,28 +130,6 @@ fn project_config() -> ProjectConfig {
     let mut project_config = json!(default_project_config());
     project_config.merge(config_file);
     from_value(project_config).unwrap()
-}
-
-pub fn default_project_config() -> ProjectConfig {
-    ProjectConfig {
-        app: AppConfig {
-            name: "app".into(),
-            title: "New application".into(),
-            ..Default::default()
-        },
-        dev: DevConfig {
-            public_path: "/".into(),
-            protocol: "http".into(),
-            host: "localhost".into(),
-            port: 8080,
-            ..Default::default()
-        },
-        prod: ProdConfig {
-            public_path: "/".into(),
-            ..Default::default()
-        },
-        ..Default::default()
-    }
 }
 
 pub fn config_dev() -> Value {
