@@ -1,7 +1,7 @@
 use json_value_merge::Merge;
 use path_absolutize::*;
 use serde::{Deserialize, Serialize};
-use serde_json::{from_str, json, Value};
+use serde_json::{from_str, from_value, json, to_string, Value};
 use std::{
     env,
     error::Error,
@@ -17,29 +17,39 @@ pub struct WebpackConfig {
     pub rules: Vec<String>,
 }
 
-#[derive(Debug, Clone, Serialize, Deserialize)]
+#[derive(Debug, Default, Clone, Serialize, Deserialize)]
 pub struct ProjectConfig {
+    #[serde(default)]
     pub app: AppConfig,
+    #[serde(default)]
     pub dev: DevConfig,
+    #[serde(default)]
     pub prod: ProdConfig,
 }
 
-#[derive(Debug, Clone, Serialize, Deserialize)]
+#[derive(Debug, Default, Clone, Serialize, Deserialize)]
 pub struct AppConfig {
+    #[serde(default, skip_serializing_if = "is_default")]
     pub name: String,
+    #[serde(default, skip_serializing_if = "is_default")]
     pub title: String,
 }
 
-#[derive(Debug, Clone, Serialize, Deserialize)]
+#[derive(Debug, Default, Clone, Serialize, Deserialize)]
 pub struct DevConfig {
+    #[serde(default, skip_serializing_if = "is_default")]
     pub public_path: String,
+    #[serde(default, skip_serializing_if = "is_default")]
     pub protocol: String,
+    #[serde(default, skip_serializing_if = "is_default")]
     pub host: String,
+    #[serde(default, skip_serializing_if = "is_default")]
     pub port: i32,
 }
 
-#[derive(Debug, Clone, Serialize, Deserialize)]
+#[derive(Debug, Default, Clone, Serialize, Deserialize)]
 pub struct ProdConfig {
+    #[serde(default, skip_serializing_if = "is_default")]
     pub public_path: String,
 }
 
@@ -56,6 +66,10 @@ impl Aliases {
     fn iter_mut(&mut self) -> impl Iterator<Item = &mut String> {
         IntoIterator::into_iter([&mut self.src, &mut self.build, &mut self.public, &mut self.images, &mut self.main])
     }
+}
+
+fn is_default<T: Default + PartialEq>(t: &T) -> bool {
+    t == &T::default()
 }
 
 pub fn get_config_dev() -> WebpackConfig {
@@ -143,19 +157,39 @@ fn ts_config_paths(filename: &str) -> Result<Value, Box<dyn Error>> {
     Ok(config_paths)
 }
 
+fn config_file(file_name: &str) -> Result<ProjectConfig, Box<dyn Error>> {
+    let data = fs::read_to_string(PathBuf::from(file_name)).unwrap_or(to_string(&default_project_config()).unwrap());
+    let config: ProjectConfig = from_str(&data).unwrap_or_default();
+
+    Ok(config)
+}
+
 fn project_config() -> ProjectConfig {
+    let config_file = json!(config_file("lyrn.json").unwrap());
+    let mut project_config = json!(default_project_config());
+    project_config.merge(config_file);
+    from_value(project_config).unwrap()
+}
+
+pub fn default_project_config() -> ProjectConfig {
     ProjectConfig {
         app: AppConfig {
-            name: "react".into(),
-            title: "React Boilerplate".into(),
+            name: "app".into(),
+            title: "New application".into(),
+            ..Default::default()
         },
         dev: DevConfig {
             public_path: "/".into(),
             protocol: "http".into(),
             host: "localhost".into(),
-            port: 8085,
+            port: 8080,
+            ..Default::default()
         },
-        prod: ProdConfig { public_path: "/".into() },
+        prod: ProdConfig {
+            public_path: "/".into(),
+            ..Default::default()
+        },
+        ..Default::default()
     }
 }
 
