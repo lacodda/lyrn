@@ -22,6 +22,7 @@ pub struct Template {
     pub scripts: Value,
     pub dependencies: Value,
     pub dev_dependencies: Value,
+    pub project_config: ProjectConfig,
     pub tsconfig: Value,
     pub eslintrc: Value,
     pub readme: String,

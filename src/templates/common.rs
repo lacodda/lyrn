@@ -8,6 +8,7 @@ pub fn get(project: &ProjectProps) -> Template {
         scripts: scripts(),
         dependencies: dependencies(),
         dev_dependencies: dev_dependencies(),
+        project_config: project_config(),
         tsconfig: tsconfig(),
         eslintrc: eslintrc(),
         readme: readme(&project),
