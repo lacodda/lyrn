@@ -1,4 +1,7 @@
-use crate::templates::{common::project_config as default_project_config, ProjectConfig};
+use crate::{
+    commands::start::StartArgs,
+    templates::{common::project_config as default_project_config, ProjectConfig},
+};
 use json_value_merge::Merge;
 use path_absolutize::*;
 use serde::{Deserialize, Serialize};
@@ -33,10 +36,10 @@ impl Aliases {
     }
 }
 
-pub fn get_config_dev() -> WebpackConfig {
+pub fn get_config_dev(start_args: &Option<StartArgs>) -> WebpackConfig {
     WebpackConfig {
-        project_config: project_config(),
-        config: config_dev(),
+        project_config: project_config(start_args),
+        config: config_dev(start_args),
         plugins: vec![
             fork_ts_checker_webpack_plugin(),
             copy_webpack_plugin(aliases()),
@@ -50,7 +53,7 @@ pub fn get_config_dev() -> WebpackConfig {
 
 pub fn get_config_prod() -> WebpackConfig {
     WebpackConfig {
-        project_config: project_config(),
+        project_config: project_config(&None),
         config: config_prod(),
         plugins: vec![
             fork_ts_checker_webpack_plugin(),
@@ -125,15 +128,24 @@ fn config_file(file_name: &str) -> Result<ProjectConfig, Box<dyn Error>> {
     Ok(config)
 }
 
-fn project_config() -> ProjectConfig {
+fn project_config(start_args: &Option<StartArgs>) -> ProjectConfig {
     let config_file = json!(config_file("lyrn.json").unwrap());
     let mut project_config = json!(default_project_config());
     project_config.merge(config_file);
-    from_value(project_config).unwrap()
+    let mut project_config: ProjectConfig = from_value(project_config).unwrap();
+    match start_args {
+        Some(start_args) => {
+            if start_args.port.is_some() {
+                project_config.dev.port = start_args.port.unwrap();
+            }
+        }
+        None => (),
+    }
+    project_config
 }
 
-pub fn config_dev() -> Value {
-    let config = project_config();
+pub fn config_dev(start_args: &Option<StartArgs>) -> Value {
+    let config = project_config(start_args);
     json!({
         "mode": "development",
         "entry": [aliases().main],
@@ -186,7 +198,7 @@ pub fn config_dev() -> Value {
 }
 
 pub fn config_prod() -> Value {
-    let config = project_config();
+    let config = project_config(&None);
     json!({
         "mode": "production",
         "entry": [aliases().main],
