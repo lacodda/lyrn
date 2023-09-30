@@ -1,4 +1,4 @@
-use super::{ProjectProps, Template};
+use super::{AppConfig, DevConfig, ProdConfig, ProjectConfig, ProjectProps, Template};
 use crate::libs::types::User;
 use chrono::Datelike;
 use serde_json::{json, Value};
@@ -8,6 +8,7 @@ pub fn get(project: &ProjectProps) -> Template {
         scripts: scripts(),
         dependencies: dependencies(),
         dev_dependencies: dev_dependencies(),
+        project_config: project_config(),
         tsconfig: tsconfig(),
         eslintrc: eslintrc(),
         readme: readme(&project),
@@ -64,6 +65,28 @@ fn dev_dependencies() -> Value {
         "webpack-shell-plugin-next": "^2.3.1",
         "zx": "^7.2.3"
     })
+}
+
+pub fn project_config() -> ProjectConfig {
+    ProjectConfig {
+        app: AppConfig {
+            name: "app".into(),
+            title: "New application".into(),
+            ..Default::default()
+        },
+        dev: DevConfig {
+            public_path: "/".into(),
+            protocol: "http".into(),
+            host: "localhost".into(),
+            port: 8080,
+            ..Default::default()
+        },
+        prod: ProdConfig {
+            public_path: "/".into(),
+            ..Default::default()
+        },
+        ..Default::default()
+    }
 }
 
 fn tsconfig() -> Value {

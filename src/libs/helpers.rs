@@ -87,3 +87,7 @@ pub fn convert_bytes(bytes: u64) -> String {
         format!("{:.2} Kb", kb)
     }
 }
+
+pub fn is_default<T: Default + PartialEq>(t: &T) -> bool {
+    t == &T::default()
+}
