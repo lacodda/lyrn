@@ -3,6 +3,7 @@ use super::types::{Content, Package};
 use crate::libs::helpers::{clear_console, spinner_start};
 use crate::templates::{Framework, ProjectProps, Template};
 use clap::Args;
+use serde_json::json;
 use std::collections::HashMap;
 use std::env::set_current_dir;
 use std::error::Error;
@@ -36,6 +37,7 @@ pub fn create_project(args: CreateProjectArgs) -> Result<(), Box<dyn Error>> {
     };
     let template = project_props.clone().get_template();
     let mut project: HashMap<String, Content> = HashMap::new();
+    project.insert("lyrn.json".into(), Content::Val(json!(template.project_config)));
     project.insert("package.json".into(), Content::Pkg(package(&project_props, &template)));
     project.insert("tsconfig.json".into(), Content::Val(template.tsconfig));
     project.insert(".eslintrc.json".into(), Content::Val(template.eslintrc));

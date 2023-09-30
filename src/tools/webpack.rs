@@ -1,7 +1,11 @@
+use crate::{
+    commands::start::StartArgs,
+    templates::{common::project_config as default_project_config, ProjectConfig},
+};
 use json_value_merge::Merge;
 use path_absolutize::*;
 use serde::{Deserialize, Serialize};
-use serde_json::{from_str, json, Value};
+use serde_json::{from_str, from_value, json, to_string, Value};
 use std::{
     env,
     error::Error,
@@ -11,20 +15,10 @@ use std::{
 
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct WebpackConfig {
-    pub app_config: AppConfig,
+    pub project_config: ProjectConfig,
     pub config: Value,
     pub plugins: Vec<String>,
     pub rules: Vec<String>,
-}
-
-#[derive(Debug, Clone, Serialize, Deserialize)]
-pub struct AppConfig {
-    pub protocol: String,
-    pub host: String,
-    pub port: i32,
-    pub app_name: String,
-    pub app_title: String,
-    pub public_path: String,
 }
 
 #[derive(Debug, Clone, Serialize, Deserialize)]
@@ -42,10 +36,10 @@ impl Aliases {
     }
 }
 
-pub fn get_config_dev() -> WebpackConfig {
+pub fn get_config_dev(start_args: &Option<StartArgs>) -> WebpackConfig {
     WebpackConfig {
-        app_config: app_config(),
-        config: config_dev(),
+        project_config: project_config(start_args),
+        config: config_dev(start_args),
         plugins: vec![
             fork_ts_checker_webpack_plugin(),
             copy_webpack_plugin(aliases()),
@@ -59,7 +53,7 @@ pub fn get_config_dev() -> WebpackConfig {
 
 pub fn get_config_prod() -> WebpackConfig {
     WebpackConfig {
-        app_config: app_config(),
+        project_config: project_config(&None),
         config: config_prod(),
         plugins: vec![
             fork_ts_checker_webpack_plugin(),
@@ -127,25 +121,37 @@ fn ts_config_paths(filename: &str) -> Result<Value, Box<dyn Error>> {
     Ok(config_paths)
 }
 
-fn app_config() -> AppConfig {
-    AppConfig {
-        protocol: "http".into(),
-        host: "localhost".into(),
-        port: 8085,
-        app_name: "react".into(),
-        app_title: "React Boilerplate".into(),
-        public_path: "/".into(),
-    }
+fn config_file(file_name: &str) -> Result<ProjectConfig, Box<dyn Error>> {
+    let data = fs::read_to_string(PathBuf::from(file_name)).unwrap_or(to_string(&default_project_config()).unwrap());
+    let config: ProjectConfig = from_str(&data).unwrap_or_default();
+
+    Ok(config)
 }
 
-pub fn config_dev() -> Value {
-    let config = app_config();
+fn project_config(start_args: &Option<StartArgs>) -> ProjectConfig {
+    let config_file = json!(config_file("lyrn.json").unwrap());
+    let mut project_config = json!(default_project_config());
+    project_config.merge(config_file);
+    let mut project_config: ProjectConfig = from_value(project_config).unwrap();
+    match start_args {
+        Some(start_args) => {
+            if start_args.port.is_some() {
+                project_config.dev.port = start_args.port.unwrap();
+            }
+        }
+        None => (),
+    }
+    project_config
+}
+
+pub fn config_dev(start_args: &Option<StartArgs>) -> Value {
+    let config = project_config(start_args);
     json!({
         "mode": "development",
         "entry": [aliases().main],
         "output": {
           "path": aliases().build,
-          "publicPath": format!("{}://{}:{}/", config.protocol, config.host, config.port),
+          "publicPath": format!("{}://{}:{}/", config.dev.protocol, config.dev.host, config.dev.port),
           "filename": "js/[name].[contenthash].bundle.js",
           "assetModuleFilename": "assets/[hash][ext][query]",
         },
@@ -172,7 +178,7 @@ pub fn config_dev() -> Value {
           "historyApiFallback": true,
           "compress": true,
           "hot": true,
-          "port": config.port,
+          "port": config.dev.port,
           "static": "./",
           "headers": {
             "Access-Control-Allow-Origin": "*",
@@ -192,13 +198,13 @@ pub fn config_dev() -> Value {
 }
 
 pub fn config_prod() -> Value {
-    let config = app_config();
+    let config = project_config(&None);
     json!({
         "mode": "production",
         "entry": [aliases().main],
         "output": {
           "path": aliases().build,
-          "publicPath": config.public_path,
+          "publicPath": config.prod.public_path,
           "filename": "js/[name].[contenthash].bundle.js",
           "assetModuleFilename": "assets/[hash][ext][query]",
           "chunkFilename": "js/[name].[chunkhash].chunk.js",

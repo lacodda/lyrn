@@ -1,6 +1,10 @@
-use crate::libs::types::{Content, User};
+use crate::libs::{
+    helpers::is_default,
+    types::{Content, User},
+};
 use clap::ValueEnum;
 use json_value_merge::Merge;
+use serde::{Deserialize, Serialize};
 use serde_json::Value;
 use std::collections::HashMap;
 
@@ -18,6 +22,7 @@ pub struct Template {
     pub scripts: Value,
     pub dependencies: Value,
     pub dev_dependencies: Value,
+    pub project_config: ProjectConfig,
     pub tsconfig: Value,
     pub eslintrc: Value,
     pub readme: String,
@@ -74,4 +79,40 @@ impl ProjectProps {
         }
         .get(&self.framework)
     }
+}
+
+#[derive(Debug, Default, Clone, Serialize, Deserialize)]
+pub struct ProjectConfig {
+    #[serde(default)]
+    pub app: AppConfig,
+    #[serde(default)]
+    pub dev: DevConfig,
+    #[serde(default)]
+    pub prod: ProdConfig,
+}
+
+#[derive(Debug, Default, Clone, Serialize, Deserialize)]
+pub struct AppConfig {
+    #[serde(default, skip_serializing_if = "is_default")]
+    pub name: String,
+    #[serde(default, skip_serializing_if = "is_default")]
+    pub title: String,
+}
+
+#[derive(Debug, Default, Clone, Serialize, Deserialize)]
+pub struct DevConfig {
+    #[serde(default, skip_serializing_if = "is_default")]
+    pub public_path: String,
+    #[serde(default, skip_serializing_if = "is_default")]
+    pub protocol: String,
+    #[serde(default, skip_serializing_if = "is_default")]
+    pub host: String,
+    #[serde(default, skip_serializing_if = "is_default")]
+    pub port: i32,
+}
+
+#[derive(Debug, Default, Clone, Serialize, Deserialize)]
+pub struct ProdConfig {
+    #[serde(default, skip_serializing_if = "is_default")]
+    pub public_path: String,
 }
