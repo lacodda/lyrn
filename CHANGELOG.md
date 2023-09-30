@@ -1,5 +1,22 @@
 # Changelog
 
+## 🎉 [1.1.2] - 2023-09-30
+
+### ✨ Features
+
+- Added a port argument to the "start" command
+- Added lyrn.json file generation
+- Added function for reading config file lyrn.json
+
+### 🎛️ Refactor
+
+- Project_config moved to templates
+- AppConfig replaced by ProjectConfig
+
+### 🛠️ Bug Fixes
+
+- Fixed adding a port argument to the "start" command
+
 ## 🎉 [1.1.1] - 2023-09-23
 
 ### ✨ Features
