@@ -56,6 +56,25 @@ mod tests {
     use super::*;
 
     #[test]
+    fn test_get_git_user() -> Result<(), Box<dyn Error>> {
+        // Get the Git user using the get_git_user function
+        let user = get_git_user()?;
+        // Get the expected Git user using the git config command
+        let expected_name = Command::new("git").args(["config", "user.name"]).output()?;
+        let expected_email = Command::new("git").args(["config", "user.email"]).output()?;
+        let expected_user = User {
+            name: String::from_utf8_lossy(&expected_name.stdout).trim().to_string(),
+            email: String::from_utf8_lossy(&expected_email.stdout).trim().to_string(),
+        };
+
+        // Assert that the obtained and expected Git users match
+        assert_eq!(user, expected_user);
+
+        // Return Ok if the test passed successfully
+        Ok(())
+    }
+
+    #[test]
     fn test_clear_console() {
         let result = clear_console();
         assert!(result.is_ok(), "clear_console failed: {:?}", result);
