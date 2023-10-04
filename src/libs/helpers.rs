@@ -50,3 +50,76 @@ pub fn convert_bytes(bytes: u64) -> String {
 pub fn is_default<T: Default + PartialEq>(t: &T) -> bool {
     t == &T::default()
 }
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    #[test]
+    fn test_clear_console() {
+        let result = clear_console();
+        assert!(result.is_ok(), "clear_console failed: {:?}", result);
+
+        // Verify that the console is cleared
+        #[cfg(windows)]
+        let output = Command::new("cmd").arg("/c").arg("cls").output().expect("Failed to run 'cmd /c cls' command");
+        #[cfg(not(windows))]
+        let output = Command::new("clear").output().expect("Failed to run 'clear' command");
+
+        assert!(output.status.success(), "Clearing the console failed");
+    }
+
+    #[test]
+    fn test_convert_bytes_kb() {
+        let bytes = 1024;
+        let result = convert_bytes(bytes);
+        assert_eq!(result, "1.00 Kb");
+    }
+
+    #[test]
+    fn test_convert_bytes_mb() {
+        let bytes = 1048576;
+        let result = convert_bytes(bytes);
+        assert_eq!(result, "1.00 Mb");
+    }
+
+    #[test]
+    fn test_convert_bytes_gb() {
+        let bytes = 1073741824;
+        let result = convert_bytes(bytes);
+        assert_eq!(result, "1.00 Gb");
+    }
+
+    #[test]
+    fn test_convert_bytes_tb() {
+        let bytes = 1099511627776;
+        let result = convert_bytes(bytes);
+        assert_eq!(result, "1.00 Tb");
+    }
+
+    #[test]
+    fn test_convert_bytes_rounding() {
+        let bytes = 1536;
+        let result = convert_bytes(bytes);
+        assert_eq!(result, "1.50 Kb");
+    }
+
+    #[test]
+    fn test_is_default() {
+        // Test with a type that implements Default and PartialEq
+        let default_int: i32 = Default::default();
+        assert!(is_default(&default_int));
+
+        // Test with a custom type that implements Default and PartialEq
+        #[derive(Default, PartialEq, Debug)]
+        struct CustomType {
+            value: i32,
+        }
+        let custom_default = CustomType::default();
+        assert!(is_default(&custom_default));
+
+        // Test with a non-default value of the custom type
+        let custom_non_default = CustomType { value: 42 };
+        assert!(!is_default(&custom_non_default));
+    }
+}
