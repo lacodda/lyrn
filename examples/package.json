@@ -1,0 +1,14 @@
+{
+  "name": "test_project",
+  "version": "0.0.1",
+  "description": "test project",
+  "main": "src/main.ts",
+  "keywords": [
+    "test"
+  ],
+  "author": "Kirill Lakhtachev",
+  "license": "MIT",
+  "devDependencies": {
+    "@types/node": "^20.8.2"
+  }
+}

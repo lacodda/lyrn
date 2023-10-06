@@ -121,7 +121,7 @@ fn ts_config_paths(filename: &str) -> Result<Value, Box<dyn Error>> {
     Ok(config_paths)
 }
 
-fn config_file(file_name: &str) -> Result<ProjectConfig, Box<dyn Error>> {
+pub fn config_file(file_name: &str) -> Result<ProjectConfig, Box<dyn Error>> {
     let data = fs::read_to_string(PathBuf::from(file_name)).unwrap_or(to_string(&default_project_config()).unwrap());
     let config: ProjectConfig = from_str(&data).unwrap_or_default();
 

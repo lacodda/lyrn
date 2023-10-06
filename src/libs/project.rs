@@ -110,3 +110,93 @@ fn run_npm_install(name: &String) {
         println!("{}", String::from_utf8_lossy(&output.stderr));
     }
 }
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+    use crate::libs::types::User;
+    use crate::tools::webpack::config_file;
+    use std::env::current_dir;
+    use std::fs;
+    use std::path::Path;
+    use tempfile::tempdir;
+
+    #[test]
+    fn test_package() {
+        // Create a sample ProjectProps
+        let project_props = ProjectProps {
+            name: "my_project".to_string(),
+            user: User {
+                name: "John Doe".to_string(),
+                email: "john@example.com".to_string(),
+            },
+            framework: Framework::None,
+        };
+
+        // Create a sample Template
+        let template = Template {
+            scripts: json!({
+                "start": "start",
+                "build": "build",
+            }),
+            dependencies: json!({
+                "dep1": "1.0.0",
+                "dep2": "1.0.0",
+            }),
+            dev_dependencies: json!({
+                "dev_dep1": "1.0.0",
+                "dev_dep2": "1.0.0",
+            }),
+            project_config: config_file("").unwrap(),
+            tsconfig: json!({}),
+            eslintrc: json!({}),
+            readme: "readme".to_string(),
+            mit_license: "mit_license".to_string(),
+            gitignore: "gitignore".to_string(),
+            postcss_config: "postcss_config".to_string(),
+            index_d: "index_d".to_string(),
+            index: "index".to_string(),
+            app: HashMap::new(),
+        };
+
+        // Call the package function
+        let result = package(&project_props, &template);
+
+        // Check that the Package struct fields match the expected values
+        assert_eq!(result.name, "my_project");
+        assert_eq!(result.version, "0.0.1");
+        assert_eq!(result.description, "");
+        assert_eq!(result.main, "src/main.ts");
+        assert_eq!(result.scripts, template.scripts);
+        assert_eq!(result.keywords, vec!["app".to_string()]);
+        assert_eq!(result.author, "John Doe");
+        assert_eq!(result.license, "MIT");
+        assert_eq!(result.dependencies, template.dependencies);
+        assert_eq!(result.dev_dependencies, template.dev_dependencies);
+    }
+
+    #[test]
+    fn test_run_npm_install() {
+        // Create a temporary directory for the test project
+        let temp_dir = tempdir().unwrap();
+        let project_dir = temp_dir.path().join("test_project");
+        fs::create_dir(&project_dir).unwrap();
+
+        // Copy the package.json file from the example to the test directory
+        let package_json_path = Path::new("examples/package.json");
+        fs::copy(package_json_path, project_dir.join("package.json")).unwrap();
+
+        // Change to the test directory and call the run_npm_install function
+        let current_dir = current_dir().unwrap();
+        set_current_dir(&project_dir).unwrap();
+        let project_name = project_dir.file_name().unwrap().to_str().unwrap();
+        run_npm_install(&project_name.to_string());
+
+        // Check that the test directory now contains a node_modules folder with installed packages
+        assert!(project_dir.join("node_modules").exists());
+
+        // Return to the original directory and delete the temporary directory
+        set_current_dir(current_dir).unwrap();
+        temp_dir.close().unwrap();
+    }
+}
