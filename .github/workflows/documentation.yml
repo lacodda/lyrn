@@ -36,9 +36,7 @@ jobs:
       - name: Build book
         run: |
           mdbook --version
-          (cd docs && mv _theme theme && mdbook build)
-          rustc ./docs/_installer/build-installer.rs
-          ./build-installer
+          cd docs && mdbook build
 
       - name: Deploy book
         uses: JamesIves/github-pages-deploy-action@v4.4.3
