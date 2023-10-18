@@ -1,48 +1,7 @@
 use super::types::User;
-use serde::{Serialize, Serializer};
 use spinners::{Spinner, Spinners};
-use std::collections::{BTreeMap, HashMap};
 use std::error::Error;
 use std::process::Command;
-
-pub fn _ordered_map<S, K: Ord + Serialize, V: Serialize>(value: &HashMap<K, V>, serializer: S) -> Result<S::Ok, S::Error>
-where
-    S: Serializer,
-{
-    let ordered: BTreeMap<_, _> = value.iter().collect();
-    ordered.serialize(serializer)
-}
-
-pub fn _opt_ordered_map<S, K: Ord + Serialize, V: Serialize>(value: &Option<HashMap<K, V>>, serializer: S) -> Result<S::Ok, S::Error>
-where
-    S: Serializer,
-{
-    let inside = value.as_ref().unwrap();
-    let ordered: BTreeMap<_, _> = inside.iter().collect();
-    ordered.serialize(serializer)
-}
-
-pub fn _to_hash_map(value: &[(&str, &str)]) -> HashMap<String, String> {
-    return value.into_iter().map(|(p, v)| (p.to_string(), v.to_string())).collect::<HashMap<_, _>>();
-}
-
-pub fn _merge_opt_hashmaps<T>(a: Option<HashMap<String, T>>, b: Option<HashMap<String, T>>) -> Option<HashMap<String, T>> {
-    if a.is_some() && b.is_some() {
-        let mut base = a.unwrap();
-        base.extend(b.unwrap().into_iter());
-        return Some(base);
-    }
-    b.or(a)
-}
-
-pub fn _merge_opt_vectors<T>(a: Option<Vec<T>>, b: Option<Vec<T>>) -> Option<Vec<T>> {
-    if a.is_some() && b.is_some() {
-        let mut base = a.unwrap();
-        base.extend(b.unwrap());
-        return Some(base);
-    }
-    b.or(a)
-}
 
 pub fn get_git_user() -> Result<User, Box<dyn Error>> {
     let user_name = Command::new("git").args(["config", "user.name"]).output()?;
@@ -90,4 +49,96 @@ pub fn convert_bytes(bytes: u64) -> String {
 
 pub fn is_default<T: Default + PartialEq>(t: &T) -> bool {
     t == &T::default()
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    #[test]
+    fn test_get_git_user() -> Result<(), Box<dyn Error>> {
+        // Get the Git user using the get_git_user function
+        let user = get_git_user()?;
+        // Get the expected Git user using the git config command
+        let expected_name = Command::new("git").args(["config", "user.name"]).output()?;
+        let expected_email = Command::new("git").args(["config", "user.email"]).output()?;
+        let expected_user = User {
+            name: String::from_utf8_lossy(&expected_name.stdout).trim().to_string(),
+            email: String::from_utf8_lossy(&expected_email.stdout).trim().to_string(),
+        };
+
+        // Assert that the obtained and expected Git users match
+        assert_eq!(user, expected_user);
+
+        // Return Ok if the test passed successfully
+        Ok(())
+    }
+
+    #[test]
+    fn test_clear_console() {
+        let result = clear_console();
+        assert!(result.is_ok(), "clear_console failed: {:?}", result);
+
+        // Verify that the console is cleared
+        #[cfg(windows)]
+        let output = Command::new("cmd").arg("/c").arg("cls").output().expect("Failed to run 'cmd /c cls' command");
+        #[cfg(not(windows))]
+        let output = Command::new("clear").output().expect("Failed to run 'clear' command");
+
+        assert!(output.status.success(), "Clearing the console failed");
+    }
+
+    #[test]
+    fn test_convert_bytes_kb() {
+        let bytes = 1024;
+        let result = convert_bytes(bytes);
+        assert_eq!(result, "1.00 Kb");
+    }
+
+    #[test]
+    fn test_convert_bytes_mb() {
+        let bytes = 1048576;
+        let result = convert_bytes(bytes);
+        assert_eq!(result, "1.00 Mb");
+    }
+
+    #[test]
+    fn test_convert_bytes_gb() {
+        let bytes = 1073741824;
+        let result = convert_bytes(bytes);
+        assert_eq!(result, "1.00 Gb");
+    }
+
+    #[test]
+    fn test_convert_bytes_tb() {
+        let bytes = 1099511627776;
+        let result = convert_bytes(bytes);
+        assert_eq!(result, "1.00 Tb");
+    }
+
+    #[test]
+    fn test_convert_bytes_rounding() {
+        let bytes = 1536;
+        let result = convert_bytes(bytes);
+        assert_eq!(result, "1.50 Kb");
+    }
+
+    #[test]
+    fn test_is_default() {
+        // Test with a type that implements Default and PartialEq
+        let default_int: i32 = Default::default();
+        assert!(is_default(&default_int));
+
+        // Test with a custom type that implements Default and PartialEq
+        #[derive(Default, PartialEq, Debug)]
+        struct CustomType {
+            value: i32,
+        }
+        let custom_default = CustomType::default();
+        assert!(is_default(&custom_default));
+
+        // Test with a non-default value of the custom type
+        let custom_non_default = CustomType { value: 42 };
+        assert!(!is_default(&custom_non_default));
+    }
 }
