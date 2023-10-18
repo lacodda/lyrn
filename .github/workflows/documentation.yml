@@ -35,7 +35,7 @@ jobs:
 
       - name: Build Documentation
         run: |
-          mdbook build
+          mdbook build docs
         working-directory: docs
 
       - name: Deploy to GitHub Pages
@@ -43,4 +43,4 @@ jobs:
         with:
           token: ${{ secrets.GITHUB_TOKEN }}
           branch: gh-pages
-          folder: book
+          folder: docs
