@@ -35,7 +35,7 @@ jobs:
 
       - name: Build Documentation
         run: |
-          mkdir docs && mdbook build docs
+          mdbook build -d docs
         working-directory: docs
 
       - name: Deploy to GitHub Pages
