@@ -27,22 +27,20 @@ jobs:
             ~/.cargo/registry/cache
           key: ${{ runner.os }}-build-${{ env.cache-name }}-0.3 }}
 
-      - name: Install mdbook
+      - name: Install mdBook
         run: |
-          (test -x $HOME/.cargo/bin/cargo-install-update || cargo install cargo-update)
-          (test -x $HOME/.cargo/bin/mdbook || cargo install --vers "^0.4" mdbook)
-          cargo install-update -a
+          cargo install mdbook
+        env:
+          CARGO_HOME: ${{ env.HOME }}/.cargo
 
-      - name: Build book
+      - name: Build Documentation
         run: |
-          mdbook --version
-          cd docs && mdbook build
+          mdbook build
+        working-directory: docs
 
-      - name: Deploy book
-        uses: JamesIves/github-pages-deploy-action@v4.4.3
-        if: ${{ github.ref == 'refs/heads/main' }}
+      - name: Deploy to GitHub Pages
+        uses: JamesIves/github-pages-deploy-action@4
         with:
-          branch: gh-pages
-          folder: docs
-          token: ${{ secrets.GITHUB_TOKEN }}
-          single-commit: true
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          BRANCH: gh-pages
+          FOLDER: book
