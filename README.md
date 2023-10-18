@@ -1,7 +1,7 @@
 <p align="center">
   <img src="https://raw.githubusercontent.com/lacodda/lyrn/main/lyrn.webp" width="320" alt="lyrn">
 </p>
-<h1 align="center">Quick start of your web application</h1>
+<h1 align="center">🚀 Quick start of your web application</h1>
 <br>
 
 [![NPM Version][npm-image]][npm-url]
