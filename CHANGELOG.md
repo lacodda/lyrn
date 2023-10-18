@@ -1,5 +1,23 @@
 # Changelog
 
+## 🎉 [1.1.3] - 2023-10-18
+
+### 📖 Documentation
+
+- Added lyrn documentation
+
+### 🛟 Miscellaneous Tasks
+
+- Fix github action "documentation"
+- Add github action "documentation"
+- Removed unused functions in helpers
+
+### 🧪 Testing
+
+- Added unit tests for project functions
+- Added unit tests for helper function "get_git_user"
+- Added unit tests for helper functions
+
 ## 🎉 [1.1.2] - 2023-09-30
 
 ### ✨ Features
@@ -39,7 +57,7 @@
 
 ### ✨ Features
 
-- Added command to build on webpack
+- Added command to build build on webpack
 - Added an argument to run the "start" script in webpack
 
 ### 🛠️ Bug Fixes
@@ -80,6 +98,16 @@
 
 ## 🎉 [1.0.0] - 2023-09-02
 
+### 🛟 Miscellaneous Tasks
+
+- Fix github action "release"
+
+### 🛠️ Bug Fixes
+
+- Fix clear_console function for windows
+
+## 🎉 [0.0.9] - 2023-09-02
+
 ### ✨ Features
 
 - 📦 added npm packages installer
@@ -107,18 +135,20 @@
 - Eslintrc struct replaced with json_serde::Value
 - HashMap in Package struct replaced with json_serde::Value
 
+### 🎨 Styling
+
+- 🖼️ changed logo
+
 ### 📖 Documentation
 
 - The description of the application's features has been improved in the README file
 
 ### 🛟 Miscellaneous Tasks
 
-- Fix github action "release"
 - Add github action "release" and cliff.toml
 
 ### 🛠️ Bug Fixes
 
-- Fix clear_console function for windows
 - Fixed function clear_console
 - Added sorting list of dependencies
 
