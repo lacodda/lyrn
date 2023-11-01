@@ -3,7 +3,7 @@ mod libs;
 mod templates;
 mod tools;
 use clap::{Parser, Subcommand};
-use commands::{create, start, build};
+use commands::{create, start, build, export};
 use std::error::Error;
 
 #[derive(Debug, Parser)]
@@ -20,6 +20,8 @@ enum Commands {
     Create(create::CreateArgs),
     Start(start::StartArgs),
     Build(build::BuildArgs),
+    #[command(arg_required_else_help = true)]
+    Export(export::ExportArgs),
 }
 
 fn main() -> Result<(), Box<dyn Error>> {
@@ -29,5 +31,6 @@ fn main() -> Result<(), Box<dyn Error>> {
         Commands::Create(args) => create::cmd(args),
         Commands::Start(args) => start::cmd(args),
         Commands::Build(args) => build::cmd(args),
+        Commands::Export(args) => export::cmd(args),
     }
 }
