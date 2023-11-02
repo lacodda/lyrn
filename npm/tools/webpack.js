@@ -4,8 +4,11 @@ const webpack = require('webpack');
 const WebpackDevServer = require('webpack-dev-server');
 
 process.stdin.on('data', function (inputData) {
-  const { config, project_config, plugins, rules } = JSON.parse(inputData);
+  const { config, project_config, constants, plugins, rules } = JSON.parse(inputData);
 
+  for (const constant of constants) {
+    eval(`global.${constant}`);
+  }
   for (const rule of rules) {
     config.module.rules.push(eval(rule));
   }

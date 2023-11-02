@@ -17,6 +17,7 @@ use std::{
 pub struct WebpackConfig {
     pub project_config: ProjectConfig,
     pub config: Value,
+    pub constants: Vec<String>,
     pub plugins: Vec<String>,
     pub rules: Vec<String>,
 }
@@ -40,6 +41,15 @@ pub fn get_config_dev(start_args: &Option<StartArgs>) -> WebpackConfig {
     WebpackConfig {
         project_config: project_config(start_args),
         config: config_dev(start_args),
+        constants: vec![
+            PATH_CONST.into(),
+            WEBPACK_CONST.into(),
+            FORK_TS_CHECKER_WEBPACK_PLUGIN_CONST.into(),
+            COPY_WEBPACK_PLUGIN_CONST.into(),
+            HTML_WEBPACK_PLUGIN_CONST.into(),
+            REACT_REFRESH_WEBPACK_PLUGIN_CONST.into(),
+            PROCESS_CWD_CONST.into(),
+        ],
         plugins: vec![
             fork_ts_checker_webpack_plugin(),
             copy_webpack_plugin(aliases()),
@@ -55,6 +65,16 @@ pub fn get_config_prod() -> WebpackConfig {
     WebpackConfig {
         project_config: project_config(&None),
         config: config_prod(),
+        constants: vec![
+            PATH_CONST.into(),
+            WEBPACK_CONST.into(),
+            FORK_TS_CHECKER_WEBPACK_PLUGIN_CONST.into(),
+            COPY_WEBPACK_PLUGIN_CONST.into(),
+            HTML_WEBPACK_PLUGIN_CONST.into(),
+            MINI_CSS_EXTRACT_PLUGIN_CONST.into(),
+            REACT_REFRESH_WEBPACK_PLUGIN_CONST.into(),
+            PROCESS_CWD_CONST.into(),
+        ],
         plugins: vec![
             fork_ts_checker_webpack_plugin(),
             copy_webpack_plugin(aliases()),
@@ -66,6 +86,15 @@ pub fn get_config_prod() -> WebpackConfig {
         rules: vec![tsx_rule(), style_rule(false), images_rule(), inline_rule()],
     }
 }
+
+const PROCESS_CWD_CONST: &str = "cwd = process.cwd();";
+const PATH_CONST: &str = "path = require('path');";
+const WEBPACK_CONST: &str = "webpack = require('webpack');";
+const FORK_TS_CHECKER_WEBPACK_PLUGIN_CONST: &str = "ForkTsCheckerWebpackPlugin = require('fork-ts-checker-webpack-plugin');";
+const HTML_WEBPACK_PLUGIN_CONST: &str = "HtmlWebpackPlugin = require('html-webpack-plugin');";
+const MINI_CSS_EXTRACT_PLUGIN_CONST: &str = "MiniCssExtractPlugin = require('mini-css-extract-plugin');";
+const COPY_WEBPACK_PLUGIN_CONST: &str = "CopyWebpackPlugin = require('copy-webpack-plugin');";
+const REACT_REFRESH_WEBPACK_PLUGIN_CONST: &str = "ReactRefreshWebpackPlugin = require('@pmmmwh/react-refresh-webpack-plugin');";
 
 fn get_abs_path(alias: &String) -> String {
     let cwd = env::current_dir().unwrap();
@@ -252,8 +281,7 @@ fn tsx_rule() -> String {
 
 fn style_rule(is_dev: bool) -> String {
     format!(
-        r###"const MiniCssExtractPlugin = require('mini-css-extract-plugin');
-let isDev = {};
+        r###"let isDev = {};
 new Object({{
   test: /\.(sass|scss|css)$/,
   use: [
@@ -297,24 +325,19 @@ fn inline_rule() -> String {
 }
 
 fn fork_ts_checker_webpack_plugin() -> String {
-    r###"const ForkTsCheckerWebpackPlugin = require('fork-ts-checker-webpack-plugin');
-new ForkTsCheckerWebpackPlugin();
+    r###"new ForkTsCheckerWebpackPlugin();
 "###
     .into()
 }
 
 fn hot_module_replacement_plugin() -> String {
-    r###"const webpack = require('webpack');
-new webpack.HotModuleReplacementPlugin();
+    r###"new webpack.HotModuleReplacementPlugin();
 "###
     .into()
 }
 
 fn html_webpack_plugin() -> String {
-    r###"const path = require('path');
-const HtmlWebpackPlugin = require('html-webpack-plugin');
-const cwd = process.cwd();
-new HtmlWebpackPlugin({
+    r###"new HtmlWebpackPlugin({
     title: 'APP TITLE',
     favicon: path.resolve(cwd, './src/images/logo.svg'),
     template: path.resolve(cwd, './src/index.html'),
@@ -325,8 +348,7 @@ new HtmlWebpackPlugin({
 }
 
 fn mini_css_extract_plugin() -> String {
-    r###"const MiniCssExtractPlugin = require('mini-css-extract-plugin');
-new MiniCssExtractPlugin({
+    r###"new MiniCssExtractPlugin({
     filename: 'styles/[name].[chunkhash].css',
     chunkFilename: 'styles/[name].[chunkhash].chunk.css',
 });
@@ -336,8 +358,7 @@ new MiniCssExtractPlugin({
 
 fn copy_webpack_plugin(aliases: Aliases) -> String {
     format!(
-        r###"const CopyWebpackPlugin = require('copy-webpack-plugin');
-new CopyWebpackPlugin({{
+        r###"new CopyWebpackPlugin({{
   patterns: [
     {{
       from: '{}',
@@ -355,8 +376,7 @@ new CopyWebpackPlugin({{
 }
 
 fn react_refresh_webpack_plugin() -> String {
-    r###"const ReactRefreshWebpackPlugin = require('@pmmmwh/react-refresh-webpack-plugin');
-new ReactRefreshWebpackPlugin();
+    r###"new ReactRefreshWebpackPlugin();
 "###
     .into()
 }
