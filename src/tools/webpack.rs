@@ -4,13 +4,16 @@ use crate::{
 };
 use json_value_merge::Merge;
 use path_absolutize::*;
+use regex::Regex;
 use serde::{Deserialize, Serialize};
 use serde_json::{from_str, from_value, json, to_string, Value};
 use std::{
     env,
     error::Error,
     fs,
+    io::Write,
     path::{Path, PathBuf},
+    string::String,
 };
 
 #[derive(Debug, Clone, Serialize, Deserialize)]
@@ -37,6 +40,11 @@ impl Aliases {
     }
 }
 
+pub enum Env {
+    Dev,
+    Prod,
+}
+
 pub fn get_config_dev(start_args: &Option<StartArgs>) -> WebpackConfig {
     WebpackConfig {
         project_config: project_config(start_args),
@@ -49,6 +57,7 @@ pub fn get_config_dev(start_args: &Option<StartArgs>) -> WebpackConfig {
             HTML_WEBPACK_PLUGIN_CONST.into(),
             REACT_REFRESH_WEBPACK_PLUGIN_CONST.into(),
             PROCESS_CWD_CONST.into(),
+            IS_DEV.into(),
         ],
         plugins: vec![
             fork_ts_checker_webpack_plugin(),
@@ -57,7 +66,7 @@ pub fn get_config_dev(start_args: &Option<StartArgs>) -> WebpackConfig {
             hot_module_replacement_plugin(),
             react_refresh_webpack_plugin(),
         ],
-        rules: vec![tsx_rule(), style_rule(true), images_rule(), inline_rule()],
+        rules: vec![tsx_rule(), style_rule(), images_rule(), inline_rule()],
     }
 }
 
@@ -74,6 +83,7 @@ pub fn get_config_prod() -> WebpackConfig {
             MINI_CSS_EXTRACT_PLUGIN_CONST.into(),
             REACT_REFRESH_WEBPACK_PLUGIN_CONST.into(),
             PROCESS_CWD_CONST.into(),
+            IS_PROD.into(),
         ],
         plugins: vec![
             fork_ts_checker_webpack_plugin(),
@@ -83,10 +93,79 @@ pub fn get_config_prod() -> WebpackConfig {
             hot_module_replacement_plugin(),
             react_refresh_webpack_plugin(),
         ],
-        rules: vec![tsx_rule(), style_rule(false), images_rule(), inline_rule()],
+        rules: vec![tsx_rule(), style_rule(), images_rule(), inline_rule()],
     }
 }
 
+pub fn export_config(env: Env) -> Result<(), Box<dyn Error>> {
+    let webpack_config: WebpackConfig;
+    let mut file;
+
+    match env {
+        Env::Dev => {
+            webpack_config = get_config_dev(&None);
+            file = fs::File::create("webpack.config.dev.js")?;
+        }
+        Env::Prod => {
+            webpack_config = get_config_prod();
+            file = fs::File::create("webpack.config.prod.js")?;
+        }
+    }
+
+    for constant in &webpack_config.constants {
+        file.write_all(format!("const {}\n", constant).as_bytes())?;
+    }
+
+    let json_config_str = serde_json::to_string_pretty(&webpack_config.config).unwrap();
+    let rules_str = webpack_config.rules.join(",\n");
+    let plugins_str = webpack_config.plugins.join(",\n");
+    let js_object_str = json_to_js_object(&json_config_str, vec![&rules_str, &plugins_str], vec!["\"rules\": [%s],", "\"plugins\": [%s],"]);
+
+    file.write_all(format!("\nmodule.exports = {}\n", js_object_str).as_bytes())?;
+
+    Ok(())
+}
+
+fn json_to_js_object(json_str: &str, content_to_insert: Vec<&str>, insert_into: Vec<&str>) -> String {
+    let lines: Vec<&str> = json_str.split("\n").collect();
+    let insert_lines: Vec<Vec<&str>> = content_to_insert.into_iter().map(|s: &str| s.split("\n").collect()).collect();
+    let insert_into_parts: Vec<Vec<&str>> = insert_into.into_iter().map(|s: &str| s.split("%s").collect()).collect();
+    let mut new_lines: Vec<String> = Vec::new();
+
+    for line in lines {
+        let indent = get_indent(line);
+        let key = insert_into_parts.iter().position(|part| line.contains(part[0]));
+        if key.is_some() {
+            let k: usize = key.unwrap();
+            new_lines.push(format_str(insert_into_parts[k][0], &indent));
+            for insert_line in &insert_lines[k] {
+                new_lines.push(format!("  {}{}", &indent, insert_line));
+            }
+            new_lines.push(format!("{}{}", &indent, insert_into_parts[k][1]));
+        } else {
+            new_lines.push(format_str(line, &indent));
+        }
+    }
+
+    new_lines.join("\n")
+}
+
+fn format_str(line: &str, indent: &str) -> String {
+    let re = Regex::new(r#""(\w+)":\s(.+)"#).unwrap();
+    let Some(caps) = re.captures(line) else {
+        return line.into();
+    };
+    format!("{}{}: {}", &indent, &caps[1], &caps[2])
+}
+
+fn get_indent(line: &str) -> String {
+    let re = Regex::new(r#"(^\s*)"#).unwrap();
+    let Some(caps) = re.captures(line) else { return "".into() };
+    " ".repeat(caps[1].len())
+}
+
+const IS_DEV: &str = "isDev = true;";
+const IS_PROD: &str = "isDev = false;";
 const PROCESS_CWD_CONST: &str = "cwd = process.cwd();";
 const PATH_CONST: &str = "path = require('path');";
 const WEBPACK_CONST: &str = "webpack = require('webpack');";
@@ -274,33 +353,28 @@ fn tsx_rule() -> String {
       transpileOnly: true,
     },
   },
-});
-"###
-    .into()
+})"###
+        .into()
 }
 
-fn style_rule(is_dev: bool) -> String {
-    format!(
-        r###"let isDev = {};
-new Object({{
+fn style_rule() -> String {
+    r###"new Object({
   test: /\.(sass|scss|css)$/,
   use: [
-    {{ loader: isDev ? 'style-loader' : MiniCssExtractPlugin.loader }},
-    {{
+    { loader: isDev ? 'style-loader' : MiniCssExtractPlugin.loader },
+    {
       loader: 'css-loader',
-      options: {{
+      options: {
         importLoaders: isDev ? 1 : 2,
         sourceMap: isDev,
         modules: isDev,
-      }},
-    }},
-    {{ loader: 'postcss-loader', options: {{ sourceMap: isDev }} }},
-    {{ loader: 'sass-loader', options: {{ sourceMap: isDev }} }},
+      },
+    },
+    { loader: 'postcss-loader', options: { sourceMap: isDev } },
+    { loader: 'sass-loader', options: { sourceMap: isDev } },
   ],
-}});
-"###,
-        { is_dev }
-    )
+})"###
+        .into()
 }
 
 fn images_rule() -> String {
@@ -310,73 +384,60 @@ fn images_rule() -> String {
   generator: {
     filename: 'assets/[hash][ext][query]',
   },
-});
-"###
-    .into()
+})"###
+        .into()
 }
 
 fn inline_rule() -> String {
     r###"new Object({
   test: /\.(woff(2)?|eot|ttf|otf|svg|)$/i,
   type: 'asset/inline',
-});
-"###
-    .into()
+})"###
+        .into()
 }
 
 fn fork_ts_checker_webpack_plugin() -> String {
-    r###"new ForkTsCheckerWebpackPlugin();
-"###
-    .into()
+    r###"new ForkTsCheckerWebpackPlugin()"###.into()
 }
 
 fn hot_module_replacement_plugin() -> String {
-    r###"new webpack.HotModuleReplacementPlugin();
-"###
-    .into()
+    r###"new webpack.HotModuleReplacementPlugin()"###.into()
 }
 
 fn html_webpack_plugin() -> String {
     r###"new HtmlWebpackPlugin({
-    title: 'APP TITLE',
-    favicon: path.resolve(cwd, './src/images/logo.svg'),
-    template: path.resolve(cwd, './src/index.html'),
-    filename: 'index.html'
-});
-"###
-    .into()
+  title: 'APP TITLE',
+  favicon: path.resolve(cwd, './src/images/logo.svg'),
+  template: path.resolve(cwd, './src/index.html'),
+  filename: 'index.html'
+})"###
+        .into()
 }
 
 fn mini_css_extract_plugin() -> String {
     r###"new MiniCssExtractPlugin({
-    filename: 'styles/[name].[chunkhash].css',
-    chunkFilename: 'styles/[name].[chunkhash].chunk.css',
-});
-"###
-    .into()
+  filename: 'styles/[name].[chunkhash].css',
+  chunkFilename: 'styles/[name].[chunkhash].chunk.css',
+})"###
+        .into()
 }
 
 fn copy_webpack_plugin(aliases: Aliases) -> String {
     format!(
         r###"new CopyWebpackPlugin({{
-  patterns: [
-    {{
-      from: '{}',
-      to: 'assets',
-      globOptions: {{
-        ignore: ['*.DS_Store'],
-      }},
-      noErrorOnMissing: true,
+  patterns: [{{
+    from: '{}',
+    to: 'assets',
+    globOptions: {{
+      ignore: ['*.DS_Store'],
     }},
-  ],
-}});
-"###,
+    noErrorOnMissing: true, 
+  }}],
+}})"###,
         aliases.public
     )
 }
 
 fn react_refresh_webpack_plugin() -> String {
-    r###"new ReactRefreshWebpackPlugin();
-"###
-    .into()
+    r###"new ReactRefreshWebpackPlugin()"###.into()
 }

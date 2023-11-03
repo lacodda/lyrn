@@ -1,3 +1,4 @@
+use crate::tools::webpack;
 use clap::{Args, Subcommand};
 use std::error::Error;
 
@@ -20,13 +21,15 @@ pub struct ExportConfigArgs {
 }
 
 pub fn cmd(export_args: ExportArgs) -> Result<(), Box<dyn Error>> {
-    let export_cmd = export_args.command.unwrap();
+    let export_cmd: ExportCommands = export_args.command.unwrap();
     match export_cmd {
         ExportCommands::Config(args) => export_config(args),
     }
 }
 
-fn export_config(args: ExportConfigArgs) -> Result<(), Box<dyn Error>> {
-    println!("{:?}", args);
+fn export_config(_args: ExportConfigArgs) -> Result<(), Box<dyn Error>> {
+    let _ = webpack::export_config(webpack::Env::Dev);
+    let _ = webpack::export_config(webpack::Env::Prod);
+
     Ok(())
 }
