@@ -16,11 +16,13 @@ struct Cli {
 
 #[derive(Debug, Subcommand)]
 enum Commands {
-    #[command(arg_required_else_help = true)]
+    #[command(about = "Create a new project", arg_required_else_help = true)]
     Create(create::CreateArgs),
+    #[command(about = "Run the project in development mode")]
     Start(start::StartArgs),
+    #[command(about = "Build project")]
     Build(build::BuildArgs),
-    #[command(arg_required_else_help = true)]
+    #[command(about = "Export configuration files", arg_required_else_help = true)]
     Export(export::ExportArgs),
 }
 

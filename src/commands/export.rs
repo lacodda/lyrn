@@ -11,6 +11,7 @@ pub struct ExportArgs {
 
 #[derive(Debug, Subcommand)]
 enum ExportCommands {
+    #[command(about = "Export configuration files")]
     Config(ExportConfigArgs),
 }
 
