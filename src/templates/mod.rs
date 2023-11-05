@@ -109,10 +109,14 @@ pub struct DevConfig {
     pub host: String,
     #[serde(default, skip_serializing_if = "is_default")]
     pub port: i32,
+    #[serde(default, skip_serializing_if = "is_default")]
+    pub config: String,
 }
 
 #[derive(Debug, Default, Clone, Serialize, Deserialize)]
 pub struct ProdConfig {
     #[serde(default, skip_serializing_if = "is_default")]
     pub public_path: String,
+    #[serde(default, skip_serializing_if = "is_default")]
+    pub config: String,
 }

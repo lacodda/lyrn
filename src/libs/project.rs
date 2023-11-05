@@ -1,7 +1,7 @@
 use super::helpers::get_git_user;
 use super::types::{Content, Package};
 use crate::libs::helpers::{clear_console, spinner_start};
-use crate::templates::{Framework, ProjectProps, Template};
+use crate::templates::{Framework, ProjectProps, Template, ProjectConfig};
 use clap::Args;
 use serde_json::json;
 use std::collections::HashMap;
@@ -73,6 +73,12 @@ pub fn create_project(args: CreateProjectArgs) -> Result<(), Box<dyn Error>> {
     set_current_dir(&project_props.name).expect("Failed to change working directory");
     run_npm_install(&project_props.name);
 
+    Ok(())
+}
+
+pub fn save_project_config(project_config: ProjectConfig) -> Result<(), Box<dyn Error>> {
+    let file = File::create(PROJECT_CONFIG)?;
+    serde_json::to_writer_pretty(&file, &project_config)?;
     Ok(())
 }
 

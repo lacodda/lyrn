@@ -1,5 +1,6 @@
 use crate::{
     commands::start::StartArgs,
+    libs::project,
     templates::{common::project_config as default_project_config, ProjectConfig},
 };
 use json_value_merge::Merge;
@@ -111,20 +112,27 @@ pub fn get_config_prod() -> WebpackConfig {
 }
 
 pub fn export_config(env: Env) -> Result<(), Box<dyn Error>> {
+    let env_name;
+    let file_name;
+    let mut project_config = project_config(&None);
     let webpack_config: WebpackConfig;
-    let mut file;
 
     match env {
         Env::Dev => {
+            env_name = "Development";
+            file_name = WEBPACK_CONFIG_DEV;
+            project_config.dev.config = file_name.into();
             webpack_config = get_config_dev(&None);
-            file = fs::File::create(WEBPACK_CONFIG_DEV)?;
         }
         Env::Prod => {
+            env_name = "Production";
+            file_name = WEBPACK_CONFIG_PROD;
+            project_config.prod.config = file_name.into();
             webpack_config = get_config_prod();
-            file = fs::File::create(WEBPACK_CONFIG_PROD)?;
         }
     }
 
+    let mut file = fs::File::create(file_name)?;
     for constant in &webpack_config.constants {
         file.write_all(format!("const {}\n", constant).as_bytes())?;
     }
@@ -135,6 +143,8 @@ pub fn export_config(env: Env) -> Result<(), Box<dyn Error>> {
     let js_object_str = json_to_js_object(&json_config_str, vec![&rules_str, &plugins_str], vec!["\"rules\": [%s],", "\"plugins\": [%s],"]);
 
     file.write_all(format!("\nmodule.exports = {}\n", js_object_str).as_bytes())?;
+    project::save_project_config(project_config)?;
+    println!("✅ Webpack {} configuration has been successfully exported to a file {}", env_name, file_name);
 
     Ok(())
 }
