@@ -29,6 +29,8 @@ pub struct CreateProjectArgs {
     show: bool,
 }
 
+pub const PROJECT_CONFIG: &str = "lyrn.json";
+
 pub fn create_project(args: CreateProjectArgs) -> Result<(), Box<dyn Error>> {
     let project_props: ProjectProps = ProjectProps {
         name: args.name,
@@ -36,17 +38,17 @@ pub fn create_project(args: CreateProjectArgs) -> Result<(), Box<dyn Error>> {
         user: get_git_user()?,
     };
     let template = project_props.clone().get_template();
-    let mut project: HashMap<String, Content> = HashMap::new();
-    project.insert("lyrn.json".into(), Content::Val(json!(template.project_config)));
-    project.insert("package.json".into(), Content::Pkg(package(&project_props, &template)));
-    project.insert("tsconfig.json".into(), Content::Val(template.tsconfig));
-    project.insert(".eslintrc.json".into(), Content::Val(template.eslintrc));
-    project.insert("README.md".into(), Content::Str(template.readme));
-    project.insert("LICENSE".into(), Content::Str(template.mit_license));
-    project.insert(".gitignore".into(), Content::Str(template.gitignore));
-    project.insert("postcss.config.js".into(), Content::Str(template.postcss_config));
-    project.insert("src/index.d.ts".into(), Content::Str(template.index_d));
-    project.insert("src/index.html".into(), Content::Str(template.index));
+    let mut project: HashMap<&str, Content> = HashMap::new();
+    project.insert(PROJECT_CONFIG, Content::Val(json!(template.project_config)));
+    project.insert("package.json", Content::Pkg(package(&project_props, &template)));
+    project.insert("tsconfig.json", Content::Val(template.tsconfig));
+    project.insert(".eslintrc.json", Content::Val(template.eslintrc));
+    project.insert("README.md", Content::Str(template.readme));
+    project.insert("LICENSE", Content::Str(template.mit_license));
+    project.insert(".gitignore", Content::Str(template.gitignore));
+    project.insert("postcss.config.js", Content::Str(template.postcss_config));
+    project.insert("src/index.d.ts", Content::Str(template.index_d));
+    project.insert("src/index.html", Content::Str(template.index));
     project.extend(template.app);
 
     if args.show {

@@ -31,7 +31,7 @@ pub struct Template {
     pub postcss_config: String,
     pub index_d: String,
     pub index: String,
-    pub app: HashMap<String, Content>,
+    pub app: HashMap<&'static str, Content>,
 }
 
 impl Template {

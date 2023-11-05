@@ -52,22 +52,22 @@ fn eslintrc() -> Value {
     })
 }
 
-fn app(_project: &ProjectProps) -> HashMap<String, Content> {
+fn app(_project: &ProjectProps) -> HashMap<&'static str, Content> {
     HashMap::from([
-        ("src/main.ts".into(), Content::Str(main())),
-        ("src/bootstrap.tsx".into(), Content::Str(bootstrap())),
-        ("src/components/App.tsx".into(), Content::Str(container_component("App".into()))),
-        ("src/components/Home.tsx".into(), Content::Str(home_page("Home".into()))),
-        ("src/components/About.tsx".into(), Content::Str(component_page("About".into()))),
-        ("src/components/Info.tsx".into(), Content::Str(component_page("Info".into()))),
-        ("src/images/logo.svg".into(), Content::Str(logo("React".into()))),
-        ("src/ui/index.ts".into(), Content::Str(ui_index())),
-        ("src/ui/components/Button.tsx".into(), Content::Str(button())),
-        ("src/ui/components/Navbar.tsx".into(), Content::Str(navbar())),
-        ("src/ui/styles/index.scss".into(), Content::Str(style_index())),
-        ("src/ui/styles/_reset.scss".into(), Content::Str(style_reset())),
-        ("src/ui/styles/_variables.scss".into(), Content::Str(style_variables())),
-        ("src/ui/styles/_scaffolding.scss".into(), Content::Str(style_scaffolding())),
+        ("src/main.ts", Content::Str(main())),
+        ("src/bootstrap.tsx", Content::Str(bootstrap())),
+        ("src/components/App.tsx", Content::Str(container_component("App".into()))),
+        ("src/components/Home.tsx", Content::Str(home_page("Home".into()))),
+        ("src/components/About.tsx", Content::Str(component_page("About".into()))),
+        ("src/components/Info.tsx", Content::Str(component_page("Info".into()))),
+        ("src/images/logo.svg", Content::Str(logo("React".into()))),
+        ("src/ui/index.ts", Content::Str(ui_index())),
+        ("src/ui/components/Button.tsx", Content::Str(button())),
+        ("src/ui/components/Navbar.tsx", Content::Str(navbar())),
+        ("src/ui/styles/index.scss", Content::Str(style_index())),
+        ("src/ui/styles/_reset.scss", Content::Str(style_reset())),
+        ("src/ui/styles/_variables.scss", Content::Str(style_variables())),
+        ("src/ui/styles/_scaffolding.scss", Content::Str(style_scaffolding())),
     ])
 }
 

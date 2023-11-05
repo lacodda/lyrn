@@ -241,7 +241,7 @@ pub fn config_file(file_name: &str) -> Result<ProjectConfig, Box<dyn Error>> {
 }
 
 fn project_config(start_args: &Option<StartArgs>) -> ProjectConfig {
-    let config_file = json!(config_file("lyrn.json").unwrap());
+    let config_file = json!(config_file(project::PROJECT_CONFIG).unwrap());
     let mut project_config = json!(default_project_config());
     project_config.merge(config_file);
     let mut project_config: ProjectConfig = from_value(project_config).unwrap();
