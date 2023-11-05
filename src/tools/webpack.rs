@@ -445,3 +445,77 @@ fn copy_webpack_plugin(aliases: Aliases) -> String {
 fn react_refresh_webpack_plugin() -> String {
     r###"new ReactRefreshWebpackPlugin()"###.into()
 }
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+    use std::fs;
+
+    fn test_export_config(env: Env, file_name: &str) {
+        let result = export_config(env);
+        // Assert that the function returns a valid Result
+        assert!(result.is_ok());
+        // Check if the expected file was created
+        let file_exists = fs::metadata(file_name).is_ok();
+        assert!(file_exists);
+
+        let generated_content = fs::read_to_string(file_name);
+        let sample_content = fs::read_to_string(format!("examples/{}", file_name));
+        if let (Ok(generated_content_str), Ok(sample_content_str)) = (generated_content, sample_content) {
+            // Compare the generated content with the sample content
+            assert_eq!(generated_content_str, sample_content_str);
+        }
+        // Clean up: remove the created file
+        fs::remove_file(file_name).unwrap();
+    }
+
+    #[test]
+    fn test_export_config_dev() {
+        test_export_config(Env::Dev, WEBPACK_CONFIG_DEV);
+    }
+
+    #[test]
+    fn test_export_config_prod() {
+        test_export_config(Env::Prod, WEBPACK_CONFIG_PROD);
+    }
+
+    #[test]
+    fn test_json_to_js_object() {
+        let json_str = r#"{
+  "key1": "value1",
+  "key2": "value2",
+  "key3": {},
+}"#;
+        let insert_lines = r#"line1: "inserted1",
+line2: "inserted2","#;
+        let content_to_insert = vec![insert_lines];
+        let insert_into = vec!["\"key3\": {%s},"];
+        let expected_result = r#"{
+  key1: "value1",
+  key2: "value2",
+  key3: {
+    line1: "inserted1",
+    line2: "inserted2",
+  },
+}"#;
+
+        assert_eq!(json_to_js_object(json_str, content_to_insert, insert_into), expected_result);
+    }
+
+    #[test]
+    fn test_format_str() {
+        let line = "\"key\": \"value\"";
+        let indent = "  ";
+        let expected_result = "  key: \"value\"";
+
+        assert_eq!(format_str(line, indent), expected_result);
+    }
+
+    #[test]
+    fn test_get_indent() {
+        let line = "  some text";
+        let expected_result = "  ";
+
+        assert_eq!(get_indent(line), expected_result);
+    }
+}
