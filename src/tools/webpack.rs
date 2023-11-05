@@ -45,6 +45,19 @@ pub enum Env {
     Prod,
 }
 
+const WEBPACK_CONFIG_DEV: &str = "webpack.config.dev.js";
+const WEBPACK_CONFIG_PROD: &str = "webpack.config.prod.js";
+const IS_DEV: &str = "isDev = true;";
+const IS_PROD: &str = "isDev = false;";
+const PROCESS_CWD_CONST: &str = "cwd = process.cwd();";
+const PATH_CONST: &str = "path = require('path');";
+const WEBPACK_CONST: &str = "webpack = require('webpack');";
+const FORK_TS_CHECKER_WEBPACK_PLUGIN_CONST: &str = "ForkTsCheckerWebpackPlugin = require('fork-ts-checker-webpack-plugin');";
+const HTML_WEBPACK_PLUGIN_CONST: &str = "HtmlWebpackPlugin = require('html-webpack-plugin');";
+const MINI_CSS_EXTRACT_PLUGIN_CONST: &str = "MiniCssExtractPlugin = require('mini-css-extract-plugin');";
+const COPY_WEBPACK_PLUGIN_CONST: &str = "CopyWebpackPlugin = require('copy-webpack-plugin');";
+const REACT_REFRESH_WEBPACK_PLUGIN_CONST: &str = "ReactRefreshWebpackPlugin = require('@pmmmwh/react-refresh-webpack-plugin');";
+
 pub fn get_config_dev(start_args: &Option<StartArgs>) -> WebpackConfig {
     WebpackConfig {
         project_config: project_config(start_args),
@@ -104,11 +117,11 @@ pub fn export_config(env: Env) -> Result<(), Box<dyn Error>> {
     match env {
         Env::Dev => {
             webpack_config = get_config_dev(&None);
-            file = fs::File::create("webpack.config.dev.js")?;
+            file = fs::File::create(WEBPACK_CONFIG_DEV)?;
         }
         Env::Prod => {
             webpack_config = get_config_prod();
-            file = fs::File::create("webpack.config.prod.js")?;
+            file = fs::File::create(WEBPACK_CONFIG_PROD)?;
         }
     }
 
@@ -164,17 +177,6 @@ fn get_indent(line: &str) -> String {
     " ".repeat(caps[1].len())
 }
 
-const IS_DEV: &str = "isDev = true;";
-const IS_PROD: &str = "isDev = false;";
-const PROCESS_CWD_CONST: &str = "cwd = process.cwd();";
-const PATH_CONST: &str = "path = require('path');";
-const WEBPACK_CONST: &str = "webpack = require('webpack');";
-const FORK_TS_CHECKER_WEBPACK_PLUGIN_CONST: &str = "ForkTsCheckerWebpackPlugin = require('fork-ts-checker-webpack-plugin');";
-const HTML_WEBPACK_PLUGIN_CONST: &str = "HtmlWebpackPlugin = require('html-webpack-plugin');";
-const MINI_CSS_EXTRACT_PLUGIN_CONST: &str = "MiniCssExtractPlugin = require('mini-css-extract-plugin');";
-const COPY_WEBPACK_PLUGIN_CONST: &str = "CopyWebpackPlugin = require('copy-webpack-plugin');";
-const REACT_REFRESH_WEBPACK_PLUGIN_CONST: &str = "ReactRefreshWebpackPlugin = require('@pmmmwh/react-refresh-webpack-plugin');";
-
 fn get_abs_path(alias: &String) -> String {
     let cwd = env::current_dir().unwrap();
     let mut path = PathBuf::from(&cwd);
@@ -199,7 +201,9 @@ fn aliases() -> Aliases {
 
 fn aliases_json() -> Value {
     let mut aliases_json = json!(aliases());
-    aliases_json.merge(ts_config_paths("tsconfig.json").unwrap());
+    if let Ok(tsconfig_paths) = ts_config_paths("tsconfig.json") {
+        aliases_json.merge(tsconfig_paths);
+    }
     aliases_json
 }
 
