@@ -11,7 +11,7 @@ pub struct CreateArgs {
 
 #[derive(Debug, Subcommand)]
 enum CreateCommands {
-    #[command(arg_required_else_help = true)]
+    #[command(about = "Create a new project", arg_required_else_help = true)]
     Project(CreateProjectArgs),
 }
 

@@ -31,7 +31,7 @@ pub struct Template {
     pub postcss_config: String,
     pub index_d: String,
     pub index: String,
-    pub app: HashMap<String, Content>,
+    pub app: HashMap<&'static str, Content>,
 }
 
 impl Template {
@@ -109,10 +109,14 @@ pub struct DevConfig {
     pub host: String,
     #[serde(default, skip_serializing_if = "is_default")]
     pub port: i32,
+    #[serde(default, skip_serializing_if = "is_default")]
+    pub config: String,
 }
 
 #[derive(Debug, Default, Clone, Serialize, Deserialize)]
 pub struct ProdConfig {
     #[serde(default, skip_serializing_if = "is_default")]
     pub public_path: String,
+    #[serde(default, skip_serializing_if = "is_default")]
+    pub config: String,
 }
