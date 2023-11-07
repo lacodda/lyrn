@@ -65,7 +65,7 @@ fn done(spinner: &mut Spinner, done_str: &str) -> Result<(), Box<dyn Error>> {
     spinner.stop();
     clear_console()?;
 
-    println!("✔️ Application build completed!");
+    println!("✅ Application build completed!");
     println!("");
     println!("{:60} {:10}", "File", "Size");
     println!("");

@@ -1,7 +1,7 @@
 use super::helpers::get_git_user;
 use super::types::{Content, Package};
 use crate::libs::helpers::{clear_console, spinner_start};
-use crate::templates::{Framework, ProjectProps, Template};
+use crate::templates::{Framework, ProjectProps, Template, ProjectConfig};
 use clap::Args;
 use serde_json::json;
 use std::collections::HashMap;
@@ -29,6 +29,8 @@ pub struct CreateProjectArgs {
     show: bool,
 }
 
+pub const PROJECT_CONFIG: &str = "lyrn.json";
+
 pub fn create_project(args: CreateProjectArgs) -> Result<(), Box<dyn Error>> {
     let project_props: ProjectProps = ProjectProps {
         name: args.name,
@@ -36,17 +38,17 @@ pub fn create_project(args: CreateProjectArgs) -> Result<(), Box<dyn Error>> {
         user: get_git_user()?,
     };
     let template = project_props.clone().get_template();
-    let mut project: HashMap<String, Content> = HashMap::new();
-    project.insert("lyrn.json".into(), Content::Val(json!(template.project_config)));
-    project.insert("package.json".into(), Content::Pkg(package(&project_props, &template)));
-    project.insert("tsconfig.json".into(), Content::Val(template.tsconfig));
-    project.insert(".eslintrc.json".into(), Content::Val(template.eslintrc));
-    project.insert("README.md".into(), Content::Str(template.readme));
-    project.insert("LICENSE".into(), Content::Str(template.mit_license));
-    project.insert(".gitignore".into(), Content::Str(template.gitignore));
-    project.insert("postcss.config.js".into(), Content::Str(template.postcss_config));
-    project.insert("src/index.d.ts".into(), Content::Str(template.index_d));
-    project.insert("src/index.html".into(), Content::Str(template.index));
+    let mut project: HashMap<&str, Content> = HashMap::new();
+    project.insert(PROJECT_CONFIG, Content::Val(json!(template.project_config)));
+    project.insert("package.json", Content::Pkg(package(&project_props, &template)));
+    project.insert("tsconfig.json", Content::Val(template.tsconfig));
+    project.insert(".eslintrc.json", Content::Val(template.eslintrc));
+    project.insert("README.md", Content::Str(template.readme));
+    project.insert("LICENSE", Content::Str(template.mit_license));
+    project.insert(".gitignore", Content::Str(template.gitignore));
+    project.insert("postcss.config.js", Content::Str(template.postcss_config));
+    project.insert("src/index.d.ts", Content::Str(template.index_d));
+    project.insert("src/index.html", Content::Str(template.index));
     project.extend(template.app);
 
     if args.show {
@@ -71,6 +73,12 @@ pub fn create_project(args: CreateProjectArgs) -> Result<(), Box<dyn Error>> {
     set_current_dir(&project_props.name).expect("Failed to change working directory");
     run_npm_install(&project_props.name);
 
+    Ok(())
+}
+
+pub fn save_project_config(project_config: ProjectConfig) -> Result<(), Box<dyn Error>> {
+    let file = File::create(PROJECT_CONFIG)?;
+    serde_json::to_writer_pretty(&file, &project_config)?;
     Ok(())
 }
 

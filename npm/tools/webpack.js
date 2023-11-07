@@ -2,10 +2,15 @@
 
 const webpack = require('webpack');
 const WebpackDevServer = require('webpack-dev-server');
+const { resolve } = require('path');
+const { mergeWithCustomize, customizeArray, } = require('webpack-merge');
 
 process.stdin.on('data', function (inputData) {
-  const { config, project_config, plugins, rules } = JSON.parse(inputData);
+  const { config, project_config, constants, plugins, rules } = JSON.parse(inputData);
 
+  for (const constant of constants) {
+    eval(`global.${constant}`);
+  }
   for (const rule of rules) {
     config.module.rules.push(eval(rule));
   }
@@ -18,7 +23,7 @@ process.stdin.on('data', function (inputData) {
       start({ config, project_config });
       break;
     case process.argv.includes('build'):
-      build({ config });
+      build({ config, project_config });
       break;
     default:
       process.exit(0);
@@ -26,6 +31,7 @@ process.stdin.on('data', function (inputData) {
 });
 
 function start({ config, project_config }) {
+  config = getConfig(config, project_config.dev.config);
   const devServerOptions = config.devServer;
   const compiler = webpack(config);
   const server = new WebpackDevServer(devServerOptions, compiler);
@@ -46,7 +52,8 @@ function start({ config, project_config }) {
   });
 }
 
-function build({ config }) {
+function build({ config, project_config }) {
+  config = getConfig(config, project_config.prod.config);
   webpack(config, (err, stats) => {
     if (err || stats.hasErrors()) {
       process.exit(0);
@@ -61,4 +68,18 @@ function build({ config }) {
         chunkModules: false,
       })));
   });
+}
+
+function getConfig(config, custom_config_path) {
+  if (!custom_config_path) {
+    return config;
+  }
+  const custom_config = require(resolve(custom_config_path));
+  return mergeWithCustomize({
+    customizeArray: customizeArray({
+      entry: 'replace',
+      plugins: 'replace',
+      'module.rules': 'replace',
+    })
+  })(config, custom_config);
 }

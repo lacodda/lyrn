@@ -59,11 +59,11 @@ fn dev_dependencies() -> Value {
         "style-loader": "^3.3.3",
         "ts-loader": "9.4.4",
         "typescript": "^5.1.6",
-        "webpack": "^5.88.1",
+        "webpack": "^5.89.0",
         "webpack-cli": "^5.1.4",
         "webpack-dev-server": "^4.15.1",
-        "webpack-shell-plugin-next": "^2.3.1",
-        "zx": "^7.2.3"
+        "webpack-merge": "5.10.0",
+        "webpack-shell-plugin-next": "^2.3.1"
     })
 }
 
