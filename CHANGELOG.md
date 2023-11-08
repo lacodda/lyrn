@@ -1,5 +1,40 @@
 # Changelog
 
+## 🎉 [1.2.0] - 2023-11-08
+
+### ✨ Features
+
+- Added merging of custom and default webpack configurations using the "webpack-merge" package
+- Added generation of path to configuration files to the file "lyrn.json"
+- Improved "export" сommand
+- Added a new command called "export"
+
+### 🎛️ Refactor
+
+- Minor edits
+- Constants are placed in a separate data array
+
+### 🎨 Styling
+
+- Changed emoji
+
+### 📖 Documentation
+
+- Added quick reference information about the "export" command
+
+### 🛟 Miscellaneous Tasks
+
+- Fix github action "documentation"
+- Added basic command descriptions
+
+### 🛠️ Bug Fixes
+
+- Fixed function "aliases_json". Minor edits
+
+### 🧪 Testing
+
+- Added unit tests for webpack functions
+
 ## 🎉 [1.1.3] - 2023-10-18
 
 ### 📖 Documentation
