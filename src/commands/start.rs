@@ -1,5 +1,5 @@
 use crate::libs::helpers::{clear_console, spinner_start};
-use crate::templates::ProjectConfig;
+use crate::libs::project_config::ProjectConfig;
 use crate::tools::webpack;
 use clap::Args;
 use local_ip_address::local_ip;
