@@ -1,7 +1,6 @@
 use crate::{
     commands::start::StartArgs,
-    libs::project,
-    templates::{common::project_config as default_project_config, ProjectConfig},
+    libs::project_config::{project_config as default_project_config, EnvType, ProjectConfig, PROJECT_CONFIG},
 };
 use json_value_merge::Merge;
 use path_absolutize::*;
@@ -39,11 +38,6 @@ impl Aliases {
     fn iter_mut(&mut self) -> impl Iterator<Item = &mut String> {
         IntoIterator::into_iter([&mut self.src, &mut self.build, &mut self.public, &mut self.images, &mut self.main])
     }
-}
-
-pub enum EnvType {
-    Dev,
-    Prod,
 }
 
 #[derive(Debug, Clone, Serialize, Deserialize)]
@@ -153,7 +147,7 @@ pub fn get_config_prod() -> WebpackConfig {
 }
 
 pub fn show_config(env_type: EnvType) -> Result<(), Box<dyn Error>> {
-    let mut env = get_env(env_type);
+    let mut env = get_env(&env_type);
     println!("\n✅ Webpack {} configuration:\n", env.name);
     for line in env.get_js_config()? {
         println!("{}", line);
@@ -162,17 +156,17 @@ pub fn show_config(env_type: EnvType) -> Result<(), Box<dyn Error>> {
 }
 
 pub fn export_config(env_type: EnvType) -> Result<(), Box<dyn Error>> {
-    let mut env = get_env(env_type);
+    let mut env = get_env(&env_type);
     let mut file = fs::File::create(&env.file)?;
     for line in env.get_js_config()? {
         file.write_all(format!("{}\n", line).as_bytes())?;
     }
-
+    let _ = project_config(&None).set_config(&env_type, env.file).save();
     println!("✅ Webpack {} configuration has been successfully exported to a file {}", env.name, env.file);
     Ok(())
 }
 
-fn get_env(env_type: EnvType) -> Env {
+fn get_env(env_type: &EnvType) -> Env {
     match env_type {
         EnvType::Dev => Env {
             name: DEV,
@@ -292,7 +286,7 @@ pub fn config_file(file_name: &str) -> Result<ProjectConfig, Box<dyn Error>> {
 }
 
 fn project_config(start_args: &Option<StartArgs>) -> ProjectConfig {
-    let config_file = json!(config_file(project::PROJECT_CONFIG).unwrap());
+    let config_file = json!(config_file(PROJECT_CONFIG).unwrap());
     let mut project_config = json!(default_project_config());
     project_config.merge(config_file);
     let mut project_config: ProjectConfig = from_value(project_config).unwrap();
