@@ -1,5 +1,19 @@
 # Changelog
 
+## 🎉 [1.2.1] - 2023-11-09
+
+### ✨ Features
+
+- Added "show" flag to output the configuration to the console
+
+### 🎛️ Refactor
+
+- ProjectConfig is moved to a separate module
+
+### 🛟 Miscellaneous Tasks
+
+- Fix github action "documentation"
+
 ## 🎉 [1.2.0] - 2023-11-08
 
 ### ✨ Features
