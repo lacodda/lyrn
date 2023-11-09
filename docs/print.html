@@ -89,7 +89,7 @@
 
         <nav id="sidebar" class="sidebar" aria-label="Table of contents">
             <div class="sidebar-scrollbox">
-                <ol class="chapter"><li class="chapter-item expanded "><a href="introduction.html"><strong aria-hidden="true">1.</strong> Introduction</a></li><li class="chapter-item expanded "><a href="commands/index.html"><strong aria-hidden="true">2.</strong> Commands</a></li><li><ol class="section"><li class="chapter-item expanded "><a href="commands/create.html"><strong aria-hidden="true">2.1.</strong> create</a></li><li class="chapter-item expanded "><a href="commands/start.html"><strong aria-hidden="true">2.2.</strong> start</a></li><li class="chapter-item expanded "><a href="commands/build.html"><strong aria-hidden="true">2.3.</strong> build</a></li></ol></li></ol>
+                <ol class="chapter"><li class="chapter-item expanded "><a href="introduction.html"><strong aria-hidden="true">1.</strong> Introduction</a></li><li class="chapter-item expanded "><a href="commands/index.html"><strong aria-hidden="true">2.</strong> Commands</a></li><li><ol class="section"><li class="chapter-item expanded "><a href="commands/create.html"><strong aria-hidden="true">2.1.</strong> create</a></li><li class="chapter-item expanded "><a href="commands/start.html"><strong aria-hidden="true">2.2.</strong> start</a></li><li class="chapter-item expanded "><a href="commands/build.html"><strong aria-hidden="true">2.3.</strong> build</a></li><li class="chapter-item expanded "><a href="commands/export.html"><strong aria-hidden="true">2.4.</strong> export</a></li></ol></li></ol>
             </div>
             <div id="sidebar-resize-handle" class="sidebar-resize-handle"></div>
         </nav>
@@ -195,6 +195,7 @@
 <li><code>create</code>: This command creates an application <a href="commands/./create.html">Learn more</a></li>
 <li><code>start</code>: This command starts the development server <a href="commands/./start.html">Learn more</a></li>
 <li><code>build</code>: This command builds your project <a href="commands/./build.html">Learn more</a></li>
+<li><code>export</code>: This command export configuration files <a href="commands/./export.html">Learn more</a></li>
 </ul>
 <div style="break-before: page; page-break-before: always;"></div><h1 id="lyrn-create"><a class="header" href="#lyrn-create">lyrn create</a></h1>
 <p>To create an application, use the command:</p>
@@ -218,6 +219,24 @@
 <p>To run the built project, use the command:</p>
 <pre><code class="language-bash">npm run serve
 </code></pre>
+<div style="break-before: page; page-break-before: always;"></div><h1 id="lyrn-export"><a class="header" href="#lyrn-export">lyrn export</a></h1>
+<p>Export configuration files:</p>
+<pre><code class="language-bash">lyrn export config
+</code></pre>
+<p>This command exports Webpack configurations for development (<code>webpack.config.dev.js</code>) and production (<code>webpack.config.prod.js</code>) environments.</p>
+<p>Also, as a result of the export, an entry will be made in the <code>lyrn.json</code> file about the exported files:</p>
+<pre><code class="language-json">{
+  &quot;dev&quot;: {
+    &quot;config&quot;: &quot;webpack.config.dev.js&quot;
+  },
+  &quot;prod&quot;: {
+    &quot;config&quot;: &quot;webpack.config.prod.js&quot;
+  }
+}
+</code></pre>
+<div class="warning">
+<p>Please note that specifying configuration files in <code>lyrn.json</code> leads to their import and merging with the default Webpack configuration when using the <a href="commands/./start.html">start</a> and <a href="commands/./build.html">build</a> commands next time.</p>
+</div>
 
                     </main>
 

@@ -3,7 +3,7 @@
     <head>
         <!-- Book generated using mdBook -->
         <meta charset="UTF-8">
-        <title>Commands - lyrn documentation</title>
+        <title>export - lyrn documentation</title>
 
 
         <!-- Custom HTML head -->
@@ -88,7 +88,7 @@
 
         <nav id="sidebar" class="sidebar" aria-label="Table of contents">
             <div class="sidebar-scrollbox">
-                <ol class="chapter"><li class="chapter-item expanded "><a href="../introduction.html"><strong aria-hidden="true">1.</strong> Introduction</a></li><li class="chapter-item expanded "><a href="../commands/index.html" class="active"><strong aria-hidden="true">2.</strong> Commands</a></li><li><ol class="section"><li class="chapter-item expanded "><a href="../commands/create.html"><strong aria-hidden="true">2.1.</strong> create</a></li><li class="chapter-item expanded "><a href="../commands/start.html"><strong aria-hidden="true">2.2.</strong> start</a></li><li class="chapter-item expanded "><a href="../commands/build.html"><strong aria-hidden="true">2.3.</strong> build</a></li><li class="chapter-item expanded "><a href="../commands/export.html"><strong aria-hidden="true">2.4.</strong> export</a></li></ol></li></ol>
+                <ol class="chapter"><li class="chapter-item expanded "><a href="../introduction.html"><strong aria-hidden="true">1.</strong> Introduction</a></li><li class="chapter-item expanded "><a href="../commands/index.html"><strong aria-hidden="true">2.</strong> Commands</a></li><li><ol class="section"><li class="chapter-item expanded "><a href="../commands/create.html"><strong aria-hidden="true">2.1.</strong> create</a></li><li class="chapter-item expanded "><a href="../commands/start.html"><strong aria-hidden="true">2.2.</strong> start</a></li><li class="chapter-item expanded "><a href="../commands/build.html"><strong aria-hidden="true">2.3.</strong> build</a></li><li class="chapter-item expanded "><a href="../commands/export.html" class="active"><strong aria-hidden="true">2.4.</strong> export</a></li></ol></li></ol>
             </div>
             <div id="sidebar-resize-handle" class="sidebar-resize-handle"></div>
         </nav>
@@ -171,25 +171,33 @@
 
                 <div id="content" class="content">
                     <main>
-                        <h1 id="commands"><a class="header" href="#commands">Commands</a></h1>
-<ul>
-<li><code>create</code>: This command creates an application <a href="./create.html">Learn more</a></li>
-<li><code>start</code>: This command starts the development server <a href="./start.html">Learn more</a></li>
-<li><code>build</code>: This command builds your project <a href="./build.html">Learn more</a></li>
-<li><code>export</code>: This command export configuration files <a href="./export.html">Learn more</a></li>
-</ul>
+                        <h1 id="lyrn-export"><a class="header" href="#lyrn-export">lyrn export</a></h1>
+<p>Export configuration files:</p>
+<pre><code class="language-bash">lyrn export config
+</code></pre>
+<p>This command exports Webpack configurations for development (<code>webpack.config.dev.js</code>) and production (<code>webpack.config.prod.js</code>) environments.</p>
+<p>Also, as a result of the export, an entry will be made in the <code>lyrn.json</code> file about the exported files:</p>
+<pre><code class="language-json">{
+  &quot;dev&quot;: {
+    &quot;config&quot;: &quot;webpack.config.dev.js&quot;
+  },
+  &quot;prod&quot;: {
+    &quot;config&quot;: &quot;webpack.config.prod.js&quot;
+  }
+}
+</code></pre>
+<div class="warning">
+<p>Please note that specifying configuration files in <code>lyrn.json</code> leads to their import and merging with the default Webpack configuration when using the <a href="./start.html">start</a> and <a href="./build.html">build</a> commands next time.</p>
+</div>
 
                     </main>
 
                     <nav class="nav-wrapper" aria-label="Page navigation">
                         <!-- Mobile navigation buttons -->
-                            <a rel="prev" href="../introduction.html" class="mobile-nav-chapters previous" title="Previous chapter" aria-label="Previous chapter" aria-keyshortcuts="Left">
+                            <a rel="prev" href="../commands/build.html" class="mobile-nav-chapters previous" title="Previous chapter" aria-label="Previous chapter" aria-keyshortcuts="Left">
                                 <i class="fa fa-angle-left"></i>
                             </a>
 
-                            <a rel="next prefetch" href="../commands/create.html" class="mobile-nav-chapters next" title="Next chapter" aria-label="Next chapter" aria-keyshortcuts="Right">
-                                <i class="fa fa-angle-right"></i>
-                            </a>
 
                         <div style="clear: both"></div>
                     </nav>
@@ -197,13 +205,10 @@
             </div>
 
             <nav class="nav-wide-wrapper" aria-label="Page navigation">
-                    <a rel="prev" href="../introduction.html" class="nav-chapters previous" title="Previous chapter" aria-label="Previous chapter" aria-keyshortcuts="Left">
+                    <a rel="prev" href="../commands/build.html" class="nav-chapters previous" title="Previous chapter" aria-label="Previous chapter" aria-keyshortcuts="Left">
                         <i class="fa fa-angle-left"></i>
                     </a>
 
-                    <a rel="next prefetch" href="../commands/create.html" class="nav-chapters next" title="Next chapter" aria-label="Next chapter" aria-keyshortcuts="Right">
-                        <i class="fa fa-angle-right"></i>
-                    </a>
             </nav>
 
         </div>
