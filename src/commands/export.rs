@@ -28,9 +28,13 @@ pub fn cmd(export_args: ExportArgs) -> Result<(), Box<dyn Error>> {
     }
 }
 
-fn export_config(_args: ExportConfigArgs) -> Result<(), Box<dyn Error>> {
-    let _ = webpack::export_config(webpack::Env::Dev);
-    let _ = webpack::export_config(webpack::Env::Prod);
-
+fn export_config(args: ExportConfigArgs) -> Result<(), Box<dyn Error>> {
+    if args.show {
+        let _ = webpack::show_config(webpack::EnvType::Dev);
+        let _ = webpack::show_config(webpack::EnvType::Prod);
+        return Ok(());
+    }
+    let _ = webpack::export_config(webpack::EnvType::Dev);
+    let _ = webpack::export_config(webpack::EnvType::Prod);
     Ok(())
 }
