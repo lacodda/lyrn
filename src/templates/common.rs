@@ -1,5 +1,5 @@
-use super::{AppConfig, DevConfig, ProdConfig, ProjectConfig, ProjectProps, Template};
-use crate::libs::types::User;
+use super::{ProjectProps, Template};
+use crate::libs::{project_config::project_config, types::User};
 use chrono::Datelike;
 use serde_json::{json, Value};
 
@@ -65,28 +65,6 @@ fn dev_dependencies() -> Value {
         "webpack-merge": "5.10.0",
         "webpack-shell-plugin-next": "^2.3.1"
     })
-}
-
-pub fn project_config() -> ProjectConfig {
-    ProjectConfig {
-        app: AppConfig {
-            name: "app".into(),
-            title: "New application".into(),
-            ..Default::default()
-        },
-        dev: DevConfig {
-            public_path: "/".into(),
-            protocol: "http".into(),
-            host: "localhost".into(),
-            port: 8080,
-            ..Default::default()
-        },
-        prod: ProdConfig {
-            public_path: "/".into(),
-            ..Default::default()
-        },
-        ..Default::default()
-    }
 }
 
 fn tsconfig() -> Value {

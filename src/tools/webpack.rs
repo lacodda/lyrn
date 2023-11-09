@@ -1,7 +1,6 @@
 use crate::{
     commands::start::StartArgs,
-    libs::project,
-    templates::{common::project_config as default_project_config, ProjectConfig},
+    libs::project_config::{project_config as default_project_config, EnvType, ProjectConfig, PROJECT_CONFIG},
 };
 use json_value_merge::Merge;
 use path_absolutize::*;
@@ -41,13 +40,49 @@ impl Aliases {
     }
 }
 
-pub enum Env {
-    Dev,
-    Prod,
+#[derive(Debug, Clone, Serialize, Deserialize)]
+struct Env {
+    name: &'static str,
+    file: &'static str,
+    config: WebpackConfig,
 }
 
-const WEBPACK_CONFIG_DEV: &str = "webpack.config.dev.js";
-const WEBPACK_CONFIG_PROD: &str = "webpack.config.prod.js";
+impl Env {
+    fn get_js_config(&mut self) -> Result<Vec<String>, Box<dyn Error>> {
+        let mut imports: Vec<String> = Vec::new();
+
+        for constant in &self.config.constants {
+            imports.push(format!("const {}", constant));
+        }
+        let rules: Vec<String> = self.config.rules.join(",\n").split("\n").map(|s| s.to_string()).collect();
+        let plugins: Vec<String> = self.config.plugins.join(",\n").split("\n").map(|s| s.to_string()).collect();
+        let js_object: Vec<String> = json_to_js_object(
+            &self.config.config,
+            &vec![
+                InsertLines {
+                    lines: rules,
+                    into: "\"rules\": [%s],",
+                },
+                InsertLines {
+                    lines: plugins,
+                    into: "\"plugins\": [%s],",
+                },
+            ],
+        );
+
+        Ok(([imports, vec!["".into()], js_object]).concat())
+    }
+}
+
+struct InsertLines {
+    lines: Vec<String>,
+    into: &'static str,
+}
+
+const DEV: &str = "Development";
+const PROD: &str = "Production";
+const CONFIG_DEV: &str = "webpack.config.dev.js";
+const CONFIG_PROD: &str = "webpack.config.prod.js";
 const IS_DEV: &str = "isDev = true;";
 const IS_PROD: &str = "isDev = false;";
 const PROCESS_CWD_CONST: &str = "cwd = process.cwd();";
@@ -111,57 +146,57 @@ pub fn get_config_prod() -> WebpackConfig {
     }
 }
 
-pub fn export_config(env: Env) -> Result<(), Box<dyn Error>> {
-    let env_name;
-    let file_name;
-    let mut project_config = project_config(&None);
-    let webpack_config: WebpackConfig;
-
-    match env {
-        Env::Dev => {
-            env_name = "Development";
-            file_name = WEBPACK_CONFIG_DEV;
-            project_config.dev.config = file_name.into();
-            webpack_config = get_config_dev(&None);
-        }
-        Env::Prod => {
-            env_name = "Production";
-            file_name = WEBPACK_CONFIG_PROD;
-            project_config.prod.config = file_name.into();
-            webpack_config = get_config_prod();
-        }
+pub fn show_config(env_type: EnvType) -> Result<(), Box<dyn Error>> {
+    let mut env = get_env(&env_type);
+    println!("\n✅ Webpack {} configuration:\n", env.name);
+    for line in env.get_js_config()? {
+        println!("{}", line);
     }
-
-    let mut file = fs::File::create(file_name)?;
-    for constant in &webpack_config.constants {
-        file.write_all(format!("const {}\n", constant).as_bytes())?;
-    }
-
-    let json_config_str = serde_json::to_string_pretty(&webpack_config.config).unwrap();
-    let rules_str = webpack_config.rules.join(",\n");
-    let plugins_str = webpack_config.plugins.join(",\n");
-    let js_object_str = json_to_js_object(&json_config_str, vec![&rules_str, &plugins_str], vec!["\"rules\": [%s],", "\"plugins\": [%s],"]);
-
-    file.write_all(format!("\nmodule.exports = {}\n", js_object_str).as_bytes())?;
-    project::save_project_config(project_config)?;
-    println!("✅ Webpack {} configuration has been successfully exported to a file {}", env_name, file_name);
-
     Ok(())
 }
 
-fn json_to_js_object(json_str: &str, content_to_insert: Vec<&str>, insert_into: Vec<&str>) -> String {
+pub fn export_config(env_type: EnvType) -> Result<(), Box<dyn Error>> {
+    let mut env = get_env(&env_type);
+    let mut file = fs::File::create(&env.file)?;
+    for line in env.get_js_config()? {
+        file.write_all(format!("{}\n", line).as_bytes())?;
+    }
+    let _ = project_config(&None).set_config(&env_type, env.file).save();
+    println!("✅ Webpack {} configuration has been successfully exported to a file {}", env.name, env.file);
+    Ok(())
+}
+
+fn get_env(env_type: &EnvType) -> Env {
+    match env_type {
+        EnvType::Dev => Env {
+            name: DEV,
+            file: CONFIG_DEV,
+            config: get_config_dev(&None),
+        },
+        EnvType::Prod => Env {
+            name: PROD,
+            file: CONFIG_PROD,
+            config: get_config_prod(),
+        },
+    }
+}
+
+fn json_to_js_object(json: &Value, insert_lines: &Vec<InsertLines>) -> Vec<String> {
+    let json_str = serde_json::to_string_pretty(&json).unwrap();
     let lines: Vec<&str> = json_str.split("\n").collect();
-    let insert_lines: Vec<Vec<&str>> = content_to_insert.into_iter().map(|s: &str| s.split("\n").collect()).collect();
-    let insert_into_parts: Vec<Vec<&str>> = insert_into.into_iter().map(|s: &str| s.split("%s").collect()).collect();
+    let insert_into_parts: Vec<Vec<&str>> = insert_lines.into_iter().map(|ins| ins.into.split("%s").collect()).collect();
     let mut new_lines: Vec<String> = Vec::new();
 
-    for line in lines {
+    for (index, mut line) in lines.into_iter().enumerate() {
+        if index == 0 {
+            line = "module.exports = {";
+        }
         let indent = get_indent(line);
         let key = insert_into_parts.iter().position(|part| line.contains(part[0]));
         if key.is_some() {
             let k: usize = key.unwrap();
             new_lines.push(format_str(insert_into_parts[k][0], &indent));
-            for insert_line in &insert_lines[k] {
+            for insert_line in &insert_lines[k].lines {
                 new_lines.push(format!("  {}{}", &indent, insert_line));
             }
             new_lines.push(format!("{}{}", &indent, insert_into_parts[k][1]));
@@ -170,7 +205,7 @@ fn json_to_js_object(json_str: &str, content_to_insert: Vec<&str>, insert_into: 
         }
     }
 
-    new_lines.join("\n")
+    new_lines
 }
 
 fn format_str(line: &str, indent: &str) -> String {
@@ -251,7 +286,7 @@ pub fn config_file(file_name: &str) -> Result<ProjectConfig, Box<dyn Error>> {
 }
 
 fn project_config(start_args: &Option<StartArgs>) -> ProjectConfig {
-    let config_file = json!(config_file(project::PROJECT_CONFIG).unwrap());
+    let config_file = json!(config_file(PROJECT_CONFIG).unwrap());
     let mut project_config = json!(default_project_config());
     project_config.merge(config_file);
     let mut project_config: ProjectConfig = from_value(project_config).unwrap();
@@ -461,8 +496,8 @@ mod tests {
     use super::*;
     use std::fs;
 
-    fn test_export_config(env: Env, file_name: &str) {
-        let result = export_config(env);
+    fn test_export_config(env_type: EnvType, file_name: &str) {
+        let result = export_config(env_type);
         // Assert that the function returns a valid Result
         assert!(result.is_ok());
         // Check if the expected file was created
@@ -481,35 +516,37 @@ mod tests {
 
     #[test]
     fn test_export_config_dev() {
-        test_export_config(Env::Dev, WEBPACK_CONFIG_DEV);
+        test_export_config(EnvType::Dev, CONFIG_DEV);
     }
 
     #[test]
     fn test_export_config_prod() {
-        test_export_config(Env::Prod, WEBPACK_CONFIG_PROD);
+        test_export_config(EnvType::Prod, CONFIG_PROD);
     }
 
     #[test]
     fn test_json_to_js_object() {
-        let json_str = r#"{
-  "key1": "value1",
-  "key2": "value2",
-  "key3": {},
-}"#;
-        let insert_lines = r#"line1: "inserted1",
-line2: "inserted2","#;
-        let content_to_insert = vec![insert_lines];
-        let insert_into = vec!["\"key3\": {%s},"];
-        let expected_result = r#"{
+        let json: Value = json!({
+          "key1": "value1",
+          "key2": "value2",
+          "key3": {},
+        });
+        let lines = vec!["line1: \"inserted1\",".to_string(), "line2: \"inserted2\",".to_string()];
+        let into = "\"key3\": {%s},";
+        let expected_result: Vec<String> = r#"module.exports = {
   key1: "value1",
   key2: "value2",
   key3: {
     line1: "inserted1",
     line2: "inserted2",
   },
-}"#;
+}"#
+        .split("\n")
+        .into_iter()
+        .map(|s| s.into())
+        .collect();
 
-        assert_eq!(json_to_js_object(json_str, content_to_insert, insert_into), expected_result);
+        assert_eq!(json_to_js_object(&json, &vec![InsertLines { lines: lines, into: into }]), expected_result);
     }
 
     #[test]
