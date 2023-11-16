@@ -1,20 +1,15 @@
 use crate::{
     commands::start::StartArgs,
-    libs::project_config::{project_config as default_project_config, EnvType, ProjectConfig, PROJECT_CONFIG},
+    libs::{
+        project_aliases::{Aliases, ProjectAliases},
+        project_config::{project_config as default_project_config, EnvType, ProjectConfig, PROJECT_CONFIG},
+    },
 };
 use json_value_merge::Merge;
-use path_absolutize::*;
 use regex::Regex;
 use serde::{Deserialize, Serialize};
 use serde_json::{from_str, from_value, json, to_string, Value};
-use std::{
-    env,
-    error::Error,
-    fs,
-    io::Write,
-    path::{Path, PathBuf},
-    string::String,
-};
+use std::{error::Error, fs, io::Write, path::PathBuf, string::String};
 
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct WebpackConfig {
@@ -23,21 +18,6 @@ pub struct WebpackConfig {
     pub constants: Vec<String>,
     pub plugins: Vec<String>,
     pub rules: Vec<String>,
-}
-
-#[derive(Debug, Clone, Serialize, Deserialize)]
-struct Aliases {
-    src: String,
-    build: String,
-    public: String,
-    images: String,
-    main: String,
-}
-
-impl Aliases {
-    fn iter_mut(&mut self) -> impl Iterator<Item = &mut String> {
-        IntoIterator::into_iter([&mut self.src, &mut self.build, &mut self.public, &mut self.images, &mut self.main])
-    }
 }
 
 #[derive(Debug, Clone, Serialize, Deserialize)]
@@ -94,10 +74,11 @@ const MINI_CSS_EXTRACT_PLUGIN_CONST: &str = "MiniCssExtractPlugin = require('min
 const COPY_WEBPACK_PLUGIN_CONST: &str = "CopyWebpackPlugin = require('copy-webpack-plugin');";
 const REACT_REFRESH_WEBPACK_PLUGIN_CONST: &str = "ReactRefreshWebpackPlugin = require('@pmmmwh/react-refresh-webpack-plugin');";
 
-pub fn get_config_dev(start_args: &Option<StartArgs>) -> WebpackConfig {
+pub fn get_config_dev(is_abs_path: bool, start_args: &Option<StartArgs>) -> WebpackConfig {
+    let project_aliases = project_aliases(is_abs_path);
     WebpackConfig {
         project_config: project_config(start_args),
-        config: config_dev(start_args),
+        config: config_dev(&project_aliases, start_args),
         constants: vec![
             PATH_CONST.into(),
             WEBPACK_CONST.into(),
@@ -110,7 +91,7 @@ pub fn get_config_dev(start_args: &Option<StartArgs>) -> WebpackConfig {
         ],
         plugins: vec![
             fork_ts_checker_webpack_plugin(),
-            copy_webpack_plugin(aliases()),
+            copy_webpack_plugin(&project_aliases),
             html_webpack_plugin(),
             hot_module_replacement_plugin(),
             react_refresh_webpack_plugin(),
@@ -119,10 +100,11 @@ pub fn get_config_dev(start_args: &Option<StartArgs>) -> WebpackConfig {
     }
 }
 
-pub fn get_config_prod() -> WebpackConfig {
+pub fn get_config_prod(is_abs_path: bool) -> WebpackConfig {
+    let project_aliases = project_aliases(is_abs_path);
     WebpackConfig {
         project_config: project_config(&None),
-        config: config_prod(),
+        config: config_prod(&project_aliases),
         constants: vec![
             PATH_CONST.into(),
             WEBPACK_CONST.into(),
@@ -136,7 +118,7 @@ pub fn get_config_prod() -> WebpackConfig {
         ],
         plugins: vec![
             fork_ts_checker_webpack_plugin(),
-            copy_webpack_plugin(aliases()),
+            copy_webpack_plugin(&project_aliases),
             html_webpack_plugin(),
             mini_css_extract_plugin(),
             hot_module_replacement_plugin(),
@@ -171,12 +153,12 @@ fn get_env(env_type: &EnvType) -> Env {
         EnvType::Dev => Env {
             name: DEV,
             file: CONFIG_DEV,
-            config: get_config_dev(&None),
+            config: get_config_dev(false, &None),
         },
         EnvType::Prod => Env {
             name: PROD,
             file: CONFIG_PROD,
-            config: get_config_prod(),
+            config: get_config_prod(false),
         },
     }
 }
@@ -222,60 +204,17 @@ fn get_indent(line: &str) -> String {
     " ".repeat(caps[1].len())
 }
 
-fn get_abs_path(alias: &String) -> String {
-    let cwd = env::current_dir().unwrap();
-    let mut path = PathBuf::from(&cwd);
-    let path_vec: Vec<String> = alias.split("/").map(|s| s.to_string()).collect();
-    path.extend(&path_vec);
-    path.to_string_lossy().into_owned()
-}
-
-fn aliases() -> Aliases {
-    let mut aliases = Aliases {
-        src: "src".into(),
-        build: "dist".into(),
-        public: "public".into(),
-        images: "src/images".into(),
-        main: "src/main.ts".into(),
-    };
-    aliases.iter_mut().for_each(|field| {
-        *field = get_abs_path(&*field);
-    });
-    aliases
-}
-
-fn aliases_json() -> Value {
-    let mut aliases_json = json!(aliases());
-    if let Ok(tsconfig_paths) = ts_config_paths("tsconfig.json") {
-        aliases_json.merge(tsconfig_paths);
+fn project_aliases(is_abs_path: bool) -> ProjectAliases {
+    ProjectAliases {
+        aliases: Aliases {
+            src: "src".into(),
+            build: "dist".into(),
+            public: "public".into(),
+            images: "src/images".into(),
+            main: "src/main.ts".into(),
+        },
+        is_abs_path: is_abs_path,
     }
-    aliases_json
-}
-
-fn ts_config_paths(filename: &str) -> Result<Value, Box<dyn Error>> {
-    let mut config_paths = json!({});
-    let data = fs::read_to_string(PathBuf::from(&filename))?;
-    let json: Value = from_str(&data)?;
-    let mut paths: Value = json["compilerOptions"]["paths"].to_owned();
-    if paths.is_null() {
-        paths = json!({});
-    }
-    paths.as_object().iter().flat_map(|s| s.iter()).for_each(|(key, value)| {
-        let path_str = value[0].as_str().unwrap().to_string().replace("/*", "");
-        let path = Path::new(path_str.as_str());
-        config_paths.merge(json!({
-          key.replace("/*", ""):
-          path.absolutize().unwrap().to_str().unwrap()
-        }))
-    });
-    let extends = &json["extends"];
-    if extends.is_string() {
-        let extends = json["extends"].as_str().unwrap();
-        let extended_paths = ts_config_paths(extends)?;
-        config_paths.merge(extended_paths);
-    }
-
-    Ok(config_paths)
 }
 
 pub fn config_file(file_name: &str) -> Result<ProjectConfig, Box<dyn Error>> {
@@ -301,21 +240,22 @@ fn project_config(start_args: &Option<StartArgs>) -> ProjectConfig {
     project_config
 }
 
-pub fn config_dev(start_args: &Option<StartArgs>) -> Value {
+fn config_dev(project_aliases: &ProjectAliases, start_args: &Option<StartArgs>) -> Value {
     let config = project_config(start_args);
+    let aliases = project_aliases.to_owned().get();
     json!({
         "mode": "development",
-        "entry": [aliases().main],
+        "entry": [&aliases.main],
         "output": {
-          "path": aliases().build,
+          "path": &aliases.build,
           "publicPath": format!("{}://{}:{}/", config.dev.protocol, config.dev.host, config.dev.port),
           "filename": "js/[name].[contenthash].bundle.js",
           "assetModuleFilename": "assets/[hash][ext][query]",
         },
         "resolve": {
-          "modules": [aliases().src, "node_modules"],
+          "modules": [&aliases.src, "node_modules"],
           "extensions": [".tsx", ".ts", ".mjs", ".js", ".jsx", ".json", ".wasm", ".css"],
-          "alias": aliases_json(),
+          "alias": project_aliases.to_owned().get_json(),
         },
         "module": {
           "rules": [],
@@ -354,13 +294,14 @@ pub fn config_dev(start_args: &Option<StartArgs>) -> Value {
     )
 }
 
-pub fn config_prod() -> Value {
+fn config_prod(project_aliases: &ProjectAliases) -> Value {
     let config = project_config(&None);
+    let aliases = project_aliases.to_owned().get();
     json!({
         "mode": "production",
-        "entry": [aliases().main],
+        "entry": [&aliases.main],
         "output": {
-          "path": aliases().build,
+          "path": &aliases.build,
           "publicPath": config.prod.public_path,
           "filename": "js/[name].[contenthash].bundle.js",
           "assetModuleFilename": "assets/[hash][ext][query]",
@@ -368,9 +309,9 @@ pub fn config_prod() -> Value {
           "clean": true,
         },
         "resolve": {
-          "modules": [aliases().src, "node_modules"],
+          "modules": [&aliases.src, "node_modules"],
           "extensions": [".tsx", ".ts", ".mjs", ".js", ".jsx", ".json", ".wasm", ".css"],
-          "alias": aliases_json(),
+          "alias": project_aliases.to_owned().get_json(),
         },
         "module": {
           "rules": [],
@@ -471,7 +412,7 @@ fn mini_css_extract_plugin() -> String {
         .into()
 }
 
-fn copy_webpack_plugin(aliases: Aliases) -> String {
+fn copy_webpack_plugin(project_aliases: &ProjectAliases) -> String {
     format!(
         r###"new CopyWebpackPlugin({{
   patterns: [{{
@@ -483,7 +424,7 @@ fn copy_webpack_plugin(aliases: Aliases) -> String {
     noErrorOnMissing: true, 
   }}],
 }})"###,
-        aliases.public
+        project_aliases.to_owned().get().public
     )
 }
 
