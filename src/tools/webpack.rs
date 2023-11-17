@@ -9,7 +9,7 @@ use json_value_merge::Merge;
 use regex::Regex;
 use serde::{Deserialize, Serialize};
 use serde_json::{from_str, from_value, json, to_string, Value};
-use std::{error::Error, fs, io::Write, path::PathBuf, string::String};
+use std::{error::Error, fs, io::Write, ops::Add, path::PathBuf, string::String};
 
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct WebpackConfig {
@@ -59,6 +59,7 @@ struct InsertLines {
     into: &'static str,
 }
 
+const INDENT_SIZE: usize = 2;
 const DEV: &str = "Development";
 const PROD: &str = "Production";
 const CONFIG_DEV: &str = "webpack.config.dev.js";
@@ -165,43 +166,47 @@ fn get_env(env_type: &EnvType) -> Env {
 
 fn json_to_js_object(json: &Value, insert_lines: &Vec<InsertLines>) -> Vec<String> {
     let json_str = serde_json::to_string_pretty(&json).unwrap();
-    let lines: Vec<&str> = json_str.split("\n").collect();
+    let mut lines: Vec<&str> = json_str.split("\n").collect();
+    lines.remove(0);
     let insert_into_parts: Vec<Vec<&str>> = insert_lines.into_iter().map(|ins| ins.into.split("%s").collect()).collect();
     let mut new_lines: Vec<String> = Vec::new();
-
-    for (index, mut line) in lines.into_iter().enumerate() {
-        if index == 0 {
-            line = "module.exports = {";
-        }
-        let indent = get_indent(line);
+    new_lines.push("module.exports = {".into());
+    for line in lines.into_iter() {
+        let parent_indent = get_indent_size(line);
         let key = insert_into_parts.iter().position(|part| line.contains(part[0]));
         if key.is_some() {
             let k: usize = key.unwrap();
-            new_lines.push(format_str(insert_into_parts[k][0], &indent));
+            new_lines.push(format_str(insert_into_parts[k][0], &Some(parent_indent)));
             for insert_line in &insert_lines[k].lines {
-                new_lines.push(format!("  {}{}", &indent, insert_line));
+                new_lines.push(format_str(insert_line, &Some(parent_indent.add(INDENT_SIZE))));
             }
-            new_lines.push(format!("{}{}", &indent, insert_into_parts[k][1]));
+            new_lines.push(format_str(insert_into_parts[k][1], &Some(parent_indent)));
         } else {
-            new_lines.push(format_str(line, &indent));
+            new_lines.push(format_str(line, &None));
         }
     }
 
     new_lines
 }
 
-fn format_str(line: &str, indent: &str) -> String {
-    let re = Regex::new(r#""(\w+)":\s(.+)"#).unwrap();
-    let Some(caps) = re.captures(line) else {
-        return line.into();
-    };
-    format!("{}{}: {}", &indent, &caps[1], &caps[2])
+fn format_str(line: &str, indent_size: &Option<usize>) -> String {
+    let mut indent = " ".repeat(indent_size.unwrap_or_default());
+    let re = Regex::new(r#"^(\s*)((["']>>>(.+)["'](,*))|("*(\w+)"*:\s((["']>>>(.+)["'](,*))|(.+))))$"#).unwrap();
+    let Some(caps) = re.captures(line) else { return format!("{}{}", &indent, &line) };
+    indent.push_str(&caps[1]);
+    if caps.get(4).is_some() {
+        format!("{}{}{}", &indent, &caps[4], &caps[5])
+    } else if caps.get(10).is_some() {
+        format!("{}{}: {}{}", &indent, &caps[7], &caps[10], &caps[11])
+    } else {
+        format!("{}{}: {}", &indent, &caps[7], &caps[12])
+    }
 }
 
-fn get_indent(line: &str) -> String {
+fn get_indent_size(line: &str) -> usize {
     let re = Regex::new(r#"(^\s*)"#).unwrap();
-    let Some(caps) = re.captures(line) else { return "".into() };
-    " ".repeat(caps[1].len())
+    let Some(caps) = re.captures(line) else { return 0 };
+    caps[1].len()
 }
 
 fn project_aliases(is_abs_path: bool) -> ProjectAliases {
@@ -493,17 +498,17 @@ mod tests {
     #[test]
     fn test_format_str() {
         let line = "\"key\": \"value\"";
-        let indent = "  ";
+        let indent = Some(2);
         let expected_result = "  key: \"value\"";
 
-        assert_eq!(format_str(line, indent), expected_result);
+        assert_eq!(format_str(line, &indent), expected_result);
     }
 
     #[test]
-    fn test_get_indent() {
+    fn test_get_indent_size() {
         let line = "  some text";
-        let expected_result = "  ";
+        let expected_result = 2;
 
-        assert_eq!(get_indent(line), expected_result);
+        assert_eq!(get_indent_size(line), expected_result);
     }
 }

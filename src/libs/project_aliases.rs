@@ -34,7 +34,10 @@ pub struct ProjectAliases {
 impl ProjectAliases {
     pub fn get(&mut self) -> Aliases {
         self.aliases.iter_mut().for_each(|field| {
-            *field = Self::get_abs_path(&*field);
+            match self.is_abs_path {
+                true => *field = Self::get_abs_path(&*field),
+                false => *field = format!(">>>path.resolve(cwd, '{}')", field)
+            }
         });
         self.to_owned().aliases
     }
