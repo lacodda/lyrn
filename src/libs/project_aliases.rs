@@ -1,14 +1,7 @@
 use json_value_merge::Merge;
-use path_absolutize::*;
 use serde::{Deserialize, Serialize};
 use serde_json::{from_str, json, Value};
-use std::{
-    env,
-    error::Error,
-    fs,
-    path::{Path, PathBuf},
-    string::String,
-};
+use std::{env, error::Error, fs, path::PathBuf, string::String};
 
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct Aliases {
@@ -33,32 +26,36 @@ pub struct ProjectAliases {
 
 impl ProjectAliases {
     pub fn get(&mut self) -> Aliases {
-        self.aliases.iter_mut().for_each(|field| {
-            match self.is_abs_path {
-                true => *field = Self::get_abs_path(&*field),
-                false => *field = format!(">>>path.resolve(cwd, '{}')", field)
-            }
+        self.aliases.iter_mut().for_each(|alias_path| {
+            *alias_path = Self::get_path(&alias_path, &self.is_abs_path);
         });
         self.to_owned().aliases
     }
 
     pub fn get_json(&mut self) -> Value {
-        let mut aliases_json = json!(self.aliases);
-        if let Ok(tsconfig_paths) = Self::ts_config_paths("tsconfig.json") {
+        let mut aliases_json = json!(self.get());
+        if let Ok(tsconfig_paths) = self.ts_config_paths("tsconfig.json") {
             aliases_json.merge(tsconfig_paths);
         }
         aliases_json
     }
 
-    fn get_abs_path(alias: &String) -> String {
+    fn get_path(alias_path: &String, is_abs_path: &bool) -> String {
+        match is_abs_path {
+            true => Self::get_abs_path(alias_path),
+            false => format!(">>>path.resolve(cwd, '{}')", alias_path),
+        }
+    }
+
+    fn get_abs_path(alias_path: &String) -> String {
         let cwd = env::current_dir().unwrap();
         let mut path = PathBuf::from(&cwd);
-        let path_vec: Vec<String> = alias.split("/").map(|s| s.to_string()).collect();
+        let path_vec: Vec<String> = alias_path.split("/").map(|s| s.to_string()).collect();
         path.extend(&path_vec);
         path.to_string_lossy().into_owned()
     }
 
-    fn ts_config_paths(filename: &str) -> Result<Value, Box<dyn Error>> {
+    fn ts_config_paths(&mut self, filename: &str) -> Result<Value, Box<dyn Error>> {
         let mut config_paths = json!({});
         let data = fs::read_to_string(PathBuf::from(&filename))?;
         let json: Value = from_str(&data)?;
@@ -68,16 +65,15 @@ impl ProjectAliases {
         }
         paths.as_object().iter().flat_map(|s| s.iter()).for_each(|(key, value)| {
             let path_str = value[0].as_str().unwrap().to_string().replace("/*", "");
-            let path = Path::new(path_str.as_str());
             config_paths.merge(json!({
               key.replace("/*", ""):
-              path.absolutize().unwrap().to_str().unwrap()
+              Self::get_path(&path_str, &self.is_abs_path)
             }))
         });
         let extends = &json["extends"];
         if extends.is_string() {
             let extends = json["extends"].as_str().unwrap();
-            let extended_paths = Self::ts_config_paths(extends)?;
+            let extended_paths = self.ts_config_paths(extends)?;
             config_paths.merge(extended_paths);
         }
 
