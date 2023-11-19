@@ -191,16 +191,30 @@ fn json_to_js_object(json: &Value, insert_lines: &Vec<InsertLines>) -> Vec<Strin
 
 fn format_str(line: &str, indent_size: &Option<usize>) -> String {
     let mut indent = " ".repeat(indent_size.unwrap_or_default());
-    let re = Regex::new(r#"^(\s*)((["']>>>(.+)["'](,*))|("*(\w+)"*:\s((["']>>>(.+)["'](,*))|(.+))))$"#).unwrap();
-    let Some(caps) = re.captures(line) else { return format!("{}{}", &indent, &line) };
+    let re = Regex::new(r#"^(\s*)(")?(>{3})?((\w*)([^":]+)?)(")?(:\s)?(")?(>{3})?([^"]*)(")?(,?)$"#).unwrap();
+    let Some(caps) = re.captures(line) else {
+        return format!("{}{}", &indent, &line);
+    };
     indent.push_str(&caps[1]);
-    if caps.get(4).is_some() {
-        format!("{}{}{}", &indent, &caps[4], &caps[5])
-    } else if caps.get(10).is_some() {
-        format!("{}{}: {}{}", &indent, &caps[7], &caps[10], &caps[11])
-    } else {
-        format!("{}{}: {}", &indent, &caps[7], &caps[12])
+    let key = &caps[4];
+    let val = &caps[11];
+    let comma = &caps[13];
+    let mut quote_key = "";
+    let mut quote_val = "";
+    let mut colon = "";
+    if caps.get(8).is_some() {
+        colon = ": ";
     }
+    if caps.get(2).is_some() && caps.get(7).is_some() && caps.get(3).is_none() && (caps.get(6).is_some() || caps.get(8).is_none()) {
+        quote_key = "'";
+    }
+    if caps.get(8).is_some() && caps.get(9).is_some() && caps.get(12).is_some() && caps.get(10).is_none() {
+        quote_val = "'";
+    }
+    format!(
+        "{}{}{}{}{}{}{}{}{}",
+        &indent, &quote_key, &key, &quote_key, &colon, &quote_val, &val, &quote_val, &comma
+    )
 }
 
 fn get_indent_size(line: &str) -> usize {
@@ -421,7 +435,7 @@ fn copy_webpack_plugin(project_aliases: &ProjectAliases) -> String {
     format!(
         r###"new CopyWebpackPlugin({{
   patterns: [{{
-    from: '{}',
+    from: {},
     to: 'assets',
     globOptions: {{
       ignore: ['*.DS_Store'],
