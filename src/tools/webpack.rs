@@ -494,11 +494,11 @@ mod tests {
         let lines = vec!["line1: \"inserted1\",".to_string(), "line2: \"inserted2\",".to_string()];
         let into = "\"key3\": {%s},";
         let expected_result: Vec<String> = r#"module.exports = {
-  key1: "value1",
-  key2: "value2",
+  key1: 'value1',
+  key2: 'value2',
   key3: {
-    line1: "inserted1",
-    line2: "inserted2",
+    line1: 'inserted1',
+    line2: 'inserted2',
   },
 }"#
         .split("\n")
@@ -513,7 +513,7 @@ mod tests {
     fn test_format_str() {
         let line = "\"key\": \"value\"";
         let indent = Some(2);
-        let expected_result = "  key: \"value\"";
+        let expected_result = "  key: 'value'";
 
         assert_eq!(format_str(line, &indent), expected_result);
     }
