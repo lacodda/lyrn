@@ -11,9 +11,9 @@ const isDev = false;
 module.exports = {
   devtool: false,
   entry: [
-    "C:\\Projects\\lyrn\\src\\main.ts"
+    path.resolve(cwd, 'src/main.ts')
   ],
-  mode: "production",
+  mode: 'production',
   module: {
     rules: [
       new Object({
@@ -61,12 +61,12 @@ module.exports = {
     sideEffects: true
   },
   output: {
-    assetModuleFilename: "assets/[hash][ext][query]",
-    chunkFilename: "js/[name].[chunkhash].chunk.js",
+    assetModuleFilename: 'assets/[hash][ext][query]',
+    chunkFilename: 'js/[name].[chunkhash].chunk.js',
     clean: true,
-    filename: "js/[name].[contenthash].bundle.js",
-    path: "C:\\Projects\\lyrn\\dist",
-    publicPath: "/"
+    filename: 'js/[name].[contenthash].bundle.js',
+    path: path.resolve(cwd, 'dist'),
+    publicPath: '/'
   },
   performance: {
     hints: false,
@@ -77,7 +77,7 @@ module.exports = {
     new ForkTsCheckerWebpackPlugin(),
     new CopyWebpackPlugin({
       patterns: [{
-        from: 'C:\Projects\lyrn\public',
+        from: path.resolve(cwd, 'public'),
         to: 'assets',
         globOptions: {
           ignore: ['*.DS_Store'],
@@ -100,26 +100,26 @@ module.exports = {
   ],
   resolve: {
     alias: {
-      build: "C:\\Projects\\lyrn\\dist",
-      images: "C:\\Projects\\lyrn\\src\\images",
-      main: "C:\\Projects\\lyrn\\src\\main.ts",
-      public: "C:\\Projects\\lyrn\\public",
-      src: "C:\\Projects\\lyrn\\src"
+      build: path.resolve(cwd, 'dist'),
+      images: path.resolve(cwd, 'src/images'),
+      main: path.resolve(cwd, 'src/main.ts'),
+      public: path.resolve(cwd, 'public'),
+      src: path.resolve(cwd, 'src')
     },
     extensions: [
-      ".tsx",
-      ".ts",
-      ".mjs",
-      ".js",
-      ".jsx",
-      ".json",
-      ".wasm",
-      ".css"
+      '.tsx',
+      '.ts',
+      '.mjs',
+      '.js',
+      '.jsx',
+      '.json',
+      '.wasm',
+      '.css'
     ],
     modules: [
-      "C:\\Projects\\lyrn\\src",
-      "node_modules"
+      path.resolve(cwd, 'src'),
+      'node_modules'
     ]
   },
-  stats: "errors-warnings"
+  stats: 'errors-warnings'
 }

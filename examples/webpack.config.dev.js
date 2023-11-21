@@ -12,23 +12,23 @@ module.exports = {
   devServer: {
     compress: true,
     headers: {
-      "Access-Control-Allow-Headers": "X-Requested-With, content-type, Authorization",
-      "Access-Control-Allow-Methods": "GET, POST, PUT, DELETE, PATCH, OPTIONS",
-      "Access-Control-Allow-Origin": "*"
+      'Access-Control-Allow-Headers': 'X-Requested-With, content-type, Authorization',
+      'Access-Control-Allow-Methods': 'GET, POST, PUT, DELETE, PATCH, OPTIONS',
+      'Access-Control-Allow-Origin': '*'
     },
     historyApiFallback: true,
     hot: true,
     port: 8080,
-    static: "./"
+    static: './'
   },
-  devtool: "inline-source-map",
+  devtool: 'inline-source-map',
   entry: [
-    "C:\\Projects\\lyrn\\src\\main.ts"
+    path.resolve(cwd, 'src/main.ts')
   ],
   infrastructureLogging: {
-    level: "warn"
+    level: 'warn'
   },
-  mode: "development",
+  mode: 'development',
   module: {
     rules: [
       new Object({
@@ -74,10 +74,10 @@ module.exports = {
     minimize: false
   },
   output: {
-    assetModuleFilename: "assets/[hash][ext][query]",
-    filename: "js/[name].[contenthash].bundle.js",
-    path: "C:\\Projects\\lyrn\\dist",
-    publicPath: "http://localhost:8080/"
+    assetModuleFilename: 'assets/[hash][ext][query]',
+    filename: 'js/[name].[contenthash].bundle.js',
+    path: path.resolve(cwd, 'dist'),
+    publicPath: 'http://localhost:8080/'
   },
   performance: {
     hints: false
@@ -86,7 +86,7 @@ module.exports = {
     new ForkTsCheckerWebpackPlugin(),
     new CopyWebpackPlugin({
       patterns: [{
-        from: 'C:\Projects\lyrn\public',
+        from: path.resolve(cwd, 'public'),
         to: 'assets',
         globOptions: {
           ignore: ['*.DS_Store'],
@@ -105,30 +105,30 @@ module.exports = {
   ],
   resolve: {
     alias: {
-      build: "C:\\Projects\\lyrn\\dist",
-      images: "C:\\Projects\\lyrn\\src\\images",
-      main: "C:\\Projects\\lyrn\\src\\main.ts",
-      public: "C:\\Projects\\lyrn\\public",
-      src: "C:\\Projects\\lyrn\\src"
+      build: path.resolve(cwd, 'dist'),
+      images: path.resolve(cwd, 'src/images'),
+      main: path.resolve(cwd, 'src/main.ts'),
+      public: path.resolve(cwd, 'public'),
+      src: path.resolve(cwd, 'src')
     },
     extensions: [
-      ".tsx",
-      ".ts",
-      ".mjs",
-      ".js",
-      ".jsx",
-      ".json",
-      ".wasm",
-      ".css"
+      '.tsx',
+      '.ts',
+      '.mjs',
+      '.js',
+      '.jsx',
+      '.json',
+      '.wasm',
+      '.css'
     ],
     modules: [
-      "C:\\Projects\\lyrn\\src",
-      "node_modules"
+      path.resolve(cwd, 'src'),
+      'node_modules'
     ]
   },
   stats: {
     assets: false,
     modules: false
   },
-  target: "web"
+  target: 'web'
 }
