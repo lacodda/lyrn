@@ -1,5 +1,21 @@
 # Changelog
 
+## 🎉 [1.2.2] - 2023-11-21
+
+### 🎛️ Refactor
+
+- Improved performance of the ProjectAliases module
+- ProjectAliases is moved to a separate module
+
+### 🛠️ Bug Fixes
+
+- Fixed function "format_str". Updated example config files.
+- Fixed function "format_str". Fixed tests
+
+### 🧪 Testing
+
+- Fixed tests
+
 ## 🎉 [1.2.1] - 2023-11-09
 
 ### ✨ Features
@@ -40,6 +56,15 @@
 
 - Fix github action "documentation"
 - Added basic command descriptions
+- Fix github action "documentation"
+- Fix github action "documentation"
+- Fix github action "documentation"
+- Fix github action "documentation"
+- Fix .gitignore
+- Fix github action "documentation"
+- Fix github action "documentation"
+- Fix github action "documentation"
+- Fix github action "documentation"
 
 ### 🛠️ Bug Fixes
 
