@@ -2,6 +2,7 @@ mod commands;
 mod libs;
 mod templates;
 mod tools;
+mod traits;
 use clap::{Parser, Subcommand};
 use commands::{create, start, build, export};
 use std::error::Error;

@@ -2,8 +2,8 @@ use crate::libs::{
     project_config::ProjectConfig,
     types::{Content, User},
 };
+use crate::traits::value_ext::ValueExt;
 use clap::ValueEnum;
-use json_value_merge::Merge;
 use serde_json::Value;
 use std::collections::HashMap;
 
@@ -38,13 +38,11 @@ pub struct Template {
 impl Template {
     fn merge(self, common: &Template) -> Template {
         let mut template: Template = common.clone();
-        if !self.scripts.is_null() {
-            template.scripts.merge(self.scripts);
-        }
-        template.dependencies.merge(self.dependencies);
-        template.dev_dependencies.merge(self.dev_dependencies);
-        template.tsconfig.merge(self.tsconfig);
-        template.eslintrc.merge(self.eslintrc);
+        template.scripts.merge_default(&self.scripts);
+        template.dependencies.merge_default(&self.dependencies);
+        template.dev_dependencies.merge_default(&self.dev_dependencies);
+        template.tsconfig.merge_default(&self.tsconfig);
+        template.eslintrc.merge_default(&self.eslintrc);
         template.app = self.app;
         template
     }
