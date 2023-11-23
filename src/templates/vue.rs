@@ -1,4 +1,4 @@
-use super::{ProjectProps, Template};
+use super::{styles::styles, ProjectProps, Template};
 use crate::libs::types::Content;
 use serde_json::{json, Value};
 use std::collections::HashMap;
@@ -57,7 +57,9 @@ fn eslintrc() -> Value {
 }
 
 fn app(_project: &ProjectProps) -> HashMap<&'static str, Content> {
-    HashMap::from([("src/main.ts", Content::Str(main())), ("src/routes.ts", Content::Str(routes()))])
+    let mut content = HashMap::from([("src/main.ts", Content::Str(main())), ("src/routes.ts", Content::Str(routes()))]);
+    content.extend(styles());
+    content
 }
 
 fn main() -> String {

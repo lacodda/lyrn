@@ -9,6 +9,7 @@ use std::collections::HashMap;
 
 pub mod common;
 pub mod react;
+pub mod styles;
 pub mod vue;
 
 #[derive(ValueEnum, Copy, Clone, Debug, PartialEq, Eq)]
