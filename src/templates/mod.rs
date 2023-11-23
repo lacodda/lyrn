@@ -9,11 +9,13 @@ use std::collections::HashMap;
 
 pub mod common;
 pub mod react;
+pub mod vue;
 
 #[derive(ValueEnum, Copy, Clone, Debug, PartialEq, Eq)]
 pub enum Framework {
     None,
     React,
+    Vue,
 }
 
 #[derive(Debug, Default, Clone)]
@@ -52,6 +54,7 @@ impl Template {
 struct Templates {
     common: Template,
     react: Template,
+    vue: Template,
 }
 
 impl Templates {
@@ -59,6 +62,7 @@ impl Templates {
         match framework {
             Framework::None => self.common,
             Framework::React => self.react.merge(&self.common),
+            Framework::Vue => self.vue.merge(&self.common),
         }
     }
 }
@@ -75,6 +79,7 @@ impl ProjectProps {
         Templates {
             common: common::get(&self),
             react: react::get(&self),
+            vue: vue::get(&self),
         }
         .get(&self.framework)
     }

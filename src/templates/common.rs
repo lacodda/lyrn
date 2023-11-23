@@ -30,7 +30,7 @@ fn scripts() -> Value {
 }
 
 fn dependencies() -> Value {
-    json!({"lyrn": "^1.0.0"})
+    json!({"lyrn": "^1.2.2"})
 }
 
 fn dev_dependencies() -> Value {
