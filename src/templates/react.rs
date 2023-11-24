@@ -1,5 +1,5 @@
 use super::{styles::styles, ProjectProps, Template};
-use crate::libs::types::Content;
+use crate::{libs::types::Content, tools::webpack::WebpackFrameworkConfig};
 use serde_json::{json, Value};
 use std::collections::HashMap;
 
@@ -12,6 +12,20 @@ pub fn get(project: &ProjectProps) -> Template {
         app: app(&project),
         ..Template::default()
     }
+}
+
+pub fn get_webpack_config() -> WebpackFrameworkConfig {
+    WebpackFrameworkConfig {
+        constants: vec![REACT_REFRESH_WEBPACK_PLUGIN_CONST.into()],
+        plugins: vec![react_refresh_webpack_plugin()],
+        ..WebpackFrameworkConfig::default()
+    }
+}
+
+const REACT_REFRESH_WEBPACK_PLUGIN_CONST: &str = "ReactRefreshWebpackPlugin = require('@pmmmwh/react-refresh-webpack-plugin');";
+
+fn react_refresh_webpack_plugin() -> String {
+    r###"new ReactRefreshWebpackPlugin()"###.into()
 }
 
 fn dependencies() -> Value {

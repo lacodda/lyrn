@@ -3,7 +3,7 @@ use crate::{
     libs::{
         project_aliases::{Aliases, ProjectAliases},
         project_config::{project_config as default_project_config, EnvType, ProjectConfig, PROJECT_CONFIG},
-    },
+    }, templates::Framework,
 };
 use json_value_merge::Merge;
 use regex::Regex;
@@ -15,6 +15,13 @@ use std::{error::Error, fs, io::Write, ops::Add, path::PathBuf, string::String};
 pub struct WebpackConfig {
     pub project_config: ProjectConfig,
     pub config: Value,
+    pub constants: Vec<String>,
+    pub plugins: Vec<String>,
+    pub rules: Vec<String>,
+}
+
+#[derive(Debug, Clone, Serialize, Deserialize, Default)]
+pub struct WebpackFrameworkConfig {
     pub constants: Vec<String>,
     pub plugins: Vec<String>,
     pub rules: Vec<String>,
@@ -73,7 +80,6 @@ const FORK_TS_CHECKER_WEBPACK_PLUGIN_CONST: &str = "ForkTsCheckerWebpackPlugin =
 const HTML_WEBPACK_PLUGIN_CONST: &str = "HtmlWebpackPlugin = require('html-webpack-plugin');";
 const MINI_CSS_EXTRACT_PLUGIN_CONST: &str = "MiniCssExtractPlugin = require('mini-css-extract-plugin');";
 const COPY_WEBPACK_PLUGIN_CONST: &str = "CopyWebpackPlugin = require('copy-webpack-plugin');";
-const REACT_REFRESH_WEBPACK_PLUGIN_CONST: &str = "ReactRefreshWebpackPlugin = require('@pmmmwh/react-refresh-webpack-plugin');";
 
 pub fn get_config_dev(is_abs_path: bool, start_args: &Option<StartArgs>) -> WebpackConfig {
     let project_aliases = project_aliases(is_abs_path);
@@ -86,7 +92,6 @@ pub fn get_config_dev(is_abs_path: bool, start_args: &Option<StartArgs>) -> Webp
             FORK_TS_CHECKER_WEBPACK_PLUGIN_CONST.into(),
             COPY_WEBPACK_PLUGIN_CONST.into(),
             HTML_WEBPACK_PLUGIN_CONST.into(),
-            REACT_REFRESH_WEBPACK_PLUGIN_CONST.into(),
             PROCESS_CWD_CONST.into(),
             IS_DEV.into(),
         ],
@@ -95,7 +100,6 @@ pub fn get_config_dev(is_abs_path: bool, start_args: &Option<StartArgs>) -> Webp
             copy_webpack_plugin(&project_aliases),
             html_webpack_plugin(),
             hot_module_replacement_plugin(),
-            react_refresh_webpack_plugin(),
         ],
         rules: vec![tsx_rule(), style_rule(), images_rule(), inline_rule()],
     }
@@ -113,7 +117,6 @@ pub fn get_config_prod(is_abs_path: bool) -> WebpackConfig {
             COPY_WEBPACK_PLUGIN_CONST.into(),
             HTML_WEBPACK_PLUGIN_CONST.into(),
             MINI_CSS_EXTRACT_PLUGIN_CONST.into(),
-            REACT_REFRESH_WEBPACK_PLUGIN_CONST.into(),
             PROCESS_CWD_CONST.into(),
             IS_PROD.into(),
         ],
@@ -123,7 +126,6 @@ pub fn get_config_prod(is_abs_path: bool) -> WebpackConfig {
             html_webpack_plugin(),
             mini_css_extract_plugin(),
             hot_module_replacement_plugin(),
-            react_refresh_webpack_plugin(),
         ],
         rules: vec![tsx_rule(), style_rule(), images_rule(), inline_rule()],
     }
@@ -211,10 +213,7 @@ fn format_str(line: &str, indent_size: &Option<usize>) -> String {
     if caps.get(8).is_some() && caps.get(9).is_some() && caps.get(12).is_some() && caps.get(10).is_none() {
         quote_val = "'";
     }
-    format!(
-        "{}{}{}{}{}{}{}{}{}",
-        &indent, &quote_key, &key, &quote_key, &colon, &quote_val, &val, &quote_val, &comma
-    )
+    format!("{}{}{}{}{}{}{}{}{}", &indent, &quote_key, &key, &quote_key, &colon, &quote_val, &val, &quote_val, &comma)
 }
 
 fn get_indent_size(line: &str) -> usize {
@@ -445,10 +444,6 @@ fn copy_webpack_plugin(project_aliases: &ProjectAliases) -> String {
 }})"###,
         project_aliases.to_owned().get().public
     )
-}
-
-fn react_refresh_webpack_plugin() -> String {
-    r###"new ReactRefreshWebpackPlugin()"###.into()
 }
 
 #[cfg(test)]
