@@ -4,6 +4,7 @@ use crate::libs::{
 };
 use crate::traits::value_ext::ValueExt;
 use clap::ValueEnum;
+use serde::{Deserialize, Serialize};
 use serde_json::Value;
 use std::collections::HashMap;
 
@@ -12,8 +13,9 @@ pub mod react;
 pub mod styles;
 pub mod vue;
 
-#[derive(ValueEnum, Copy, Clone, Debug, PartialEq, Eq)]
+#[derive(ValueEnum, Copy, Clone, Debug, PartialEq, Eq, Default, Serialize, Deserialize)]
 pub enum Framework {
+    #[default]
     None,
     React,
     Vue,

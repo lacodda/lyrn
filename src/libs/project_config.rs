@@ -1,4 +1,5 @@
 use super::helpers::is_default;
+use crate::templates::{Framework, ProjectProps};
 use serde::{Deserialize, Serialize};
 use std::error::Error;
 use std::fs::File;
@@ -42,6 +43,8 @@ pub struct AppConfig {
     pub name: String,
     #[serde(default, skip_serializing_if = "is_default")]
     pub title: String,
+    #[serde(default, skip_serializing_if = "is_default")]
+    pub framework: Framework,
 }
 
 #[derive(Debug, Default, Clone, Serialize, Deserialize)]
@@ -66,13 +69,16 @@ pub struct ProdConfig {
     pub config: String,
 }
 
-pub fn project_config() -> ProjectConfig {
+pub fn project_config(project: Option<&ProjectProps>) -> ProjectConfig {
+    let mut app = AppConfig { ..Default::default() };
+    if project.is_some() {
+        let project = project.unwrap();
+        app.name = project.clone().name;
+        app.framework = project.framework;
+        app.title = project.name.to_uppercase();
+    }
     ProjectConfig {
-        app: AppConfig {
-            name: "app".into(),
-            title: "New application".into(),
-            ..Default::default()
-        },
+        app: app,
         dev: DevConfig {
             public_path: "/".into(),
             protocol: "http".into(),

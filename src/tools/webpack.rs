@@ -237,7 +237,7 @@ fn project_aliases(is_abs_path: bool) -> ProjectAliases {
 }
 
 pub fn config_file(file_name: &str) -> Result<ProjectConfig, Box<dyn Error>> {
-    let data = fs::read_to_string(PathBuf::from(file_name)).unwrap_or(to_string(&default_project_config()).unwrap());
+    let data = fs::read_to_string(PathBuf::from(file_name)).unwrap_or(to_string(&default_project_config(None)).unwrap());
     let config: ProjectConfig = from_str(&data).unwrap_or_default();
 
     Ok(config)
@@ -245,7 +245,7 @@ pub fn config_file(file_name: &str) -> Result<ProjectConfig, Box<dyn Error>> {
 
 fn project_config(start_args: &Option<StartArgs>) -> ProjectConfig {
     let config_file = json!(config_file(PROJECT_CONFIG).unwrap());
-    let mut project_config = json!(default_project_config());
+    let mut project_config = json!(default_project_config(None));
     project_config.merge(config_file);
     let mut project_config: ProjectConfig = from_value(project_config).unwrap();
     match start_args {
