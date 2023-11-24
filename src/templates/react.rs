@@ -56,11 +56,11 @@ fn app(_project: &ProjectProps) -> HashMap<&'static str, Content> {
     let mut content = HashMap::from([
         ("src/main.ts", Content::Str(main())),
         ("src/bootstrap.tsx", Content::Str(bootstrap())),
-        ("src/components/App.tsx", Content::Str(container_component("App".into()))),
-        ("src/components/Home.tsx", Content::Str(home_page("Home".into()))),
-        ("src/components/About.tsx", Content::Str(component_page("About".into()))),
-        ("src/components/Info.tsx", Content::Str(component_page("Info".into()))),
-        ("src/images/logo.svg", Content::Str(logo("React".into()))),
+        ("src/components/App.tsx", Content::Str(container_component("App"))),
+        ("src/components/Home.tsx", Content::Str(home_page("Home"))),
+        ("src/components/About.tsx", Content::Str(component_page("About"))),
+        ("src/components/Info.tsx", Content::Str(component_page("Info"))),
+        ("src/images/logo.svg", Content::Str(logo("React"))),
         ("src/ui/index.ts", Content::Str(ui_index())),
         ("src/ui/components/Button.tsx", Content::Str(button())),
         ("src/ui/components/Navbar.tsx", Content::Str(navbar())),
@@ -91,7 +91,7 @@ createRoot(document.getElementById('app')).render(
     .into()
 }
 
-fn component_page(name: String) -> String {
+fn component_page(name: &str) -> String {
     format!(
         r###"import React from 'react';
 import styled from 'styled-components';
@@ -132,7 +132,7 @@ export default {};
     )
 }
 
-fn home_page(name: String) -> String {
+fn home_page(name: &str) -> String {
     format!(
         r###"import React, {{ useState }} from 'react';
 import styled from 'styled-components';
@@ -204,7 +204,7 @@ export default {};
     )
 }
 
-fn container_component(name: String) -> String {
+fn container_component(name: &str) -> String {
     format!(
         r###"import React from 'react';
 import {{ Routes, Route, Link }} from 'react-router-dom';
@@ -240,7 +240,7 @@ export default {};
     )
 }
 
-fn logo(name: String) -> String {
+fn logo(name: &str) -> String {
     format!(
         r###"<svg xmlns="http://www.w3.org/2000/svg" viewBox="-11.5 -10.23174 23 20.46348">
   <title>{}</title>
