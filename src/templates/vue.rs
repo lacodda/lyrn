@@ -60,7 +60,11 @@ fn app(_project: &ProjectProps) -> HashMap<&'static str, Content> {
     let mut content = HashMap::from([
         ("src/main.ts", Content::Str(main())),
         ("src/routes.ts", Content::Str(routes())),
-        ("src/images/logo.svg", Content::Str(logo("Vue".into()))),
+        ("src/components/App.vue", Content::Str(container_component())),
+        ("src/components/Home.vue", Content::Str(home_page())),
+        ("src/components/About.vue", Content::Str(component_page("About"))),
+        ("src/components/Info.vue", Content::Str(component_page("Info"))),
+        ("src/images/logo.svg", Content::Str(logo("Vue"))),
         ("src/ui/index.ts", Content::Str(ui_index())),
         ("src/ui/components/Button.vue", Content::Str(button())),
         ("src/ui/components/Navbar.vue", Content::Str(navbar())),
@@ -109,7 +113,142 @@ export default router;
     .into()
 }
 
-fn logo(name: String) -> String {
+fn component_page(name: &str) -> String {
+    let name_lc = name.to_lowercase();
+    format!(
+        r###"<template>
+  <div class="{}__container">
+    <div class="{}__title">
+      <h1>{}</h1>
+    </div>
+  </div>
+</template>
+
+<style scoped lang="scss">
+.{} {{
+  &__container {{
+    display: grid;
+    justify-content: center;
+    align-content: center;
+    background: var(--gr-lime-blue);
+    width: 100%;
+    height: 100%;
+  }}
+  &__title {{
+    display: flex;
+    h1 {{
+      font-size: var(--font-size-h1);
+      width: max-content;
+      text-transform: uppercase;
+      background: var(--teal);
+      background: var(--gr-teal-blue);
+      -webkit-background-clip: text;
+      -webkit-text-fill-color: transparent;
+    }}
+  }}
+}}
+</style>
+"###,
+        name_lc, name_lc, name, name_lc
+    )
+}
+
+fn home_page() -> String {
+    r###"<template>
+  <div class="home__container">
+    <div class="home__title">
+      <img :src="require('images/logo.svg')" width="100" />
+      <h1>Vue 3 Boilerplate</h1>
+    </div>
+    <div class="home__counter">
+      <button-el size="l" @click="inc">+</button-el>
+      <button-el size="l" @click="dec">−</button-el>
+      <div class="home__count">{{count}}</div>
+    </div>
+  </div>
+</template>
+
+<script lang="ts">
+import { Ref, ref } from 'vue';
+
+export default {
+  setup () {
+    const count: Ref<number> = ref(0);
+
+    function inc (): void {
+      count.value++;
+    }
+    function dec (): void {
+      count.value--;
+    }
+    return { count, inc, dec };
+  },
+};
+</script>
+
+<style scoped lang="scss">
+.home {
+  &__container {
+    display: grid;
+    justify-content: center;
+    align-content: center;
+    background: var(--gr-azure-pink);
+    width: 100%;
+    height: 100%;
+  }
+  &__title {
+    display: flex;
+    column-gap: 1rem;
+    h1 {
+      font-size: var(--font-size-h1);
+      width: max-content;
+      text-transform: uppercase;
+      background: var(--teal);
+      background: var(--gr-teal-blue);
+      -webkit-background-clip: text;
+      -webkit-text-fill-color: transparent;
+    }
+  }
+  &__counter {
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    gap: 1rem;
+  }
+  &__count {
+    font-size: 2rem;
+    font-weight: 700;
+    color: var(--white);
+  }
+}
+</style>
+"###
+    .into()
+}
+
+fn container_component() -> String {
+    r###"<template>
+  <div class="app">
+    <navbar-el>
+      <router-link to="/">home</router-link>
+      <router-link to="/info">info</router-link>
+      <router-link to="/about">about</router-link>
+    </navbar-el>
+    <router-view />
+  </div>
+</template>
+
+<style lang="scss">
+.app {
+  width: 100%;
+  height: 100%;
+}
+</style>
+"###
+    .into()
+}
+
+fn logo(name: &str) -> String {
     format!(
         r###"<svg version="1.1" viewBox="0 0 261.76 226.69" xmlns="http://www.w3.org/2000/svg">
   <title>{}</title>
