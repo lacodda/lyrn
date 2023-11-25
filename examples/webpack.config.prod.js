@@ -4,7 +4,6 @@ const ForkTsCheckerWebpackPlugin = require('fork-ts-checker-webpack-plugin');
 const CopyWebpackPlugin = require('copy-webpack-plugin');
 const HtmlWebpackPlugin = require('html-webpack-plugin');
 const MiniCssExtractPlugin = require('mini-css-extract-plugin');
-const ReactRefreshWebpackPlugin = require('@pmmmwh/react-refresh-webpack-plugin');
 const cwd = process.cwd();
 const isDev = false;
 
@@ -95,8 +94,7 @@ module.exports = {
       filename: 'styles/[name].[chunkhash].css',
       chunkFilename: 'styles/[name].[chunkhash].chunk.css',
     }),
-    new webpack.HotModuleReplacementPlugin(),
-    new ReactRefreshWebpackPlugin()
+    new webpack.HotModuleReplacementPlugin()
   ],
   resolve: {
     alias: {
