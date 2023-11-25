@@ -31,7 +31,7 @@ pub struct CreateProjectArgs {
 }
 
 pub fn create_project(args: CreateProjectArgs) -> Result<(), Box<dyn Error>> {
-    let project_props: ProjectProps = ProjectProps {
+    let project_props = ProjectProps {
         name: args.name,
         framework: args.framework,
         user: get_git_user()?,
@@ -115,8 +115,8 @@ fn run_npm_install(name: &String) {
 #[cfg(test)]
 mod tests {
     use super::*;
+    use crate::libs::project_config::ProjectConfig;
     use crate::libs::types::User;
-    use crate::tools::webpack::config_file;
     use std::env::current_dir;
     use std::fs;
     use std::path::Path;
@@ -148,7 +148,7 @@ mod tests {
                 "dev_dep1": "1.0.0",
                 "dev_dep2": "1.0.0",
             }),
-            project_config: config_file("").unwrap(),
+            project_config: ProjectConfig::get(&None),
             tsconfig: json!({}),
             eslintrc: json!({}),
             readme: "readme".to_string(),

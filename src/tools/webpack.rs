@@ -1,15 +1,11 @@
-use crate::{
-    commands::start::StartArgs,
-    libs::{
-        project_aliases::{Aliases, ProjectAliases},
-        project_config::{project_config as default_project_config, EnvType, ProjectConfig, PROJECT_CONFIG},
-    }, templates::Framework,
+use crate::libs::{
+    project_aliases::{Aliases, ProjectAliases},
+    project_config::{EnvType, ProjectConfig},
 };
-use json_value_merge::Merge;
 use regex::Regex;
 use serde::{Deserialize, Serialize};
-use serde_json::{from_str, from_value, json, to_string, Value};
-use std::{error::Error, fs, io::Write, ops::Add, path::PathBuf, string::String};
+use serde_json::{json, Value};
+use std::{error::Error, fs, io::Write, ops::Add, string::String};
 
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct WebpackConfig {
@@ -81,11 +77,11 @@ const HTML_WEBPACK_PLUGIN_CONST: &str = "HtmlWebpackPlugin = require('html-webpa
 const MINI_CSS_EXTRACT_PLUGIN_CONST: &str = "MiniCssExtractPlugin = require('mini-css-extract-plugin');";
 const COPY_WEBPACK_PLUGIN_CONST: &str = "CopyWebpackPlugin = require('copy-webpack-plugin');";
 
-pub fn get_config_dev(is_abs_path: bool, start_args: &Option<StartArgs>) -> WebpackConfig {
+pub fn get_config_dev(is_abs_path: bool, project_config: &ProjectConfig) -> WebpackConfig {
     let project_aliases = project_aliases(is_abs_path);
     WebpackConfig {
-        project_config: project_config(start_args),
-        config: config_dev(&project_aliases, start_args),
+        project_config: project_config.clone(),
+        config: config_dev(&project_aliases, &project_config),
         constants: vec![
             PATH_CONST.into(),
             WEBPACK_CONST.into(),
@@ -105,11 +101,11 @@ pub fn get_config_dev(is_abs_path: bool, start_args: &Option<StartArgs>) -> Webp
     }
 }
 
-pub fn get_config_prod(is_abs_path: bool) -> WebpackConfig {
+pub fn get_config_prod(is_abs_path: bool, project_config: &ProjectConfig) -> WebpackConfig {
     let project_aliases = project_aliases(is_abs_path);
     WebpackConfig {
-        project_config: project_config(&None),
-        config: config_prod(&project_aliases),
+        project_config: project_config.clone(),
+        config: config_prod(&project_aliases, &project_config),
         constants: vec![
             PATH_CONST.into(),
             WEBPACK_CONST.into(),
@@ -146,22 +142,23 @@ pub fn export_config(env_type: EnvType) -> Result<(), Box<dyn Error>> {
     for line in env.get_js_config()? {
         file.write_all(format!("{}\n", line).as_bytes())?;
     }
-    let _ = project_config(&None).set_config(&env_type, env.file).save();
+    let _ = ProjectConfig::get(&None).set_config(&env_type, env.file).save();
     println!("✅ Webpack {} configuration has been successfully exported to a file {}", env.name, env.file);
     Ok(())
 }
 
 fn get_env(env_type: &EnvType) -> Env {
+    let project_config = ProjectConfig::get(&None);
     match env_type {
         EnvType::Dev => Env {
             name: DEV,
             file: CONFIG_DEV,
-            config: get_config_dev(false, &None),
+            config: get_config_dev(false, &project_config),
         },
         EnvType::Prod => Env {
             name: PROD,
             file: CONFIG_PROD,
-            config: get_config_prod(false),
+            config: get_config_prod(false, &project_config),
         },
     }
 }
@@ -213,7 +210,10 @@ fn format_str(line: &str, indent_size: &Option<usize>) -> String {
     if caps.get(8).is_some() && caps.get(9).is_some() && caps.get(12).is_some() && caps.get(10).is_none() {
         quote_val = "'";
     }
-    format!("{}{}{}{}{}{}{}{}{}", &indent, &quote_key, &key, &quote_key, &colon, &quote_val, &val, &quote_val, &comma)
+    format!(
+        "{}{}{}{}{}{}{}{}{}",
+        &indent, &quote_key, &key, &quote_key, &colon, &quote_val, &val, &quote_val, &comma
+    )
 }
 
 fn get_indent_size(line: &str) -> usize {
@@ -235,38 +235,14 @@ fn project_aliases(is_abs_path: bool) -> ProjectAliases {
     }
 }
 
-pub fn config_file(file_name: &str) -> Result<ProjectConfig, Box<dyn Error>> {
-    let data = fs::read_to_string(PathBuf::from(file_name)).unwrap_or(to_string(&default_project_config(None)).unwrap());
-    let config: ProjectConfig = from_str(&data).unwrap_or_default();
-
-    Ok(config)
-}
-
-fn project_config(start_args: &Option<StartArgs>) -> ProjectConfig {
-    let config_file = json!(config_file(PROJECT_CONFIG).unwrap());
-    let mut project_config = json!(default_project_config(None));
-    project_config.merge(config_file);
-    let mut project_config: ProjectConfig = from_value(project_config).unwrap();
-    match start_args {
-        Some(start_args) => {
-            if start_args.port.is_some() {
-                project_config.dev.port = start_args.port.unwrap();
-            }
-        }
-        None => (),
-    }
-    project_config
-}
-
-fn config_dev(project_aliases: &ProjectAliases, start_args: &Option<StartArgs>) -> Value {
-    let config = project_config(start_args);
+fn config_dev(project_aliases: &ProjectAliases, project_config: &ProjectConfig) -> Value {
     let aliases = project_aliases.to_owned().get();
     json!({
         "mode": "development",
         "entry": [&aliases.main],
         "output": {
           "path": &aliases.build,
-          "publicPath": format!("{}://{}:{}/", config.dev.protocol, config.dev.host, config.dev.port),
+          "publicPath": format!("{}://{}:{}/", project_config.dev.protocol, project_config.dev.host, project_config.dev.port),
           "filename": "js/[name].[contenthash].bundle.js",
           "assetModuleFilename": "assets/[hash][ext][query]",
         },
@@ -293,7 +269,7 @@ fn config_dev(project_aliases: &ProjectAliases, start_args: &Option<StartArgs>) 
           "historyApiFallback": true,
           "compress": true,
           "hot": true,
-          "port": config.dev.port,
+          "port": project_config.dev.port,
           "static": "./",
           "headers": {
             "Access-Control-Allow-Origin": "*",
@@ -312,15 +288,14 @@ fn config_dev(project_aliases: &ProjectAliases, start_args: &Option<StartArgs>) 
     )
 }
 
-fn config_prod(project_aliases: &ProjectAliases) -> Value {
-    let config = project_config(&None);
+fn config_prod(project_aliases: &ProjectAliases, project_config: &ProjectConfig) -> Value {
     let aliases = project_aliases.to_owned().get();
     json!({
         "mode": "production",
         "entry": [&aliases.main],
         "output": {
           "path": &aliases.build,
-          "publicPath": config.prod.public_path,
+          "publicPath": project_config.prod.public_path,
           "filename": "js/[name].[contenthash].bundle.js",
           "assetModuleFilename": "assets/[hash][ext][query]",
           "chunkFilename": "js/[name].[chunkhash].chunk.js",

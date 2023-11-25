@@ -1,8 +1,10 @@
 use super::helpers::is_default;
+use crate::commands::start::StartArgs;
 use crate::templates::{Framework, ProjectProps};
 use serde::{Deserialize, Serialize};
+use serde_json::{from_str, to_string};
 use std::error::Error;
-use std::fs::File;
+use std::fs::{read_to_string, File};
 
 pub const PROJECT_CONFIG: &str = "lyrn.json";
 
@@ -34,6 +36,46 @@ impl ProjectConfig {
         let file = File::create(PROJECT_CONFIG)?;
         serde_json::to_writer_pretty(&file, &self)?;
         Ok(())
+    }
+
+    pub fn get(start_args: &Option<StartArgs>) -> Self {
+        let data = read_to_string(PROJECT_CONFIG).unwrap_or(to_string(&Self::default()).unwrap());
+        let mut project_config: Self = from_str(&data).unwrap_or_default();
+        if start_args.is_some() {
+            let start_args = start_args.clone().unwrap();
+            if start_args.port.is_some() {
+                project_config.dev.port = start_args.port.unwrap()
+            }
+        }
+        project_config
+    }
+
+    pub fn create(project_props: &ProjectProps) -> Self {
+        let mut project_config = Self::default();
+        project_config.app = AppConfig {
+            name: project_props.clone().name,
+            title: project_props.name.to_uppercase(),
+            framework: project_props.framework,
+        };
+        project_config
+    }
+
+    pub fn default() -> Self {
+        Self {
+            app: AppConfig { ..Default::default() },
+            dev: DevConfig {
+                public_path: "/".into(),
+                protocol: "http".into(),
+                host: "localhost".into(),
+                port: 8080,
+                ..Default::default()
+            },
+            prod: ProdConfig {
+                public_path: "/".into(),
+                ..Default::default()
+            },
+            ..Default::default()
+        }
     }
 }
 
@@ -67,29 +109,4 @@ pub struct ProdConfig {
     pub public_path: String,
     #[serde(default, skip_serializing_if = "is_default")]
     pub config: String,
-}
-
-pub fn project_config(project: Option<&ProjectProps>) -> ProjectConfig {
-    let mut app = AppConfig { ..Default::default() };
-    if project.is_some() {
-        let project = project.unwrap();
-        app.name = project.clone().name;
-        app.framework = project.framework;
-        app.title = project.name.to_uppercase();
-    }
-    ProjectConfig {
-        app: app,
-        dev: DevConfig {
-            public_path: "/".into(),
-            protocol: "http".into(),
-            host: "localhost".into(),
-            port: 8080,
-            ..Default::default()
-        },
-        prod: ProdConfig {
-            public_path: "/".into(),
-            ..Default::default()
-        },
-        ..Default::default()
-    }
 }

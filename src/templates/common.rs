@@ -1,22 +1,22 @@
 use super::{ProjectProps, Template};
-use crate::libs::{project_config::project_config, types::User};
+use crate::libs::{project_config::ProjectConfig, types::User};
 use chrono::Datelike;
 use serde_json::{json, Value};
 
-pub fn get(project: &ProjectProps) -> Template {
+pub fn get(project_props: &ProjectProps) -> Template {
     Template {
         scripts: scripts(),
         dependencies: dependencies(),
         dev_dependencies: dev_dependencies(),
-        project_config: project_config(Some(project)),
+        project_config: ProjectConfig::create(&project_props),
         tsconfig: tsconfig(),
         eslintrc: eslintrc(),
-        readme: readme(&project),
-        mit_license: mit_license(&project.user),
+        readme: readme(&project_props),
+        mit_license: mit_license(&project_props.user),
         gitignore: gitignore(),
         postcss_config: postcss_config(),
         index_d: index_d(),
-        index: index(&project.name),
+        index: index(&project_props.name),
         ..Template::default()
     }
 }
