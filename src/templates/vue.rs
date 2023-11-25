@@ -100,6 +100,7 @@ fn eslintrc() -> Value {
 
 fn app(_project: &ProjectProps) -> HashMap<&'static str, Content> {
     let mut content = HashMap::from([
+        ("src/vue.d.ts", Content::Str(vue_d_ts())),
         ("src/main.ts", Content::Str(main())),
         ("src/routes.ts", Content::Str(routes())),
         ("src/components/App.vue", Content::Str(container_component())),
@@ -113,6 +114,15 @@ fn app(_project: &ProjectProps) -> HashMap<&'static str, Content> {
     ]);
     content.extend(styles());
     content
+}
+
+fn vue_d_ts() -> String {
+    r###"declare module '*.vue' {
+  import { type defineComponent } from 'vue';
+  const component: ReturnType<typeof defineComponent>;
+  export default component;
+}"###
+        .into()
 }
 
 fn main() -> String {
