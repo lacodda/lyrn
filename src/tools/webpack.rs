@@ -1,6 +1,9 @@
-use crate::libs::{
-    project_aliases::{Aliases, ProjectAliases},
-    project_config::{EnvType, ProjectConfig},
+use crate::{
+    libs::{
+        project_aliases::{Aliases, ProjectAliases},
+        project_config::{EnvType, ProjectConfig},
+    },
+    templates::Framework,
 };
 use regex::Regex;
 use serde::{Deserialize, Serialize};
@@ -79,51 +82,69 @@ const COPY_WEBPACK_PLUGIN_CONST: &str = "CopyWebpackPlugin = require('copy-webpa
 
 pub fn get_config_dev(is_abs_path: bool, project_config: &ProjectConfig) -> WebpackConfig {
     let project_aliases = project_aliases(is_abs_path);
+    let webpack_framework_config = Framework::get_webpack_config(&project_config.app.framework);
     WebpackConfig {
         project_config: project_config.clone(),
         config: config_dev(&project_aliases, &project_config),
         constants: vec![
-            PATH_CONST.into(),
-            WEBPACK_CONST.into(),
-            FORK_TS_CHECKER_WEBPACK_PLUGIN_CONST.into(),
-            COPY_WEBPACK_PLUGIN_CONST.into(),
-            HTML_WEBPACK_PLUGIN_CONST.into(),
-            PROCESS_CWD_CONST.into(),
-            IS_DEV.into(),
-        ],
+            webpack_framework_config.constants,
+            vec![
+                PATH_CONST.into(),
+                WEBPACK_CONST.into(),
+                FORK_TS_CHECKER_WEBPACK_PLUGIN_CONST.into(),
+                COPY_WEBPACK_PLUGIN_CONST.into(),
+                HTML_WEBPACK_PLUGIN_CONST.into(),
+                PROCESS_CWD_CONST.into(),
+                IS_DEV.into(),
+            ],
+        ]
+        .concat(),
         plugins: vec![
-            fork_ts_checker_webpack_plugin(),
-            copy_webpack_plugin(&project_aliases),
-            html_webpack_plugin(),
-            hot_module_replacement_plugin(),
-        ],
-        rules: vec![tsx_rule(), style_rule(), images_rule(), inline_rule()],
+            vec![
+                fork_ts_checker_webpack_plugin(),
+                copy_webpack_plugin(&project_aliases),
+                html_webpack_plugin(),
+                hot_module_replacement_plugin(),
+            ],
+            webpack_framework_config.plugins,
+        ]
+        .concat(),
+        rules: vec![vec![tsx_rule(), style_rule(), images_rule(), inline_rule()], webpack_framework_config.rules].concat(),
     }
 }
 
 pub fn get_config_prod(is_abs_path: bool, project_config: &ProjectConfig) -> WebpackConfig {
     let project_aliases = project_aliases(is_abs_path);
+    let webpack_framework_config = Framework::get_webpack_config(&project_config.app.framework);
     WebpackConfig {
         project_config: project_config.clone(),
         config: config_prod(&project_aliases, &project_config),
         constants: vec![
-            PATH_CONST.into(),
-            WEBPACK_CONST.into(),
-            FORK_TS_CHECKER_WEBPACK_PLUGIN_CONST.into(),
-            COPY_WEBPACK_PLUGIN_CONST.into(),
-            HTML_WEBPACK_PLUGIN_CONST.into(),
-            MINI_CSS_EXTRACT_PLUGIN_CONST.into(),
-            PROCESS_CWD_CONST.into(),
-            IS_PROD.into(),
-        ],
+            webpack_framework_config.constants,
+            vec![
+                PATH_CONST.into(),
+                WEBPACK_CONST.into(),
+                FORK_TS_CHECKER_WEBPACK_PLUGIN_CONST.into(),
+                COPY_WEBPACK_PLUGIN_CONST.into(),
+                HTML_WEBPACK_PLUGIN_CONST.into(),
+                MINI_CSS_EXTRACT_PLUGIN_CONST.into(),
+                PROCESS_CWD_CONST.into(),
+                IS_PROD.into(),
+            ],
+        ]
+        .concat(),
         plugins: vec![
-            fork_ts_checker_webpack_plugin(),
-            copy_webpack_plugin(&project_aliases),
-            html_webpack_plugin(),
-            mini_css_extract_plugin(),
-            hot_module_replacement_plugin(),
-        ],
-        rules: vec![tsx_rule(), style_rule(), images_rule(), inline_rule()],
+            vec![
+                fork_ts_checker_webpack_plugin(),
+                copy_webpack_plugin(&project_aliases),
+                html_webpack_plugin(),
+                mini_css_extract_plugin(),
+                hot_module_replacement_plugin(),
+            ],
+            webpack_framework_config.plugins,
+        ]
+        .concat(),
+        rules: vec![vec![tsx_rule(), style_rule(), images_rule(), inline_rule()], webpack_framework_config.rules].concat(),
     }
 }
 
@@ -409,7 +430,7 @@ fn copy_webpack_plugin(project_aliases: &ProjectAliases) -> String {
     format!(
         r###"new CopyWebpackPlugin({{
   patterns: [{{
-    from: {},
+    from: "{}",
     to: 'assets',
     globOptions: {{
       ignore: ['*.DS_Store'],

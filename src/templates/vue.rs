@@ -1,5 +1,5 @@
 use super::{styles::styles, ProjectProps, Template};
-use crate::libs::types::Content;
+use crate::{libs::types::Content, tools::webpack::WebpackFrameworkConfig};
 use serde_json::{json, Value};
 use std::collections::HashMap;
 
@@ -11,6 +11,48 @@ pub fn get(project: &ProjectProps) -> Template {
         app: app(&project),
         ..Template::default()
     }
+}
+
+pub fn get_webpack_config() -> WebpackFrameworkConfig {
+    WebpackFrameworkConfig {
+        constants: vec![VUE_LOADER_PLUGIN_CONST.into()],
+        plugins: vec![vue_loader_plugin(), webpack_define_plugin()],
+        rules: vec![vue_rule(), ts_vue_rule()],
+    }
+}
+
+const VUE_LOADER_PLUGIN_CONST: &str = "VueLoaderPlugin = require('vue-loader').VueLoaderPlugin;";
+
+fn vue_loader_plugin() -> String {
+    r###"new VueLoaderPlugin()"###.into()
+}
+
+fn webpack_define_plugin() -> String {
+    r###"new webpack.DefinePlugin({
+  __VUE_OPTIONS_API__: false,
+  __VUE_PROD_DEVTOOLS__: false,
+})"###
+        .into()
+}
+
+fn vue_rule() -> String {
+    r###"new Object({
+  test: /\.vue$/,
+  loader: 'vue-loader'
+})"###
+        .into()
+}
+
+fn ts_vue_rule() -> String {
+    r###"new Object({
+  test: /\.ts$/,
+  loader: 'ts-loader',
+  options: {
+    appendTsSuffixTo: [/\.vue$/],
+    transpileOnly: true
+  }
+})"###
+        .into()
 }
 
 fn dependencies() -> Value {

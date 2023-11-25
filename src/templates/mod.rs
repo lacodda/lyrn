@@ -1,8 +1,11 @@
-use crate::libs::{
-    project_config::ProjectConfig,
-    types::{Content, User},
-};
 use crate::traits::value_ext::ValueExt;
+use crate::{
+    libs::{
+        project_config::ProjectConfig,
+        types::{Content, User},
+    },
+    tools::webpack::WebpackFrameworkConfig,
+};
 use clap::ValueEnum;
 use serde::{Deserialize, Serialize};
 use serde_json::Value;
@@ -19,6 +22,20 @@ pub enum Framework {
     None,
     React,
     Vue,
+}
+
+impl Framework {
+    pub fn get_webpack_config(&self) -> WebpackFrameworkConfig {
+        match &self {
+            Framework::None => WebpackFrameworkConfig {
+                constants: vec![],
+                plugins: vec![],
+                rules: vec![],
+            },
+            Framework::React => react::get_webpack_config(),
+            Framework::Vue => vue::get_webpack_config(),
+        }
+    }
 }
 
 #[derive(Debug, Default, Clone)]
