@@ -269,7 +269,7 @@ fn config_dev(project_aliases: &ProjectAliases, project_config: &ProjectConfig) 
         },
         "resolve": {
           "modules": [&aliases.src, "node_modules"],
-          "extensions": [".tsx", ".ts", ".mjs", ".js", ".jsx", ".json", ".wasm", ".css"],
+          "extensions": [".tsx", ".ts", ".mjs", ".js", ".jsx", ".json", ".wasm", ".css", ".vue"],
           "alias": project_aliases.to_owned().get_json(),
         },
         "module": {
@@ -289,7 +289,6 @@ fn config_dev(project_aliases: &ProjectAliases, project_config: &ProjectConfig) 
         "devServer": {
           "historyApiFallback": true,
           "compress": true,
-          "hot": true,
           "port": project_config.dev.port,
           "static": "./",
           "headers": {
@@ -324,7 +323,7 @@ fn config_prod(project_aliases: &ProjectAliases, project_config: &ProjectConfig)
         },
         "resolve": {
           "modules": [&aliases.src, "node_modules"],
-          "extensions": [".tsx", ".ts", ".mjs", ".js", ".jsx", ".json", ".wasm", ".css"],
+          "extensions": [".tsx", ".ts", ".mjs", ".js", ".jsx", ".json", ".wasm", ".css", ".vue"],
           "alias": project_aliases.to_owned().get_json(),
         },
         "module": {
@@ -371,7 +370,6 @@ fn style_rule() -> String {
       options: {
         importLoaders: isDev ? 1 : 2,
         sourceMap: isDev,
-        modules: isDev,
       },
     },
     { loader: 'postcss-loader', options: { sourceMap: isDev } },
