@@ -1,5 +1,32 @@
 # Changelog
 
+## 🎉 [1.3.0] - 2023-11-30
+
+### ✨ Features
+
+- Added method get_webpack_config to select WebpackFrameworkConfig
+- Added WebpackFrameworkConfig
+- Added framework definition to project config file
+- Added component generation functions to Vue 3 template
+- Updated Vue 3 template
+- Added Value-based trait for merging non-null values
+- Added Vue 3 template
+
+### 🎛️ Refactor
+
+- Improved ProjectConfig
+- Improved React template
+- Styles are moved to a separate module
+
+### 🛠️ Bug Fixes
+
+- Small fixes
+- Added template for src/vue.d.ts
+
+### 🧪 Testing
+
+- Updated examples
+
 ## 🎉 [1.2.2] - 2023-11-21
 
 ### 🎛️ Refactor

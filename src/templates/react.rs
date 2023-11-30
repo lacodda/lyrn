@@ -1,5 +1,5 @@
-use super::{ProjectProps, Template};
-use crate::libs::types::Content;
+use super::{styles::styles, ProjectProps, Template};
+use crate::{libs::types::Content, tools::webpack::WebpackFrameworkConfig};
 use serde_json::{json, Value};
 use std::collections::HashMap;
 
@@ -12,6 +12,20 @@ pub fn get(project: &ProjectProps) -> Template {
         app: app(&project),
         ..Template::default()
     }
+}
+
+pub fn get_webpack_config() -> WebpackFrameworkConfig {
+    WebpackFrameworkConfig {
+        constants: vec![REACT_REFRESH_WEBPACK_PLUGIN_CONST.into()],
+        plugins: vec![react_refresh_webpack_plugin()],
+        ..WebpackFrameworkConfig::default()
+    }
+}
+
+const REACT_REFRESH_WEBPACK_PLUGIN_CONST: &str = "ReactRefreshWebpackPlugin = require('@pmmmwh/react-refresh-webpack-plugin');";
+
+fn react_refresh_webpack_plugin() -> String {
+    r###"new ReactRefreshWebpackPlugin()"###.into()
 }
 
 fn dependencies() -> Value {
@@ -53,22 +67,20 @@ fn eslintrc() -> Value {
 }
 
 fn app(_project: &ProjectProps) -> HashMap<&'static str, Content> {
-    HashMap::from([
+    let mut content = HashMap::from([
         ("src/main.ts", Content::Str(main())),
         ("src/bootstrap.tsx", Content::Str(bootstrap())),
-        ("src/components/App.tsx", Content::Str(container_component("App".into()))),
-        ("src/components/Home.tsx", Content::Str(home_page("Home".into()))),
-        ("src/components/About.tsx", Content::Str(component_page("About".into()))),
-        ("src/components/Info.tsx", Content::Str(component_page("Info".into()))),
-        ("src/images/logo.svg", Content::Str(logo("React".into()))),
+        ("src/components/App.tsx", Content::Str(container_component("App"))),
+        ("src/components/Home.tsx", Content::Str(home_page("Home"))),
+        ("src/components/About.tsx", Content::Str(component_page("About"))),
+        ("src/components/Info.tsx", Content::Str(component_page("Info"))),
+        ("src/images/logo.svg", Content::Str(logo("React"))),
         ("src/ui/index.ts", Content::Str(ui_index())),
         ("src/ui/components/Button.tsx", Content::Str(button())),
         ("src/ui/components/Navbar.tsx", Content::Str(navbar())),
-        ("src/ui/styles/index.scss", Content::Str(style_index())),
-        ("src/ui/styles/_reset.scss", Content::Str(style_reset())),
-        ("src/ui/styles/_variables.scss", Content::Str(style_variables())),
-        ("src/ui/styles/_scaffolding.scss", Content::Str(style_scaffolding())),
-    ])
+    ]);
+    content.extend(styles());
+    content
 }
 
 fn main() -> String {
@@ -93,7 +105,7 @@ createRoot(document.getElementById('app')).render(
     .into()
 }
 
-fn component_page(name: String) -> String {
+fn component_page(name: &str) -> String {
     format!(
         r###"import React from 'react';
 import styled from 'styled-components';
@@ -134,7 +146,7 @@ export default {};
     )
 }
 
-fn home_page(name: String) -> String {
+fn home_page(name: &str) -> String {
     format!(
         r###"import React, {{ useState }} from 'react';
 import styled from 'styled-components';
@@ -206,7 +218,7 @@ export default {};
     )
 }
 
-fn container_component(name: String) -> String {
+fn container_component(name: &str) -> String {
     format!(
         r###"import React from 'react';
 import {{ Routes, Route, Link }} from 'react-router-dom';
@@ -242,7 +254,7 @@ export default {};
     )
 }
 
-fn logo(name: String) -> String {
+fn logo(name: &str) -> String {
     format!(
         r###"<svg xmlns="http://www.w3.org/2000/svg" viewBox="-11.5 -10.23174 23 20.46348">
   <title>{}</title>
@@ -354,143 +366,6 @@ export const Navbar: React.FC<{ children: React.ReactNode }> = ({ children }: Na
 );
 
 export default Navbar;
-"###
-    .into()
-}
-
-fn style_index() -> String {
-    r###"@import url('https://fonts.googleapis.com/css2?family=Noto+Sans:wght@400;700&display=swap');
-
-@import 'reset';
-@import 'variables';
-@import 'scaffolding';
-"###
-    .into()
-}
-
-fn style_reset() -> String {
-    r###"/*
-  1. Use a more-intuitive box-sizing model.
-*/
-*,
-*::before,
-*::after {
-  box-sizing: border-box;
-}
-
-/*
-    2. Remove default margin
-  */
-* {
-  margin: 0;
-}
-
-/*
-    3. Allow percentage-based heights in the application
-  */
-html,
-body {
-  height: 100%;
-}
-
-/*
-    Typographic tweaks!
-    4. Add accessible line-height
-    5. Improve text rendering
-  */
-body {
-  line-height: 1.5;
-  -webkit-font-smoothing: antialiased;
-}
-
-/*
-    6. Improve media defaults
-  */
-img,
-picture,
-video,
-canvas,
-svg {
-  display: block;
-  max-width: 100%;
-}
-
-/*
-    7. Remove built-in form typography styles
-  */
-input,
-button,
-textarea,
-select {
-  font: inherit;
-}
-
-/*
-    8. Avoid text overflows
-  */
-p,
-h1,
-h2,
-h3,
-h4,
-h5,
-h6 {
-  overflow-wrap: break-word;
-}
-
-/*
-    9. Create a root stacking context
-  */
-#root,
-#__next {
-  isolation: isolate;
-}
-"###
-    .into()
-}
-
-fn style_variables() -> String {
-    r###":root {
-    --black: #343434;
-    --gray: #dedede;
-    --blue: #06347e;
-    --white: #ffffff;
-    --teal: #008080;
-    --azure: #31CDDD;
-    --fuxia: #F700F7;
-    --pink: #ec62b5;
-    --violet: #9333ea;
-    --purple: #38006b;
-    --lime: #86efac;
-    --gr-teal-blue: linear-gradient(to right, var(--teal) 0%, var(--blue) 100%);
-    --gr-teal-pink: linear-gradient(to right, var(--teal) 0%, var(--pink) 100%);
-    --gr-azure-fuxia: linear-gradient(to right, var(--azure) 0%, var(--fuxia) 100%);
-    --gr-violet-purple: linear-gradient(to right, var(--violet) 0%, var(--purple) 100%);
-    --gr-azure-pink: linear-gradient(var(--azure), var(--pink));
-    --gr-lime-blue: linear-gradient(var(--lime), var(--blue));
-    --gr-pink-violet: linear-gradient(var(--pink), var(--violet));
-    --font-family: 'Noto Sans', sans-serif;
-    --font-size: 20px;
-    --font-size-h1: 2.6rem;
-    --font-size-h2: 1.6rem;
-    --font-size-h3: 1.1rem;
-}
-"###
-    .into()
-}
-
-fn style_scaffolding() -> String {
-    r###"html {
-  font-size: var(--font-size);
-  font-family: var(--font-family);
-  color: var(--black);
-}
-
-body {
-  & > :not(noscript) {
-    display: contents;
-  }
-}
 "###
     .into()
 }

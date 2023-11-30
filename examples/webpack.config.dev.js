@@ -3,7 +3,6 @@ const webpack = require('webpack');
 const ForkTsCheckerWebpackPlugin = require('fork-ts-checker-webpack-plugin');
 const CopyWebpackPlugin = require('copy-webpack-plugin');
 const HtmlWebpackPlugin = require('html-webpack-plugin');
-const ReactRefreshWebpackPlugin = require('@pmmmwh/react-refresh-webpack-plugin');
 const cwd = process.cwd();
 const isDev = true;
 
@@ -100,8 +99,7 @@ module.exports = {
       template: path.resolve(cwd, './src/index.html'),
       filename: 'index.html'
     }),
-    new webpack.HotModuleReplacementPlugin(),
-    new ReactRefreshWebpackPlugin()
+    new webpack.HotModuleReplacementPlugin()
   ],
   resolve: {
     alias: {
