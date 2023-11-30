@@ -1,19 +1,41 @@
-use crate::libs::{
-    project_config::ProjectConfig,
-    types::{Content, User},
+use crate::traits::value_ext::ValueExt;
+use crate::{
+    libs::{
+        project_config::ProjectConfig,
+        types::{Content, User},
+    },
+    tools::webpack::WebpackFrameworkConfig,
 };
 use clap::ValueEnum;
-use json_value_merge::Merge;
+use serde::{Deserialize, Serialize};
 use serde_json::Value;
 use std::collections::HashMap;
 
 pub mod common;
 pub mod react;
+pub mod styles;
+pub mod vue;
 
-#[derive(ValueEnum, Copy, Clone, Debug, PartialEq, Eq)]
+#[derive(ValueEnum, Copy, Clone, Debug, PartialEq, Eq, Default, Serialize, Deserialize)]
 pub enum Framework {
+    #[default]
     None,
     React,
+    Vue,
+}
+
+impl Framework {
+    pub fn get_webpack_config(&self) -> WebpackFrameworkConfig {
+        match &self {
+            Framework::None => WebpackFrameworkConfig {
+                constants: vec![],
+                plugins: vec![],
+                rules: vec![],
+            },
+            Framework::React => react::get_webpack_config(),
+            Framework::Vue => vue::get_webpack_config(),
+        }
+    }
 }
 
 #[derive(Debug, Default, Clone)]
@@ -36,13 +58,11 @@ pub struct Template {
 impl Template {
     fn merge(self, common: &Template) -> Template {
         let mut template: Template = common.clone();
-        if !self.scripts.is_null() {
-            template.scripts.merge(self.scripts);
-        }
-        template.dependencies.merge(self.dependencies);
-        template.dev_dependencies.merge(self.dev_dependencies);
-        template.tsconfig.merge(self.tsconfig);
-        template.eslintrc.merge(self.eslintrc);
+        template.scripts.merge_default(&self.scripts);
+        template.dependencies.merge_default(&self.dependencies);
+        template.dev_dependencies.merge_default(&self.dev_dependencies);
+        template.tsconfig.merge_default(&self.tsconfig);
+        template.eslintrc.merge_default(&self.eslintrc);
         template.app = self.app;
         template
     }
@@ -52,6 +72,7 @@ impl Template {
 struct Templates {
     common: Template,
     react: Template,
+    vue: Template,
 }
 
 impl Templates {
@@ -59,6 +80,7 @@ impl Templates {
         match framework {
             Framework::None => self.common,
             Framework::React => self.react.merge(&self.common),
+            Framework::Vue => self.vue.merge(&self.common),
         }
     }
 }
@@ -75,6 +97,7 @@ impl ProjectProps {
         Templates {
             common: common::get(&self),
             react: react::get(&self),
+            vue: vue::get(&self),
         }
         .get(&self.framework)
     }
