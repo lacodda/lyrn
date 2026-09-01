@@ -64,6 +64,8 @@ $ lyrn forms
 | `--description <text>` | One line describing what the project is |
 | `--author <name>` | Recorded in LICENSE; defaults to `git config user.name` |
 | `--path <path>` | Where to create it |
+| `--repo <owner/name>` | The GitHub repository it will live in |
+| `--with <addon,...>` | Optional pieces of the form, comma-separated |
 | `-y`, `--yes` | Accept the defaults instead of asking |
 | `--dry-run` | Show what would be written, and write nothing |
 | `--no-hooks` | Skip installing dependencies and starting the repository |
@@ -92,8 +94,20 @@ case its mark's colour is used.
 | Form | What it produces |
 | --- | --- |
 | `spa` | Single-page app: Vite, React, TypeScript, Tailwind, dowel |
+| `cli` | Command-line tool: Rust, clap, anyhow, dialoguer |
 
-More forms — `cli`, `desktop`, `service`, `lib` — follow in 2.x.
+A form can carry optional pieces. The line's four CLIs agree on clap, anyhow
+and dialoguer and disagree about everything else, so the rest is asked for:
+
+```console
+$ lyrn new my-tool --form cli --with keyring,self-update
+```
+
+`keyring` puts secrets in the OS keyring rather than a config file;
+`self-update` adds a command that checks the releases page. Neither is
+generated unless asked for — a project should not carry code it never calls.
+
+More forms — `desktop`, `service`, `lib` — follow in 2.x.
 
 ## Migrating from 1.x
 

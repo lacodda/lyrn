@@ -1,0 +1,48 @@
+[package]
+name = "{{ name }}"
+version = "0.1.0"
+edition = "2024"
+rust-version = "{{ msrv }}"
+description = "{{ description }}"
+authors = ["{{ author }}"]
+license = "MIT"
+readme = "README.md"
+keywords = ["cli", "command-line-utilities"]
+categories = ["command-line-utilities"]
+
+# assets/icon.ico is required by build.rs on Windows; the rest of the brand
+# artwork only serves GitHub and the docs site.
+exclude = [
+    "docs/",
+    ".github/",
+    "npm/",
+    "cliff.toml",
+    "rustfmt.toml",
+]
+
+[target.'cfg(windows)'.build-dependencies]
+winresource = "0.1"
+
+[dependencies]
+anyhow = "1"
+clap = { version = "4", features = ["derive"] }
+dialoguer = "0.12"
+{{#keyring}}
+keyring = { version = "4", features = ["v1"] }
+{{/keyring}}
+{{#self-update}}
+reqwest = { version = "0.13", default-features = false, features = ["rustls", "blocking"] }
+{{/self-update}}
+
+[dev-dependencies]
+assert_cmd = "2"
+predicates = "3"
+tempfile = "3"
+
+# A release binary is downloaded far more often than it is built. Link-time
+# optimization across one codegen unit and a stripped symbol table roughly
+# halve it, at the cost of a slower release build.
+[profile.release]
+lto = true
+codegen-units = 1
+strip = true

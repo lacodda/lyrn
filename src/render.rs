@@ -36,6 +36,16 @@ pub fn render(input: &str, context: &Context) -> Result<String, UnknownPlacehold
         let (before, from_open) = rest.split_at(start);
         out.push_str(before);
 
+        // `${{ ... }}` belongs to GitHub Actions, which uses the same braces
+        // for its own expressions. The dollar tells them apart, so a workflow
+        // can carry both without being excluded from substitution entirely.
+        if before.ends_with('$') {
+            let end = from_open.find("}}").map(|e| e + 2).unwrap_or(from_open.len());
+            out.push_str(&from_open[..end]);
+            rest = &from_open[end..];
+            continue;
+        }
+
         let Some(end) = from_open.find("}}") else {
             // An unpaired `{{` is literal text, not a broken placeholder.
             out.push_str(from_open);
@@ -66,7 +76,14 @@ pub fn placeholders(input: &str) -> Vec<String> {
     while let Some(start) = rest.find("{{") {
         let from_open = &rest[start..];
         let Some(end) = from_open.find("}}") else { break };
-        found.push(from_open[2..end].trim().to_string());
+        // `${{ ... }}` is a GitHub Actions expression, not a placeholder; and
+        // `{{#addon}}` / `{{/addon}}` are section markers the generator strips
+        // before rendering.
+        let is_actions = rest[..start].ends_with('$');
+        let key = from_open[2..end].trim();
+        if !is_actions && !key.starts_with('#') && !key.starts_with('/') {
+            found.push(key.to_string());
+        }
         rest = &from_open[end + 2..];
     }
 

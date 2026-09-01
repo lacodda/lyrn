@@ -1,6 +1,6 @@
 use clap::{Parser, Subcommand};
 
-use crate::model::Form;
+use crate::model::{Addon, Form};
 
 /// Start a new web application on the lacodda line's stack: Vite, React,
 /// TypeScript, Tailwind and the dowel design system, with the line's standard
@@ -44,6 +44,14 @@ pub struct NewArgs {
     /// Where to create it; defaults to a directory named after the project
     #[arg(long, value_name = "PATH")]
     pub path: Option<std::path::PathBuf>,
+
+    /// The GitHub repository it will live in, as `owner/name`
+    #[arg(long, value_name = "OWNER/NAME")]
+    pub repo: Option<String>,
+
+    /// Optional pieces to generate with, comma-separated (see `lyrn forms`)
+    #[arg(long = "with", value_name = "ADDON", value_delimiter = ',')]
+    pub with: Vec<Addon>,
 
     /// Accept the defaults instead of asking
     #[arg(short = 'y', long = "yes")]

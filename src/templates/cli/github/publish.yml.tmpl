@@ -1,0 +1,36 @@
+name: Publish
+
+# Triggered by the tag push directly (not the release event): releases here are
+# created by release.yml with GITHUB_TOKEN, and such events do not start other
+# workflows.
+on:
+  push:
+    tags: ['v*']
+  workflow_dispatch:
+    inputs:
+      tag:
+        description: Tag to publish
+        required: true
+
+permissions: {}
+
+jobs:
+  crates-io:
+    runs-on: ubuntu-latest
+    permissions:
+      id-token: write
+      contents: read
+    steps:
+      - uses: actions/checkout@v7
+        with:
+          ref: ${{ github.event_name == 'workflow_dispatch' && inputs.tag || github.ref }}
+      - uses: dtolnay/rust-toolchain@stable
+      # The first publish of a crate has to be manual: a trusted publisher
+      # cannot be attached to a crate that does not exist yet. Set one up on
+      # crates.io after that first release, and this job takes over.
+      - name: Get a crates.io token (OIDC trusted publishing)
+        uses: rust-lang/crates-io-auth-action@v1
+        id: auth
+      - run: cargo publish
+        env:
+          CARGO_REGISTRY_TOKEN: ${{ steps.auth.outputs.token }}

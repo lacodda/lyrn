@@ -2,11 +2,11 @@ name = "spa"
 description = "Single-page app: Vite, React, TypeScript, Tailwind, dowel"
 standard = "2026.09"
 
-# Files whose own syntax collides with the placeholder braces, or that must
-# reach the new project byte for byte.
-# `cliff.toml` is Tera and `ci.yml` is GitHub Actions; both use the same
-# double-brace syntax for their own purposes.
-verbatim = ["cliff.toml", ".github/workflows/ci.yml"]
+# Files whose own syntax collides with the placeholder braces. `cliff.toml` is
+# a Tera template using bare `{{ }}` for its own variables, so it has to travel
+# untouched. GitHub Actions expressions are `${{ }}` and the renderer leaves
+# those alone by itself, so workflows do not belong here.
+verbatim = ["cliff.toml"]
 
 [[hooks]]
 name = "Installing dependencies"

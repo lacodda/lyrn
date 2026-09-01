@@ -91,3 +91,40 @@ jobs:
       - name: Build it
         working-directory: ${{ runner.temp }}/demo-app
         run: pnpm build
+
+  # The cli form is checked with cargo rather than pnpm, and every combination
+  # of its add-ons is generated: the failures live in the seams, and a seam
+  # only exists once a particular combination is produced.
+  template-cli:
+    name: template cli (${{ matrix.addons || 'none' }}) on ${{ matrix.os }}
+    runs-on: ${{ matrix.os }}
+    strategy:
+      fail-fast: false
+      matrix:
+        os: [ubuntu-latest, windows-latest, macos-latest]
+        addons: ['', 'keyring', 'self-update', 'keyring,self-update']
+    steps:
+      - uses: actions/checkout@v7
+      - name: Install Linux build deps (keyring secret-service)
+        if: runner.os == 'Linux' && contains(matrix.addons, 'keyring')
+        run: sudo apt-get update && sudo apt-get install -y libdbus-1-dev pkg-config
+      - uses: dtolnay/rust-toolchain@stable
+        with:
+          components: rustfmt, clippy
+      - uses: Swatinem/rust-cache@v2
+      - name: Build lyrn
+        run: cargo build --release
+      - name: Generate a project
+        shell: bash
+        run: |
+          args=(new demo-tool --form cli --yes --no-hooks --repo owner/demo-tool --path "$RUNNER_TEMP/demo-tool")
+          if [ -n "${{ matrix.addons }}" ]; then
+            args+=(--with "${{ matrix.addons }}")
+          fi
+          ./target/release/lyrn "${args[@]}"
+      - name: Run the gate it ships with
+        working-directory: ${{ runner.temp }}/demo-tool
+        run: |
+          cargo fmt --check
+          cargo clippy --all-targets -- -D warnings
+          cargo test

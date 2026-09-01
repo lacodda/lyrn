@@ -14,15 +14,18 @@ use serde::{Deserialize, Serialize};
 pub enum Form {
     /// Vite + React + TypeScript + Tailwind with the dowel theme.
     Spa,
+    /// A Rust command-line tool: clap, anyhow, dialoguer.
+    Cli,
 }
 
 impl Form {
     /// Every form the binary carries built in.
-    pub const ALL: &'static [Form] = &[Form::Spa];
+    pub const ALL: &'static [Form] = &[Form::Spa, Form::Cli];
 
     pub fn as_str(self) -> &'static str {
         match self {
             Form::Spa => "spa",
+            Form::Cli => "cli",
         }
     }
 
@@ -30,6 +33,65 @@ impl Form {
     pub fn summary(self) -> &'static str {
         match self {
             Form::Spa => "Single-page app: Vite, React, TypeScript, Tailwind, dowel",
+            Form::Cli => "Command-line tool: Rust, clap, anyhow, dialoguer",
+        }
+    }
+
+    /// The add-ons this form understands.
+    pub fn addons(self) -> &'static [Addon] {
+        match self {
+            Form::Spa => &[],
+            Form::Cli => &[Addon::Keyring, Addon::SelfUpdate],
+        }
+    }
+}
+
+/// An optional piece a form can be generated with.
+///
+/// The line's four CLIs disagree about these: turnout and sefy keep secrets in
+/// the OS keyring, kasl and turnout update themselves. Putting either in every
+/// generated project would ship dead code and drag in dependencies - reqwest
+/// and an archive reader for one, a platform keyring for the other - that most
+/// projects never call.
+#[derive(Debug, Clone, Copy, PartialEq, Eq, PartialOrd, Ord, Serialize, Deserialize)]
+#[serde(rename_all = "kebab-case")]
+pub enum Addon {
+    /// Secrets in the OS keyring, never in a config file.
+    Keyring,
+    /// `self-update`, checking the releases page for a newer version.
+    SelfUpdate,
+}
+
+impl Addon {
+    pub fn as_str(self) -> &'static str {
+        match self {
+            Addon::Keyring => "keyring",
+            Addon::SelfUpdate => "self-update",
+        }
+    }
+
+    pub fn summary(self) -> &'static str {
+        match self {
+            Addon::Keyring => "Secrets in the OS keyring, never in a config file",
+            Addon::SelfUpdate => "A `self-update` command that reads the releases page",
+        }
+    }
+}
+
+impl std::fmt::Display for Addon {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        f.write_str(self.as_str())
+    }
+}
+
+impl std::str::FromStr for Addon {
+    type Err = String;
+
+    fn from_str(s: &str) -> Result<Self, Self::Err> {
+        match s {
+            "keyring" => Ok(Addon::Keyring),
+            "self-update" => Ok(Addon::SelfUpdate),
+            other => Err(format!("unknown add-on `{other}` (known: keyring, self-update)")),
         }
     }
 }
@@ -46,6 +108,7 @@ impl std::str::FromStr for Form {
     fn from_str(s: &str) -> Result<Self, Self::Err> {
         match s {
             "spa" => Ok(Form::Spa),
+            "cli" => Ok(Form::Cli),
             other => Err(format!(
                 "unknown form `{other}` (known: {})",
                 Form::ALL.iter().map(|f| f.as_str()).collect::<Vec<_>>().join(", ")

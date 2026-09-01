@@ -35,5 +35,10 @@ fn main() -> ExitCode {
 fn list_forms() {
     for form in Form::ALL {
         println!("{:<8} {}", form.as_str(), form.summary());
+        // Add-ons are listed under the form that understands them, because
+        // `--with keyring` means nothing without knowing which forms take it.
+        for addon in form.addons() {
+            println!("  --with {:<13} {}", addon.as_str(), addon.summary());
+        }
     }
 }

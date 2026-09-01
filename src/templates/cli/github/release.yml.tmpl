@@ -1,0 +1,80 @@
+name: Release
+
+on:
+  push:
+    tags: ['v*']
+
+permissions:
+  contents: write
+
+env:
+  CARGO_TERM_COLOR: always
+
+jobs:
+  build:
+    name: ${{ matrix.target }}
+    runs-on: ${{ matrix.os }}
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - os: windows-latest
+            target: x86_64-pc-windows-msvc
+          - os: ubuntu-latest
+            target: x86_64-unknown-linux-gnu
+          - os: macos-latest
+            target: aarch64-apple-darwin
+    steps:
+      - uses: actions/checkout@v7
+      - uses: dtolnay/rust-toolchain@stable
+        with:
+          targets: ${{ matrix.target }}
+      - uses: Swatinem/rust-cache@v2
+      - name: Build
+        run: cargo build --release --target ${{ matrix.target }}
+      - name: Package (Windows)
+        if: runner.os == 'Windows'
+        shell: pwsh
+        run: |
+          $name = "{{ name }}-${{ github.ref_name }}-${{ matrix.target }}"
+          New-Item -ItemType Directory $name | Out-Null
+          Copy-Item "target/${{ matrix.target }}/release/{{ name }}.exe", "LICENSE", "README.md" $name
+          Compress-Archive -Path $name -DestinationPath "$name.zip"
+      - name: Package (Unix)
+        if: runner.os != 'Windows'
+        shell: bash
+        run: |
+          name="{{ name }}-${{ github.ref_name }}-${{ matrix.target }}"
+          mkdir "$name"
+          cp "target/${{ matrix.target }}/release/{{ name }}" LICENSE README.md "$name"
+          tar czf "$name.tar.gz" "$name"
+      - uses: actions/upload-artifact@v7
+        with:
+          name: package-${{ matrix.target }}
+          path: |
+            {{ name }}-*.zip
+            {{ name }}-*.tar.gz
+          if-no-files-found: error
+
+  release:
+    needs: build
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v7
+        with:
+          fetch-depth: 0
+      - name: Generate release notes
+        uses: orhun/git-cliff-action@v4
+        id: cliff
+        with:
+          config: cliff.toml
+          args: --latest --strip header
+      - uses: actions/download-artifact@v8
+        with:
+          path: packages
+          merge-multiple: true
+      - name: Create GitHub Release
+        uses: softprops/action-gh-release@v3
+        with:
+          body: ${{ steps.cliff.outputs.content }}
+          files: packages/*

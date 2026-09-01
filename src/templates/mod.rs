@@ -3,6 +3,7 @@
 //! A form is a directory of template files plus a manifest, both embedded in
 //! the binary so that `lyrn new` works offline.
 
+pub mod cli;
 pub mod spa;
 
 use crate::generate::SourceFile;
@@ -12,6 +13,7 @@ use crate::model::Form;
 pub fn manifest_for(form: Form) -> &'static str {
     match form {
         Form::Spa => spa::MANIFEST,
+        Form::Cli => cli::MANIFEST,
     }
 }
 
@@ -19,6 +21,7 @@ pub fn manifest_for(form: Form) -> &'static str {
 pub fn sources_for(form: Form) -> Vec<SourceFile> {
     match form {
         Form::Spa => spa::sources(),
+        Form::Cli => cli::sources(),
     }
 }
 
@@ -42,6 +45,9 @@ mod tests {
         "registry",
         "lyrn_version",
         "standard",
+        "msrv",
+        "repo",
+        "env_prefix",
     ];
 
     #[test]
@@ -59,6 +65,46 @@ mod tests {
                         source.path
                     );
                 }
+            }
+        }
+    }
+
+    #[test]
+    fn every_section_marker_is_closed() {
+        // An unclosed `{{#addon}}` is silent damage: with the add-on off it
+        // swallows the rest of the file, and with it on it changes nothing -
+        // so the only person who sees the loss is whoever enables it later.
+        for form in Form::ALL {
+            for source in sources_for(*form) {
+                let mut open: Option<&str> = None;
+                for (number, line) in source.contents.lines().enumerate() {
+                    let trimmed = line.trim();
+                    if let Some(name) = trimmed.strip_prefix("{{#").and_then(|r| r.strip_suffix("}}")) {
+                        assert!(
+                            open.is_none(),
+                            "{form}: {} line {}: `{{{{#{name}}}}}` opens inside `{}`, which is still open",
+                            source.path,
+                            number + 1,
+                            open.unwrap()
+                        );
+                        assert!(
+                            form.addons().iter().any(|a| a.as_str() == name),
+                            "{form}: {} names the section `{name}`, which is not one of its add-ons",
+                            source.path
+                        );
+                        open = Some(name);
+                    } else if let Some(name) = trimmed.strip_prefix("{{/").and_then(|r| r.strip_suffix("}}")) {
+                        assert_eq!(
+                            open,
+                            Some(name),
+                            "{form}: {} line {}: `{{{{/{name}}}}}` closes a section that is not open",
+                            source.path,
+                            number + 1
+                        );
+                        open = None;
+                    }
+                }
+                assert!(open.is_none(), "{form}: {} leaves `{}` unclosed", source.path, open.unwrap_or(""));
             }
         }
     }

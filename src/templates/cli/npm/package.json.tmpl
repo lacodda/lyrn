@@ -1,0 +1,27 @@
+{
+  "name": "{{ name }}",
+  "version": "0.1.0",
+  "{{ name }}": {
+    "binary": "v0.1.0"
+  },
+  "description": "{{ description }}",
+  "license": "MIT",
+  "author": "{{ author }}",
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/{{ repo }}.git"
+  },
+  "keywords": ["cli", "command-line"],
+  "bin": {
+    "{{ name }}": "run.js"
+  },
+  "files": ["download.js", "install.js", "prepack.js", "run.js", "README.md"],
+  "scripts": {
+    "prepack": "node prepack.js",
+    "postinstall": "node install.js"
+  },
+  "os": ["win32", "darwin", "linux"],
+  "engines": {
+    "node": ">=18"
+  }
+}

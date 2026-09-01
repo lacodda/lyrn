@@ -5,7 +5,7 @@ use std::process::Command as Process;
 
 use crate::cli::NewArgs;
 use crate::generate;
-use crate::model::{Context, TemplateManifest};
+use crate::model::{Context, Form, TemplateManifest};
 use crate::naming::{self, PLACEHOLDER_ACCENT};
 use crate::templates;
 
@@ -45,7 +45,16 @@ pub fn build_context(args: &NewArgs, manifest: &TemplateManifest, interactive: b
         .set("date", current_date())
         .set("registry", "https://lacodda.github.io/dowel/r")
         .set("lyrn_version", env!("CARGO_PKG_VERSION"))
-        .set("standard", manifest.standard.clone());
+        .set("standard", manifest.standard.clone())
+        // The repository the generated project will live in. Guessed from the
+        // git identity so the installers and the update check point somewhere
+        // real; `--repo` overrides it.
+        .set("repo", repo(args))
+        // Environment variables are shouted and hyphen-free: `MY_TOOL_VERSION`.
+        .set("env_prefix", args.name.to_uppercase().replace('-', "_"))
+        // Measured, not assumed: a number that is wrong is worse than absent,
+        // because `cargo install` believes it.
+        .set("msrv", msrv());
 
     Ok(context)
 }
@@ -57,7 +66,7 @@ pub fn run(args: NewArgs) -> Result<(), Box<dyn Error>> {
     let context = build_context(&args, &manifest, interactive)?;
     let root = args.path.clone().unwrap_or_else(|| PathBuf::from(&args.name));
 
-    let plan = generate::plan(&templates::sources_for(args.form), &manifest, &context)?;
+    let plan = generate::plan_with(&templates::sources_for(args.form), &manifest, &context, &args.with)?;
 
     if args.dry_run {
         println!("Would create {} in `{}`:\n", plural(plan.files.len()), root.display());
@@ -110,10 +119,17 @@ fn run_hooks(manifest: &TemplateManifest, root: &std::path::Path) -> Result<(), 
 fn print_next_steps(args: &NewArgs, root: &std::path::Path) {
     println!("\nNext:");
     println!("  cd {}", root.display());
-    if args.no_hooks {
-        println!("  pnpm install");
+    match args.form {
+        Form::Spa => {
+            if args.no_hooks {
+                println!("  pnpm install");
+            }
+            println!("  pnpm dev");
+        }
+        Form::Cli => {
+            println!("  cargo run -- hello");
+        }
     }
-    println!("  pnpm dev");
 }
 
 fn plural(count: usize) -> String {
@@ -122,6 +138,57 @@ fn plural(count: usize) -> String {
 
 fn indent(text: &str) -> String {
     text.lines().map(|line| format!("  {line}")).collect::<Vec<_>>().join("\n")
+}
+
+/// Where the generated project will live: `owner/name`.
+///
+/// The owner is looked up rather than derived: a GitHub account name is not a
+/// person's name, and turning "Jane Smith" into `jane-smith` produces a URL
+/// that looks right and resolves to nobody. `git config github.user` first,
+/// then the authenticated `gh` account, and failing both an obvious
+/// placeholder - a name that is visibly a blank is safer than a plausible one.
+fn repo(args: &NewArgs) -> String {
+    if let Some(explicit) = &args.repo {
+        return explicit.clone();
+    }
+    let owner = git_config("github.user").or_else(gh_login).unwrap_or_else(|| "OWNER".to_string());
+    format!("{owner}/{}", args.name)
+}
+
+/// The GitHub account `gh` is logged in as, if it is installed and logged in.
+fn gh_login() -> Option<String> {
+    let output = Process::new("gh").args(["api", "user", "--jq", ".login"]).output().ok()?;
+    if !output.status.success() {
+        return None;
+    }
+    let login = String::from_utf8(output.stdout).ok()?.trim().to_string();
+    if login.is_empty() { None } else { Some(login) }
+}
+
+/// The Rust version the generated project declares as its minimum.
+///
+/// Read from the toolchain that is generating it: the edition the template
+/// uses already sets a floor, and claiming a lower number than the compiler in
+/// the room would be a promise nobody has tested. The CI job the template
+/// ships reads this back out of the manifest and builds against it, so a wrong
+/// number fails rather than rots.
+fn msrv() -> String {
+    // `rustc 1.98.0 (88d9e12ae 2026-08-18)` - the second word is the version.
+    let output = Process::new("rustc").arg("--version").output().ok();
+    let measured = output
+        .filter(|o| o.status.success())
+        .and_then(|o| String::from_utf8(o.stdout).ok())
+        .and_then(|line| line.split_whitespace().nth(1).map(str::to_string))
+        .and_then(|v| {
+            let mut parts = v.split('.');
+            match (parts.next(), parts.next()) {
+                (Some(major), Some(minor)) => Some(format!("{major}.{minor}")),
+                _ => None,
+            }
+        });
+    // Edition 2024 needs 1.85; without a toolchain to ask, say the floor
+    // rather than inventing a number.
+    measured.unwrap_or_else(|| "1.85".to_string())
 }
 
 fn git_config(key: &str) -> Option<String> {
@@ -162,7 +229,6 @@ fn current_date() -> String {
 #[cfg(test)]
 mod tests {
     use super::*;
-    use crate::model::Form;
 
     fn args(name: &str) -> NewArgs {
         NewArgs {
@@ -172,6 +238,8 @@ mod tests {
             description: None,
             author: Some("Tester".to_string()),
             path: None,
+            repo: Some("tester/demo-app".to_string()),
+            with: Vec::new(),
             assume_yes: true,
             dry_run: false,
             no_hooks: true,
