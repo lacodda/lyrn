@@ -1,98 +1,112 @@
 <p align="center">
   <img src="https://raw.githubusercontent.com/lacodda/lyrn/main/assets/banner.svg" width="720" alt="lyrn">
 </p>
-<h1 align="center">🚀 Quick Start for Web Application Development with lyrn</h1>
-<br>
+<h1 align="center">lyrn</h1>
+<p align="center">Start a new web application on one finished stack — with one command.</p>
 
-[![NPM Version][npm-image]][npm-url] ![Build Status][build-image] ![Contributors][contributors-image] ![License][license-url]
+[![NPM Version][npm-image]][npm-url] ![License][license-url]
 
-## 📌 Overview
+## What it is
 
-lyrn is an innovative command-line tool that accelerates the web application development process. It simplifies the initial setup and configuration, allowing developers to focus on creating robust and high-quality web applications. lyrn supports a variety of frameworks and tools, making it versatile for different project requirements.
+`lyrn new` creates a repository that is ready to work in: Vite, React,
+TypeScript, Tailwind and the [dowel](https://lacodda.github.io/dowel) design
+system, together with the things a project usually grows only after the third
+time somebody wishes it had them — a CI gate, a changelog, an ADR directory, an
+editor config, a license.
 
-## 🌟 Features
+It is not a scaffolder for any framework you like. It is **one stack, assembled
+to the end**. The choice a generator usually hands back to you has already been
+made, and made the same way for every product on the line.
 
-- **Framework Agnostic:** Start projects with any major web framework, including React, Vue, Svelte, and more.
-- **Instant Setup:** Automates the configuration of development environments, including necessary dependencies and build tools.
-- **Modern Tooling:** Integrates with modern development tools such as Webpack, Babel, ESLint, and TypeScript, ensuring best practices and optimal development workflows.
-- **Custom Templates:** Support for custom project templates, allowing teams to standardize development practices.
-- **Live Reloading:** Facilitates development with live reloading, ensuring immediate feedback for any changes.
+## A day in the life
 
-## 🚀 Getting Started
+```console
+$ lyrn new demo-app --accent kilna
+Created 25 files in `demo-app`.
+Installing dependencies... done
+Starting the repository... done
+Staging the first commit... done
+Creating the first commit... done
 
-### Prerequisites
-
-Before installing lyrn, make sure you have Node.js and npm installed on your system. These are essential for running JavaScript projects and managing their dependencies.
-
-### Installation
-
-To install lyrn globally on your system, use the following npm command:
-
-```bash
-npm install -g lyrn
+Next:
+  cd demo-app
+  pnpm dev
 ```
 
-This allows you to use lyrn from any directory on your system.
+```console
+$ cd demo-app && pnpm lint
+> eslint . && tsc --noEmit && pnpm test
 
-Alternatively, for a one-off project setup without global installation, use:
-
-```bash
-npx lyrn@latest
+ Test Files  1 passed (1)
+      Tests  2 passed (2)
 ```
 
-### Creating Your First Project
+That gate is the same one CI runs, so a green terminal means a green pull
+request.
 
-To create a new project, lyrn streamlines the process with a simple command:
+## Install
 
-```bash
-lyrn create project <your-app-name> -f <framework>
+```console
+$ npm install -g lyrn          # or: cargo install lyrn
 ```
 
-Replace `<your-app-name>` with the name of your project and `<framework>` with the web framework you want to use (e.g., `react`, `vue`).
+## Usage
 
-## 🛠 Usage
-
-After creating a project, navigate into your project directory to start development:
-
-```bash
-cd <your-app-name>
+```console
+$ lyrn new <name> [options]
+$ lyrn forms
 ```
 
-To launch the development server with live reloading:
+| Option | What it does |
+| --- | --- |
+| `--form <form>` | The shape of the project (default: `spa`) |
+| `--accent <colour>` | A product of the line, or a `#rrggbb` value |
+| `--description <text>` | One line describing what the project is |
+| `--author <name>` | Recorded in LICENSE; defaults to `git config user.name` |
+| `--path <path>` | Where to create it |
+| `-y`, `--yes` | Accept the defaults instead of asking |
+| `--dry-run` | Show what would be written, and write nothing |
+| `--no-hooks` | Skip installing dependencies and starting the repository |
 
-```bash
-npm start
+Without `--yes` and with a terminal attached, lyrn asks for what it is missing.
+Without a terminal — in CI, in a script — it takes the defaults and never
+blocks waiting for an answer.
+
+## The accent
+
+A generated project states one thing about its own appearance, and the theme
+derives the rest — the hover shade, the soft fill, the focus ring, the tint the
+greys carry, and what colour text has to be on an accent fill:
+
+```css
+:root {
+  --accent-base: #d9569e;
+}
 ```
 
-When you're ready to build your application for production:
+`--accent` takes either a colour or the name of a product on the line, in which
+case its mark's colour is used.
 
-```bash
-npm run build
-```
+## Forms
 
-To serve your production build locally:
+| Form | What it produces |
+| --- | --- |
+| `spa` | Single-page app: Vite, React, TypeScript, Tailwind, dowel |
 
-```bash
-npm run serve
-```
+More forms — `cli`, `desktop`, `service`, `lib` — follow in 2.x.
 
-## 💡 Contributing
+## Migrating from 1.x
 
-We welcome contributions from the community! Whether it's adding new features, fixing bugs, or improving documentation, your help is appreciated. Please read our [Contributing Guide](CONTRIBUTING.md) for more details on how to start contributing.
+Version 1 wrapped webpack and generated its configuration. That job belongs to
+Vite now, and the wrapper is gone: `lyrn create`, `start`, `build` and `export`
+no longer exist. An existing 1.x project keeps working — pin `lyrn@1.3.0`, or
+move to Vite directly, which is what the 1.x templates were producing
+configuration for anyway.
 
-## 🆘 Support
+## License
 
-If you encounter any issues or have questions, please file an issue on our GitHub repository.
+MIT — see [LICENSE](LICENSE).
 
-## 📜 License
-
-lyrn is open-source software licensed under the MIT license. See the [LICENSE](LICENSE) file for more details.
-
-[build-image]: https://img.shields.io/travis/com/lacodda/lyrn/main.svg?style=flat-square
-[build-url]: https://travis-ci.com/lacodda/lyrn
-[contributors-image]: https://img.shields.io/github/contributors/lacodda/lyrn.svg?style=flat-square
-[contributors-url]: https://github.com/lacodda/lyrn/graphs/contributors
-[license-image]: https://img.shields.io/github/license/lacodda/lyrn.svg?style=flat-square
-[license-url]: https://github.com/lacodda/lyrn/blob/main/LICENSE
-[npm-image]: https://img.shields.io/npm/v/lyrn.svg?style=flat-square
-[npm-url]: https://npmjs.org/package/lyrn
+[npm-image]: https://img.shields.io/npm/v/lyrn.svg
+[npm-url]: https://www.npmjs.com/package/lyrn
+[license-url]: https://img.shields.io/npm/l/lyrn.svg

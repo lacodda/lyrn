@@ -1,0 +1,222 @@
+use std::error::Error;
+use std::io::IsTerminal;
+use std::path::PathBuf;
+use std::process::Command as Process;
+
+use crate::cli::NewArgs;
+use crate::generate;
+use crate::model::{Context, TemplateManifest};
+use crate::naming::{self, PLACEHOLDER_ACCENT};
+use crate::templates;
+
+/// Build the context a generation runs with.
+///
+/// Everything can be given on the command line; the wizard only fills what is
+/// still missing, and only when there is a terminal to ask into.
+pub fn build_context(args: &NewArgs, manifest: &TemplateManifest, interactive: bool) -> Result<Context, Box<dyn Error>> {
+    naming::validate_name(&args.name)?;
+
+    let accent = match &args.accent {
+        Some(value) => naming::resolve_accent(value)?,
+        None if interactive => prompt_accent()?,
+        None => PLACEHOLDER_ACCENT.to_string(),
+    };
+
+    let description = match &args.description {
+        Some(value) => value.clone(),
+        None if interactive => prompt_line("What is it, in one line?", &format!("A {} on the lacodda line's stack.", args.form))?,
+        None => format!("A {} on the lacodda line's stack.", args.form),
+    };
+
+    let author = match &args.author {
+        Some(value) => value.clone(),
+        None => git_config("user.name").unwrap_or_else(|| "The author".to_string()),
+    };
+
+    let mut context = Context::new();
+    context
+        .set("name", &args.name)
+        .set("title", naming::title_from_name(&args.name))
+        .set("description", description)
+        .set("accent", accent)
+        .set("author", author)
+        .set("form", args.form.as_str())
+        .set("year", current_year())
+        .set("date", current_date())
+        .set("registry", "https://lacodda.github.io/dowel/r")
+        .set("lyrn_version", env!("CARGO_PKG_VERSION"))
+        .set("standard", manifest.standard.clone());
+
+    Ok(context)
+}
+
+pub fn run(args: NewArgs) -> Result<(), Box<dyn Error>> {
+    let manifest: TemplateManifest = toml::from_str(templates::manifest_for(args.form))?;
+    let interactive = !args.assume_yes && std::io::stdin().is_terminal();
+
+    let context = build_context(&args, &manifest, interactive)?;
+    let root = args.path.clone().unwrap_or_else(|| PathBuf::from(&args.name));
+
+    let plan = generate::plan(&templates::sources_for(args.form), &manifest, &context)?;
+
+    if args.dry_run {
+        println!("Would create {} in `{}`:\n", plural(plan.files.len()), root.display());
+        println!("{}", indent(&plan.tree()));
+        return Ok(());
+    }
+
+    generate::check_destination(&root)?;
+    generate::write(&plan, &root)?;
+    println!("Created {} in `{}`.", plural(plan.files.len()), root.display());
+
+    if !args.no_hooks {
+        run_hooks(&manifest, &root)?;
+    }
+
+    print_next_steps(&args, &root);
+    Ok(())
+}
+
+fn run_hooks(manifest: &TemplateManifest, root: &std::path::Path) -> Result<(), Box<dyn Error>> {
+    for hook in &manifest.hooks {
+        let Some((program, rest)) = hook.run.split_first() else { continue };
+        print!("{}... ", hook.name);
+        use std::io::Write;
+        std::io::stdout().flush().ok();
+
+        // A hook's own chatter would land in the middle of the line this
+        // function is writing; what matters here is whether it worked.
+        let outcome = Process::new(program).args(rest).current_dir(root).output();
+        match outcome {
+            Ok(out) if out.status.success() => println!("done"),
+            Ok(out) => {
+                println!("failed");
+                if !hook.optional {
+                    let stderr = String::from_utf8_lossy(&out.stderr);
+                    return Err(format!("`{}` failed: {}", hook.run.join(" "), stderr.trim()).into());
+                }
+            }
+            Err(e) if hook.optional => {
+                // A missing tool is not a failed generation: the files are
+                // already on disk and the step is one command away.
+                println!("skipped ({e})");
+            }
+            Err(e) => return Err(Box::new(e)),
+        }
+    }
+    Ok(())
+}
+
+fn print_next_steps(args: &NewArgs, root: &std::path::Path) {
+    println!("\nNext:");
+    println!("  cd {}", root.display());
+    if args.no_hooks {
+        println!("  pnpm install");
+    }
+    println!("  pnpm dev");
+}
+
+fn plural(count: usize) -> String {
+    if count == 1 { "1 file".to_string() } else { format!("{count} files") }
+}
+
+fn indent(text: &str) -> String {
+    text.lines().map(|line| format!("  {line}")).collect::<Vec<_>>().join("\n")
+}
+
+fn git_config(key: &str) -> Option<String> {
+    let output = Process::new("git").args(["config", "--get", key]).output().ok()?;
+    if !output.status.success() {
+        return None;
+    }
+    let value = String::from_utf8(output.stdout).ok()?.trim().to_string();
+    if value.is_empty() { None } else { Some(value) }
+}
+
+fn prompt_accent() -> Result<String, Box<dyn Error>> {
+    use dialoguer::{Input, theme::ColorfulTheme};
+    let raw: String = Input::with_theme(&ColorfulTheme::default())
+        .with_prompt("Accent (a product of the line, or #rrggbb)")
+        .default(PLACEHOLDER_ACCENT.to_string())
+        .interact_text()?;
+    Ok(naming::resolve_accent(&raw)?)
+}
+
+fn prompt_line(prompt: &str, default: &str) -> Result<String, Box<dyn Error>> {
+    use dialoguer::{Input, theme::ColorfulTheme};
+    let value: String = Input::with_theme(&ColorfulTheme::default())
+        .with_prompt(prompt)
+        .default(default.to_string())
+        .interact_text()?;
+    Ok(value)
+}
+
+fn current_year() -> String {
+    chrono::Local::now().format("%Y").to_string()
+}
+
+fn current_date() -> String {
+    chrono::Local::now().format("%Y-%m-%d").to_string()
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+    use crate::model::Form;
+
+    fn args(name: &str) -> NewArgs {
+        NewArgs {
+            name: name.to_string(),
+            form: Form::Spa,
+            accent: None,
+            description: None,
+            author: Some("Tester".to_string()),
+            path: None,
+            assume_yes: true,
+            dry_run: false,
+            no_hooks: true,
+        }
+    }
+
+    #[test]
+    fn a_non_interactive_run_needs_no_answers() {
+        let manifest = TemplateManifest::default();
+        let context = build_context(&args("demo-app"), &manifest, false).unwrap();
+        assert_eq!(context.get("name"), Some("demo-app"));
+        assert_eq!(context.get("title"), Some("Demo App"));
+        assert_eq!(context.get("accent"), Some(PLACEHOLDER_ACCENT));
+    }
+
+    #[test]
+    fn a_bad_name_is_refused_before_anything_is_written() {
+        let manifest = TemplateManifest::default();
+        assert!(build_context(&args("Demo App"), &manifest, false).is_err());
+    }
+
+    #[test]
+    fn an_accent_names_a_product_of_the_line() {
+        let manifest = TemplateManifest::default();
+        let mut a = args("demo-app");
+        a.accent = Some("kilna".to_string());
+        let context = build_context(&a, &manifest, false).unwrap();
+        assert_eq!(context.get("accent"), Some("#D9569E"));
+    }
+
+    #[test]
+    fn an_unknown_accent_is_refused() {
+        let manifest = TemplateManifest::default();
+        let mut a = args("demo-app");
+        a.accent = Some("chartreuse".to_string());
+        assert!(build_context(&a, &manifest, false).is_err());
+    }
+
+    #[test]
+    fn the_standard_comes_from_the_manifest() {
+        let manifest = TemplateManifest {
+            standard: "2026.09".to_string(),
+            ..Default::default()
+        };
+        let context = build_context(&args("demo-app"), &manifest, false).unwrap();
+        assert_eq!(context.get("standard"), Some("2026.09"));
+    }
+}

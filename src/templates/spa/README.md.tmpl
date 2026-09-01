@@ -1,0 +1,58 @@
+# {{ title }}
+
+{{ description }}
+
+Built on the lacodda line's stack: [Vite](https://vite.dev), React, TypeScript,
+[Tailwind](https://tailwindcss.com) and the [dowel](https://lacodda.github.io/dowel)
+design system. Scaffolded with [lyrn](https://github.com/lacodda/lyrn).
+
+## A day in the life
+
+```console
+$ pnpm install          # once
+$ pnpm dev              # the app, on http://localhost:5173
+$ pnpm lint             # eslint + types + tests, the same gate CI runs
+$ pnpm build            # a production bundle in dist/
+```
+
+## Adding a component
+
+Primitives are copied in from the dowel registry and then belong to this
+repository — edit them freely:
+
+```console
+$ npx shadcn add {{ registry }}/button.json
+```
+
+The full set is listed at <https://lacodda.github.io/dowel>.
+
+## The look
+
+This project states one thing about its own appearance — its accent, in
+`src/styles.css`:
+
+```css
+:root {
+  --accent-base: {{ accent }};
+}
+```
+
+Everything else follows from it: the hover shade, the soft fill, the focus
+ring, the tint the greys carry, and what colour text sits on an accent fill.
+
+A component never writes a colour down; it names a token, so the theme can swap
+it underneath. `pnpm lint` enforces this.
+
+## Layout
+
+| Path | What lives there |
+| --- | --- |
+| `src/` | The application |
+| `src/lib/utils.ts` | `cn()`, the class-name joiner the primitives use |
+| `src/styles.css` | Tailwind, the dowel theme, this product's accent |
+| `docs/adr/` | Architecture decisions, newest last |
+| `.github/workflows/ci.yml` | The gate: lint, types, tests, build |
+
+## License
+
+MIT — see [LICENSE](LICENSE).

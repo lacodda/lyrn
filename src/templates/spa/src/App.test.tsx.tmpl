@@ -1,0 +1,15 @@
+import { render, screen } from '@testing-library/react'
+import { describe, expect, it } from 'vitest'
+import { App } from '@/App'
+
+describe('App', () => {
+  it('names the project', () => {
+    render(<App />)
+    expect(screen.getByRole('heading', { name: '{{ title }}' })).toBeTruthy()
+  })
+
+  it('starts the counter at zero', () => {
+    render(<App />)
+    expect(screen.getByRole('button', { name: /clicked 0 times/i })).toBeTruthy()
+  })
+})

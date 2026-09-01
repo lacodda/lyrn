@@ -1,104 +1,85 @@
-use crate::traits::value_ext::ValueExt;
-use crate::{
-    libs::{
-        project_config::ProjectConfig,
-        types::{Content, User},
-    },
-    tools::webpack::WebpackFrameworkConfig,
-};
-use clap::ValueEnum;
-use serde::{Deserialize, Serialize};
-use serde_json::Value;
-use std::collections::HashMap;
+//! The forms lyrn carries built in.
+//!
+//! A form is a directory of template files plus a manifest, both embedded in
+//! the binary so that `lyrn new` works offline.
 
-pub mod common;
-pub mod react;
-pub mod styles;
-pub mod vue;
+pub mod spa;
 
-#[derive(ValueEnum, Copy, Clone, Debug, PartialEq, Eq, Default, Serialize, Deserialize)]
-pub enum Framework {
-    #[default]
-    None,
-    React,
-    Vue,
-}
+use crate::generate::SourceFile;
+use crate::model::Form;
 
-impl Framework {
-    pub fn get_webpack_config(&self) -> WebpackFrameworkConfig {
-        match &self {
-            Framework::None => WebpackFrameworkConfig {
-                constants: vec![],
-                plugins: vec![],
-                rules: vec![],
-            },
-            Framework::React => react::get_webpack_config(),
-            Framework::Vue => vue::get_webpack_config(),
-        }
+/// The manifest text for a form.
+pub fn manifest_for(form: Form) -> &'static str {
+    match form {
+        Form::Spa => spa::MANIFEST,
     }
 }
 
-#[derive(Debug, Default, Clone)]
-pub struct Template {
-    pub scripts: Value,
-    pub dependencies: Value,
-    pub dev_dependencies: Value,
-    pub project_config: ProjectConfig,
-    pub tsconfig: Value,
-    pub eslintrc: Value,
-    pub readme: String,
-    pub mit_license: String,
-    pub gitignore: String,
-    pub postcss_config: String,
-    pub index_d: String,
-    pub index: String,
-    pub app: HashMap<&'static str, Content>,
-}
-
-impl Template {
-    fn merge(self, common: &Template) -> Template {
-        let mut template: Template = common.clone();
-        template.scripts.merge_default(&self.scripts);
-        template.dependencies.merge_default(&self.dependencies);
-        template.dev_dependencies.merge_default(&self.dev_dependencies);
-        template.tsconfig.merge_default(&self.tsconfig);
-        template.eslintrc.merge_default(&self.eslintrc);
-        template.app = self.app;
-        template
+/// The files a form writes.
+pub fn sources_for(form: Form) -> Vec<SourceFile> {
+    match form {
+        Form::Spa => spa::sources(),
     }
 }
 
-#[derive(Debug, Default)]
-struct Templates {
-    common: Template,
-    react: Template,
-    vue: Template,
-}
+#[cfg(test)]
+mod tests {
+    use super::*;
+    use crate::model::TemplateManifest;
+    use crate::render;
 
-impl Templates {
-    fn get(self, framework: &Framework) -> Template {
-        match framework {
-            Framework::None => self.common,
-            Framework::React => self.react.merge(&self.common),
-            Framework::Vue => self.vue.merge(&self.common),
+    /// The variables `lyrn new` is able to fill in. A template asking for
+    /// anything else would only fail once someone ran it.
+    const PROVIDED: &[&str] = &[
+        "name",
+        "title",
+        "description",
+        "accent",
+        "author",
+        "form",
+        "year",
+        "date",
+        "registry",
+        "lyrn_version",
+        "standard",
+    ];
+
+    #[test]
+    fn no_form_asks_for_a_variable_nothing_provides() {
+        for form in Form::ALL {
+            let manifest: TemplateManifest = toml::from_str(manifest_for(*form)).unwrap();
+            for source in sources_for(*form) {
+                if manifest.verbatim.iter().any(|v| v == source.path) {
+                    continue;
+                }
+                for key in render::placeholders(source.contents).into_iter().chain(render::placeholders(source.path)) {
+                    assert!(
+                        PROVIDED.contains(&key.as_str()),
+                        "{form}: `{}` asks for `{{{{ {key} }}}}`, which the generator does not provide",
+                        source.path
+                    );
+                }
+            }
         }
     }
-}
 
-#[derive(Debug, Clone)]
-pub struct ProjectProps {
-    pub name: String,
-    pub framework: Framework,
-    pub user: User,
-}
-
-impl ProjectProps {
-    pub fn get_template(self) -> Template {
-        Templates {
-            common: common::get(&self),
-            react: react::get(&self),
-            vue: vue::get(&self),
+    #[test]
+    fn every_form_has_a_manifest_that_parses() {
+        for form in Form::ALL {
+            let manifest: TemplateManifest = toml::from_str(manifest_for(*form)).unwrap();
+            assert!(!manifest.standard.is_empty(), "{form} declares no standard version");
         }
-        .get(&self.framework)
+    }
+
+    #[test]
+    fn every_verbatim_entry_names_a_file_the_form_writes() {
+        // A stale entry would silently stop protecting anything.
+        for form in Form::ALL {
+            let manifest: TemplateManifest = toml::from_str(manifest_for(*form)).unwrap();
+            let paths: Vec<&str> = sources_for(*form).iter().map(|s| s.path).collect();
+            for entry in &manifest.verbatim {
+                assert!(paths.contains(&entry.as_str()), "{form}: verbatim names `{entry}`, which it does not write");
+            }
+        }
     }
 }

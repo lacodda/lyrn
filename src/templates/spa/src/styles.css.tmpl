@@ -1,0 +1,28 @@
+@import 'tailwindcss';
+
+/*
+ * The theme is dowel's - the token vocabulary of the lacodda line, in dark and
+ * light. This project states one thing about its own look, its accent, and the
+ * theme derives the rest: the hover shade, the soft fill, the focus ring, the
+ * tint the greys carry, and what colour text has to be on an accent fill.
+ *
+ * Never write a colour down in a component. Name a token instead, so the theme
+ * can swap it underneath - `eslint` enforces this via `dowel/no-raw-color`.
+ */
+@import 'dowel-ui/theme.css';
+
+:root {
+  --accent-base: {{ accent }};
+}
+
+html,
+body,
+#root {
+  height: 100%;
+}
+
+body {
+  margin: 0;
+  background-color: var(--bg);
+  color: var(--text);
+}
