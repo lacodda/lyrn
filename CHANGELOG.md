@@ -1,5 +1,11 @@
 # Changelog
 
+## 🎉 [2.1.1] - 2026-09-01
+
+### 🛠️ Bug Fixes
+
+- Keep the template files inside the published crate
+
 ## 🎉 [2.1.0] - 2026-09-01
 
 ### ✨ Features
