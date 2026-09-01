@@ -1,5 +1,30 @@
 # Changelog
 
+## 🎉 [2.0.0] - 2026-09-01
+
+### 💥 Breaking Changes
+
+- **Replace the webpack wrapper with `lyrn new`**
+`lyrn create`, `start`, `build` and `export` are removed along
+with the webpack tooling behind them. Pin `lyrn@1.3.0` to keep the old
+behaviour, or move to Vite directly - which is what the 1.x templates were
+generating configuration for.
+
+
+### ✨ Features
+
+- Bring the repository up to the line's standard
+- [**breaking**] Replace the webpack wrapper with `lyrn new`
+- Add the brand assets
+
+### 📖 Documentation
+
+- Updated logo, updated information in README file
+
+### 🛟 Miscellaneous Tasks
+
+- Tea.yaml has been added
+
 ## 🎉 [1.3.0] - 2023-11-30
 
 ### ✨ Features
@@ -199,15 +224,11 @@
 
 ## 🎉 [1.0.0] - 2023-09-02
 
-### 🛟 Miscellaneous Tasks
+### 💥 Breaking Changes
 
-- Fix github action "release"
+- **📦✨ next lyrn version started**
+📦✨ next lyrn version started
 
-### 🛠️ Bug Fixes
-
-- Fix clear_console function for windows
-
-## 🎉 [0.0.9] - 2023-09-02
 
 ### ✨ Features
 
@@ -236,20 +257,27 @@
 - Eslintrc struct replaced with json_serde::Value
 - HashMap in Package struct replaced with json_serde::Value
 
-### 🎨 Styling
-
-- 🖼️ changed logo
-
 ### 📖 Documentation
 
 - The description of the application's features has been improved in the README file
 
 ### 🛟 Miscellaneous Tasks
 
+- Fix github action "release"
 - Add github action "release" and cliff.toml
 
 ### 🛠️ Bug Fixes
 
+- Fix clear_console function for windows
 - Fixed function clear_console
 - Added sorting list of dependencies
+
+## 🎉 [0.0.9] - 2023-09-02
+
+### 🎨 Styling
+
+- 🖼️ changed logo
+
+## 🎉 [0.0.2] - 2018-04-18
+
 

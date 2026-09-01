@@ -18,6 +18,14 @@ body = """
 {% else %}\
     ## [unreleased]
 {% endif %}\
+{% set breaking = commits | filter(attribute="breaking", value=true) %}\
+{% if breaking | length > 0 %}
+    ### 💥 Breaking Changes
+    {% for commit in breaking %}
+        - **{{ commit.message | upper_first }}**
+        {{ commit.breaking_description | trim }}
+    {% endfor %}
+{% endif %}\
 {% for group, commits in commits | group_by(attribute="group") %}
     ### {{ group | upper_first }}
     {% for commit in commits %}
@@ -63,7 +71,7 @@ commit_parsers = [
   { message = "^revert", group = "Revert" },
 ]
 # protect breaking changes from being skipped due to matching a skipping commit_parser
-protect_breaking_commits = false
+protect_breaking_commits = true
 # filter out the commits that are not matched by commit parsers
 filter_commits = false
 # glob pattern for matching git tags
