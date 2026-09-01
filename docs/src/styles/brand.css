@@ -1,0 +1,84 @@
+/* Brand accent: lyrn indigo. */
+:root {
+	--sl-color-accent: #6d7bf2;
+	--sl-color-accent-high: #b4bcf8;
+	--sl-color-accent-low: #262c5c;
+}
+
+:root[data-theme='light'] {
+	--sl-color-accent: #4c58c9;
+	--sl-color-accent-high: #2b3178;
+	--sl-color-accent-low: #dfe2fc;
+}
+
+/* ---------------------------------------------------------------- header -- */
+
+/* The mark is a square hex tile: let it fill the bar height rather than the
+   2rem it was pinned to, and sit close to the wordmark it belongs with. */
+.site-title {
+	gap: 0.4rem;
+}
+
+.site-title img {
+	width: auto;
+	height: 2.5rem;
+}
+
+/* -------------------------------------------------------------- hero box -- */
+
+.ln-install {
+	width: 100%;
+	border: 1px solid var(--sl-color-gray-5);
+	border-radius: 0.75rem;
+	background: var(--sl-color-black);
+	overflow: hidden;
+	text-align: start;
+	box-shadow: 0 1px 3px rgb(0 0 0 / 0.2);
+}
+
+.ln-install__bar {
+	display: flex;
+	align-items: center;
+	gap: 0.5rem;
+	padding: 0.6rem 0.9rem;
+	border-bottom: 1px solid var(--sl-color-gray-5);
+	background: var(--sl-color-gray-6);
+}
+
+.ln-install__dot {
+	width: 0.6rem;
+	height: 0.6rem;
+	border-radius: 50%;
+	background: var(--sl-color-gray-4);
+}
+
+.ln-install__dot:first-child {
+	background: var(--sl-color-accent);
+}
+
+.ln-install__os {
+	margin-inline-start: auto;
+	font-size: var(--sl-text-xs);
+	color: var(--sl-color-gray-3);
+}
+
+.ln-install__body {
+	margin: 0;
+	padding: 0.9rem;
+	font-family: var(--__sl-font-mono);
+	/* Commands here are kept short on purpose so they never wrap; the one-line
+	   installers with their long URLs live on the Getting Started page. */
+	font-size: var(--sl-text-code-sm);
+	line-height: 1.9;
+	overflow-x: auto;
+	color: var(--sl-color-gray-1);
+}
+
+.ln-install__prompt {
+	color: var(--sl-color-accent-high);
+	user-select: none;
+}
+
+.ln-install__comment {
+	color: var(--sl-color-gray-3);
+}

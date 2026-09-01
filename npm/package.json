@@ -1,41 +1,31 @@
 {
   "name": "lyrn",
-  "version": "1.3.0",
-  "description": "🚀 Command-line tool for quickly starting the development of your web application",
-  "license": "MIT",
-  "homepage": "https://github.com/lacodda/lyrn",
-  "author": {
-    "name": "Kirill Lakhtachev",
-    "email": "lahtachev@gmail.com",
-    "url": "https://lacodda.com"
+  "version": "2.0.0",
+  "lyrn": {
+    "binary": "v2.0.0"
   },
+  "description": "Start a new web application on the lacodda line's stack with one command",
+  "license": "MIT",
+  "author": "Kirill Lakhtachev <lahtachev@gmail.com> (https://lacodda.com)",
+  "homepage": "https://lacodda.github.io/lyrn/",
   "repository": {
     "type": "git",
-    "url": "git@github.com:lacodda/lyrn.git"
+    "url": "git+https://github.com/lacodda/lyrn.git"
   },
   "bugs": {
     "url": "https://github.com/lacodda/lyrn/issues"
   },
-  "keywords": [
-    "lyrn",
-    "cli",
-    "tool",
-    "template",
-    "react",
-    "frontend",
-    "webpack",
-    "npm",
-    "package",
-    "rust"
-  ],
-  "main": "binary.js",
-  "scripts": {
-    "postinstall": "node ./install.js"
-  },
+  "keywords": ["cli", "scaffold", "template", "vite", "react", "tailwind", "starter"],
   "bin": {
-    "lyrn": "./run.js"
+    "lyrn": "run.js"
   },
-  "dependencies": {
-    "binary-install": "^1.0.1"
+  "files": ["download.js", "install.js", "prepack.js", "run.js", "README.md"],
+  "scripts": {
+    "prepack": "node prepack.js",
+    "postinstall": "node install.js"
+  },
+  "os": ["win32", "darwin", "linux"],
+  "engines": {
+    "node": ">=18"
   }
 }

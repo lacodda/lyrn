@@ -1,0 +1,54 @@
+---
+title: lyrn
+description: Start a new web application on the lacodda line's stack with one command.
+template: splash
+hero:
+  tagline: One stack, assembled to the end - and a repository that is ready to work in from the first commit.
+  image:
+    html: |
+      <div class="ln-install">
+        <div class="ln-install__bar">
+          <span class="ln-install__dot"></span>
+          <span class="ln-install__dot"></span>
+          <span class="ln-install__dot"></span>
+          <span class="ln-install__os">create &amp; run</span>
+        </div>
+        <pre class="ln-install__body"><span class="ln-install__prompt">$</span> npm i -g lyrn
+
+      <span class="ln-install__comment"># then, per project:</span>
+      <span class="ln-install__prompt">$</span> lyrn new demo-app --accent kilna
+      <span class="ln-install__prompt">$</span> cd demo-app
+      <span class="ln-install__prompt">$</span> pnpm dev</pre>
+      </div>
+  actions:
+    - text: Get started
+      link: /lyrn/getting-started/
+      icon: right-arrow
+    - text: View on GitHub
+      link: https://github.com/lacodda/lyrn
+      icon: external
+      variant: minimal
+---
+
+import { Card, CardGrid } from '@astrojs/starlight/components';
+
+<CardGrid stagger>
+	<Card title="One stack, not a menu" icon="setting">
+		Vite, React, TypeScript, Tailwind and the dowel design system. The choice
+		a generator usually hands back to you has already been made — and made
+		the same way for every product on the line.
+	</Card>
+	<Card title="The standard, as files" icon="document">
+		A CI gate, a changelog and its config, an ADR directory, editor and git
+		configuration. Not described in a document somebody has to remember:
+		written into the repository.
+	</Card>
+	<Card title="Green means green" icon="approve-check">
+		`pnpm lint` is eslint, types and tests in one script — and CI runs that
+		same script, so the two cannot drift apart.
+	</Card>
+	<Card title="One colour decides the rest" icon="star">
+		A project states its accent and the theme derives the palette from it,
+		down to what colour text has to be to stay readable on it.
+	</Card>
+</CardGrid>

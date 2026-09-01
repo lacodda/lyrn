@@ -59,4 +59,11 @@ lib-cov/
 target/
 
 # Docs
-docs/book
+docs/booknpm/README.md
+npm/lyrn
+npm/lyrn.exe
+
+# Docs site (Astro)
+docs/dist/
+docs/node_modules/
+docs/.astro/
