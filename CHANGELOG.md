@@ -1,5 +1,11 @@
 # Changelog
 
+## 🎉 [2.1.0] - 2026-09-01
+
+### ✨ Features
+
+- Add the cli form, with keyring and self-update as add-ons
+
 ## 🎉 [2.0.0] - 2026-09-01
 
 ### 💥 Breaking Changes
@@ -19,6 +25,7 @@ generating configuration for.
 
 ### 📖 Documentation
 
+- Record the decisions behind 2.0 and regenerate the changelog
 - Updated logo, updated information in README file
 
 ### 🛟 Miscellaneous Tasks
