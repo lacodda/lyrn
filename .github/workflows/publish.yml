@@ -25,10 +25,25 @@ jobs:
         with:
           ref: ${{ github.event_name == 'workflow_dispatch' && inputs.tag || github.ref }}
       - uses: dtolnay/rust-toolchain@stable
+      # A version can only be published once, and a re-run - after a manual
+      # bootstrap, or a tag pushed twice - would otherwise fail on the
+      # duplicate and leave a red run in the release's history.
+      - name: Check whether this version is already on crates.io
+        id: check
+        run: |
+          version=$(cargo metadata --no-deps --format-version 1 | jq -r '.packages[0].version')
+          if curl -sf "https://crates.io/api/v1/crates/lyrn/$version" -H 'user-agent: lyrn-ci' > /dev/null; then
+            echo "published=true" >> "$GITHUB_OUTPUT"
+            echo "lyrn $version is already on crates.io; nothing to do."
+          else
+            echo "published=false" >> "$GITHUB_OUTPUT"
+          fi
       - name: Get a crates.io token (OIDC trusted publishing)
+        if: steps.check.outputs.published == 'false'
         uses: rust-lang/crates-io-auth-action@v1
         id: auth
-      - run: cargo publish
+      - if: steps.check.outputs.published == 'false'
+        run: cargo publish
         env:
           CARGO_REGISTRY_TOKEN: ${{ steps.auth.outputs.token }}
 
@@ -47,5 +62,17 @@ jobs:
         with:
           node-version: 24
           registry-url: https://registry.npmjs.org
-      - run: npm publish
+      - name: Check whether this version is already on npm
+        id: check
+        working-directory: npm
+        run: |
+          version=$(node -p "require('./package.json').version")
+          if npm view "lyrn@$version" version > /dev/null 2>&1; then
+            echo "published=true" >> "$GITHUB_OUTPUT"
+            echo "lyrn $version is already on npm; nothing to do."
+          else
+            echo "published=false" >> "$GITHUB_OUTPUT"
+          fi
+      - if: steps.check.outputs.published == 'false'
+        run: npm publish
         working-directory: npm
