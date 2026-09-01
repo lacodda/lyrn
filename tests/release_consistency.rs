@@ -167,6 +167,48 @@ fn the_docs_site_and_the_crate_describe_the_same_product() {
 }
 
 #[test]
+fn every_embedded_template_file_survives_packaging() {
+    // `include_str!` reads from the source tree, so a template file the crate
+    // does not ship still compiles here and fails to compile from the tarball
+    // - the crate publishes, and then nobody can install it. This happened:
+    // a bare `docs/` in `exclude` is a glob matched anywhere, and it took
+    // `src/templates/*/docs` with it.
+    let manifest = read("Cargo.toml");
+    let excluded: Vec<&str> = manifest
+        .lines()
+        .skip_while(|l| !l.trim_start().starts_with("exclude"))
+        .skip(1)
+        .take_while(|l| !l.trim().starts_with(']'))
+        .filter_map(|l| l.trim().trim_end_matches(',').strip_prefix('"'))
+        .filter_map(|l| l.strip_suffix('"'))
+        .collect();
+
+    for pattern in &excluded {
+        assert!(
+            pattern.starts_with('/'),
+            "`{pattern}` in exclude has no leading slash, so it matches at every depth -              anchor it to the root or it will silently drop files under src/"
+        );
+    }
+
+    // And the templates really are in the package: walk what the sources
+    // reference and check none of it sits under an excluded path.
+    for entry in fs::read_dir(repo_root().join("src/templates")).expect("no templates directory") {
+        let path = entry.unwrap().path();
+        if !path.is_dir() {
+            continue;
+        }
+        let relative = path.strip_prefix(repo_root()).unwrap().display().to_string().replace('\\', "/");
+        for pattern in &excluded {
+            let bare = pattern.trim_start_matches('/').trim_end_matches('/');
+            assert!(
+                !relative.split('/').any(|part| part == bare),
+                "the template directory `{relative}` matches the exclude pattern `{pattern}`"
+            );
+        }
+    }
+}
+
+#[test]
 fn the_installers_agree_on_the_repository() {
     for installer in ["tools/install.sh", "tools/install.ps1"] {
         let text = read(installer);

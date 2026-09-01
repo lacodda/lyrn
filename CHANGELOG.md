@@ -6,6 +6,14 @@
 
 - Add the cli form, with keyring and self-update as add-ons
 
+### 📖 Documentation
+
+- Record why optional pieces are add-ons, and release 2.1.0
+
+### 🛠️ Bug Fixes
+
+- Keep the generator building on the declared MSRV
+
 ## 🎉 [2.0.0] - 2026-09-01
 
 ### 💥 Breaking Changes
