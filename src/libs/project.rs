@@ -8,7 +8,7 @@ use serde_json::json;
 use std::collections::HashMap;
 use std::env::set_current_dir;
 use std::error::Error;
-use std::fs::{create_dir_all, File};
+use std::fs::{File, create_dir_all};
 use std::io::Write;
 use std::path::PathBuf;
 use std::process::Command;

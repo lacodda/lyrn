@@ -7,7 +7,7 @@ use crate::{
 };
 use regex::Regex;
 use serde::{Deserialize, Serialize};
-use serde_json::{json, Value};
+use serde_json::{Value, json};
 use std::{error::Error, fs, io::Write, ops::Add, string::String};
 
 #[derive(Debug, Clone, Serialize, Deserialize)]

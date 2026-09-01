@@ -1,6 +1,6 @@
-use super::{styles::styles, ProjectProps, Template};
+use super::{ProjectProps, Template, styles::styles};
 use crate::{libs::types::Content, tools::webpack::WebpackFrameworkConfig};
-use serde_json::{json, Value};
+use serde_json::{Value, json};
 use std::collections::HashMap;
 
 pub fn get(project: &ProjectProps) -> Template {

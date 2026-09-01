@@ -4,7 +4,7 @@ mod templates;
 mod tools;
 mod traits;
 use clap::{Parser, Subcommand};
-use commands::{create, start, build, export};
+use commands::{build, create, export, start};
 use std::error::Error;
 
 #[derive(Debug, Parser)]

@@ -1,7 +1,7 @@
 use super::{ProjectProps, Template};
 use crate::libs::{project_config::ProjectConfig, types::User};
 use chrono::Datelike;
-use serde_json::{json, Value};
+use serde_json::{Value, json};
 
 pub fn get(project_props: &ProjectProps) -> Template {
     Template {

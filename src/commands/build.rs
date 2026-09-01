@@ -1,8 +1,8 @@
-use crate::libs::helpers::{clear_console, spinner_start, convert_bytes};
+use crate::libs::helpers::{clear_console, convert_bytes, spinner_start};
 use crate::libs::project_config::ProjectConfig;
 use crate::tools::webpack;
 use clap::Args;
-use serde_json::{from_str, Value};
+use serde_json::{Value, from_str};
 use spinners::Spinner;
 use std::error::Error;
 use std::fs;
@@ -63,7 +63,7 @@ fn done(spinner: &mut Spinner, done_str: &str) -> Result<(), Box<dyn Error>> {
     let json_str = done_str.replace("done ", "");
     let json_value: Value = from_str(json_str.as_str())?;
     let assets = json_value["assets"].as_array().unwrap();
-    
+
     spinner.stop();
     clear_console()?;
 

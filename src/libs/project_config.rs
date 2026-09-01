@@ -4,7 +4,7 @@ use crate::templates::{Framework, ProjectProps};
 use serde::{Deserialize, Serialize};
 use serde_json::{from_str, to_string};
 use std::error::Error;
-use std::fs::{read_to_string, File};
+use std::fs::{File, read_to_string};
 
 pub const PROJECT_CONFIG: &str = "lyrn.json";
 

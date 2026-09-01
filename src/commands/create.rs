@@ -1,4 +1,4 @@
-use crate::libs::project::{create_project, CreateProjectArgs};
+use crate::libs::project::{CreateProjectArgs, create_project};
 use clap::{Args, Subcommand};
 use std::error::Error;
 

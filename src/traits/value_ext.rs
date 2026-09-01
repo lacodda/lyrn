@@ -8,7 +8,7 @@ pub trait ValueExt {
 impl ValueExt for Value {
     fn merge_default(&mut self, value: &Value) {
         if !value.is_null() {
-            self.merge(value.clone());
+            self.merge(value);
         }
     }
 }

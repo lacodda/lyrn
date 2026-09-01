@@ -1,6 +1,6 @@
 use json_value_merge::Merge;
 use serde::{Deserialize, Serialize};
-use serde_json::{from_str, json, Value};
+use serde_json::{Value, from_str, json};
 use std::{env, error::Error, fs, path::PathBuf, string::String};
 
 #[derive(Debug, Clone, Serialize, Deserialize)]
@@ -35,7 +35,7 @@ impl ProjectAliases {
     pub fn get_json(&mut self) -> Value {
         let mut aliases_json = json!(self.get());
         if let Ok(tsconfig_paths) = self.ts_config_paths("tsconfig.json") {
-            aliases_json.merge(tsconfig_paths);
+            aliases_json.merge(&tsconfig_paths);
         }
         aliases_json
     }
@@ -65,7 +65,7 @@ impl ProjectAliases {
         }
         paths.as_object().iter().flat_map(|s| s.iter()).for_each(|(key, value)| {
             let path_str = value[0].as_str().unwrap().to_string().replace("/*", "");
-            config_paths.merge(json!({
+            config_paths.merge(&json!({
               key.replace("/*", ""):
               Self::get_path(&path_str, &self.is_abs_path)
             }))
@@ -74,7 +74,7 @@ impl ProjectAliases {
         if extends.is_string() {
             let extends = json["extends"].as_str().unwrap();
             let extended_paths = self.ts_config_paths(extends)?;
-            config_paths.merge(extended_paths);
+            config_paths.merge(&extended_paths);
         }
 
         Ok(config_paths)

@@ -1,4 +1,4 @@
-use crate::{tools::webpack, libs::project_config::EnvType};
+use crate::{libs::project_config::EnvType, tools::webpack};
 use clap::{Args, Subcommand};
 use std::error::Error;
 
