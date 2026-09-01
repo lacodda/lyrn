@@ -154,9 +154,9 @@ pub fn plan_with(sources: &[SourceFile], manifest: &TemplateManifest, context: &
     for source in sources {
         // A file belonging to an add-on that was not asked for is simply not
         // written; nothing downstream has to know it exists.
-        if let Some(required) = source.addon
-            && !addons.contains(&required)
-        {
+        // `is_some_and` rather than a let-chain: those are stable from 1.88
+        // and this crate promises 1.85.
+        if source.addon.is_some_and(|required| !addons.contains(&required)) {
             continue;
         }
 
