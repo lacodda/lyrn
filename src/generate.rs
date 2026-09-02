@@ -12,7 +12,7 @@ use crate::render;
 pub struct PlannedFile {
     /// Path relative to the project root, already rendered.
     pub path: PathBuf,
-    pub contents: String,
+    pub contents: Vec<u8>,
     /// Whether the file needs the executable bit on Unix.
     pub executable: bool,
 }
@@ -83,12 +83,20 @@ impl From<io::Error> for GenerateError {
     }
 }
 
+/// What a template file is made of: text that gets rendered, or bytes that do
+/// not. An icon has no placeholders to fill and must not be read as UTF-8.
+#[derive(Debug, Clone, Copy)]
+pub enum Contents {
+    Text(&'static str),
+    Binary(&'static [u8]),
+}
+
 /// A template file as it lives inside the binary.
 #[derive(Debug, Clone)]
 pub struct SourceFile {
     /// Path relative to the template root, placeholders still in place.
     pub path: &'static str,
-    pub contents: &'static str,
+    pub contents: Contents,
     pub executable: bool,
     /// The add-on this file belongs to; `None` means the form always writes it.
     ///
@@ -99,11 +107,15 @@ pub struct SourceFile {
     pub addon: Option<Addon>,
 }
 
-/// Strip the `{{#name}} ... {{/name}}` sections whose add-on is not enabled,
-/// and unwrap the ones that are.
+/// Strip the sections whose condition does not hold, and unwrap the ones whose
+/// does: `{{#name}} ... {{/name}}` keeps its body when the add-on is enabled,
+/// `{{^name}} ... {{/name}}` when it is not.
 ///
-/// The markers live on their own lines and are removed with them, so an
-/// enabled section leaves no trace of ever having been conditional.
+/// The markers live on their own lines and are removed with them, so a kept
+/// section leaves no trace of ever having been conditional. The inverted form
+/// exists because a file often needs a line either way in slightly different
+/// shape - a `lint` script with and without the locale step - and duplicating
+/// the whole file to say that would be worse.
 fn apply_sections(text: &str, enabled: &[Addon]) -> String {
     let mut out = String::with_capacity(text.len());
     // Sections do not nest: an add-on is either on or off, and a section
@@ -117,6 +129,12 @@ fn apply_sections(text: &str, enabled: &[Addon]) -> String {
 
         if let Some(name) = trimmed.strip_prefix("{{#").and_then(|r| r.strip_suffix("}}")) {
             if !enabled.iter().any(|a| a.as_str() == name) {
+                skipping = Some(name);
+            }
+            continue;
+        }
+        if let Some(name) = trimmed.strip_prefix("{{^").and_then(|r| r.strip_suffix("}}")) {
+            if enabled.iter().any(|a| a.as_str() == name) {
                 skipping = Some(name);
             }
             continue;
@@ -167,17 +185,21 @@ pub fn plan_with(sources: &[SourceFile], manifest: &TemplateManifest, context: &
         })?;
 
         let verbatim = manifest.verbatim.iter().any(|pattern| pattern == source.path);
-        let contents = if verbatim {
-            source.contents.to_string()
-        } else {
-            // Sections first: a section that is switched off must not have its
-            // placeholders resolved, and may legitimately mention variables
-            // that only make sense with that add-on enabled.
-            let sectioned = apply_sections(source.contents, addons);
-            render::render(&sectioned, context).map_err(|source_err| GenerateError::Placeholder {
-                file: PathBuf::from(source.path),
-                source: source_err,
-            })?
+        let contents = match source.contents {
+            Contents::Binary(bytes) => bytes.to_vec(),
+            Contents::Text(text) if verbatim => text.as_bytes().to_vec(),
+            Contents::Text(text) => {
+                // Sections first: a section that is switched off must not have
+                // its placeholders resolved, and may legitimately mention
+                // variables that only make sense with that add-on enabled.
+                let sectioned = apply_sections(text, addons);
+                render::render(&sectioned, context)
+                    .map_err(|source_err| GenerateError::Placeholder {
+                        file: PathBuf::from(source.path),
+                        source: source_err,
+                    })?
+                    .into_bytes()
+            }
         };
 
         files.push(PlannedFile {
@@ -251,13 +273,13 @@ mod tests {
         vec![
             SourceFile {
                 path: "README.md",
-                contents: "# {{ name }}",
+                contents: Contents::Text("# {{ name }}"),
                 executable: false,
                 addon: None,
             },
             SourceFile {
                 path: "src/main.ts",
-                contents: "export const n = '{{ name }}'",
+                contents: Contents::Text("export const n = '{{ name }}'"),
                 executable: false,
                 addon: None,
             },
@@ -268,14 +290,14 @@ mod tests {
     fn renders_contents_into_the_plan() {
         let plan = plan(&sources(), &TemplateManifest::default(), &ctx()).unwrap();
         let readme = plan.files.iter().find(|f| f.path == Path::new("README.md")).unwrap();
-        assert_eq!(readme.contents, "# demo-app");
+        assert_eq!(readme.contents, b"# demo-app");
     }
 
     #[test]
     fn renders_placeholders_in_paths() {
         let sources = [SourceFile {
             path: "src/{{ name }}.ts",
-            contents: "x",
+            contents: Contents::Text("x"),
             executable: false,
             addon: None,
         }];
@@ -287,7 +309,7 @@ mod tests {
     fn a_verbatim_file_keeps_its_braces() {
         let sources = [SourceFile {
             path: "keep.md",
-            contents: "{{ name }}",
+            contents: Contents::Text("{{ name }}"),
             executable: false,
             addon: None,
         }];
@@ -296,14 +318,14 @@ mod tests {
             ..Default::default()
         };
         let plan = plan(&sources, &manifest, &ctx()).unwrap();
-        assert_eq!(plan.files[0].contents, "{{ name }}");
+        assert_eq!(plan.files[0].contents, b"{{ name }}");
     }
 
     #[test]
     fn an_unknown_placeholder_names_the_file_it_is_in() {
         let sources = [SourceFile {
             path: "bad.md",
-            contents: "{{ nope }}",
+            contents: Contents::Text("{{ nope }}"),
             executable: false,
             addon: None,
         }];
@@ -343,7 +365,7 @@ mod tests {
     fn a_file_of_an_unrequested_addon_is_not_written() {
         let sources = [SourceFile {
             path: "secret.rs",
-            contents: "x",
+            contents: Contents::Text("x"),
             executable: false,
             addon: Some(Addon::Keyring),
         }];
@@ -355,7 +377,7 @@ mod tests {
     fn a_file_of_a_requested_addon_is_written() {
         let sources = [SourceFile {
             path: "secret.rs",
-            contents: "x",
+            contents: Contents::Text("x"),
             executable: false,
             addon: Some(Addon::Keyring),
         }];
@@ -367,7 +389,7 @@ mod tests {
     fn an_addon_asked_for_does_not_bring_in_another() {
         let sources = [SourceFile {
             path: "update.rs",
-            contents: "x",
+            contents: Contents::Text("x"),
             executable: false,
             addon: Some(Addon::SelfUpdate),
         }];
@@ -442,6 +464,62 @@ b
     }
 
     #[test]
+    fn an_inverted_section_is_kept_when_the_addon_is_off() {
+        let text = "a
+{{^i18n}}
+plain
+{{/i18n}}
+b
+";
+        assert_eq!(
+            apply_sections(text, &[]),
+            "a
+plain
+b
+"
+        );
+    }
+
+    #[test]
+    fn an_inverted_section_is_cut_when_the_addon_is_on() {
+        let text = "a
+{{^i18n}}
+plain
+{{/i18n}}
+b
+";
+        assert_eq!(
+            apply_sections(text, &[Addon::I18n]),
+            "a
+b
+"
+        );
+    }
+
+    #[test]
+    fn the_two_forms_of_a_section_are_exclusive() {
+        // The pattern a file uses to say "this line either way, in two
+        // shapes": exactly one of the pair survives, never both or neither.
+        let text = "{{#i18n}}
+with
+{{/i18n}}
+{{^i18n}}
+without
+{{/i18n}}
+";
+        assert_eq!(
+            apply_sections(text, &[Addon::I18n]),
+            "with
+"
+        );
+        assert_eq!(
+            apply_sections(text, &[]),
+            "without
+"
+        );
+    }
+
+    #[test]
     fn a_file_without_sections_is_untouched() {
         assert_eq!(
             apply_sections(
@@ -462,18 +540,20 @@ b
         // that add-on; resolving them would fail the whole generation.
         let sources = [SourceFile {
             path: "Cargo.toml",
-            contents: "[deps]
+            contents: Contents::Text(
+                "[deps]
 {{#keyring}}
 keyring = \"{{ nonexistent }}\"
 {{/keyring}}
 ",
+            ),
             executable: false,
             addon: None,
         }];
         let plan = plan_with(&sources, &TemplateManifest::default(), &ctx(), &[]).unwrap();
         assert_eq!(
             plan.files[0].contents,
-            "[deps]
+            b"[deps]
 "
         );
     }

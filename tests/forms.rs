@@ -19,6 +19,7 @@ use assert_cmd::Command;
 fn combinations(form: &str) -> Vec<Vec<&'static str>> {
     match form {
         "cli" => vec![vec![], vec!["keyring"], vec!["self-update"], vec!["keyring", "self-update"]],
+        "desktop" => vec![vec![], vec!["i18n"]],
         _ => vec![vec![]],
     }
 }
@@ -43,19 +44,26 @@ fn generate(form: &str, addons: &[&str], root: &Path) {
 
 #[test]
 fn every_combination_renders_completely() {
-    for form in ["spa", "cli"] {
+    for form in ["spa", "cli", "desktop"] {
         for addons in combinations(form) {
             let dir = tempfile::tempdir().unwrap();
             let root = dir.path().join("demo-tool");
             generate(form, &addons, &root);
 
-            // `cliff.toml` is Tera and keeps its own braces on purpose.
+            // Some files keep their own braces on purpose - a Tera template,
+            // a regex matching i18next interpolation. The form says which in
+            // its manifest, so read that rather than keeping a second list
+            // here that would drift.
+            let verbatim = verbatim_of(form);
             for entry in walk(&root) {
                 let relative = entry.strip_prefix(&root).unwrap();
-                if relative == Path::new("cliff.toml") {
+                let as_posix = relative.display().to_string().replace('\\', "/");
+                if verbatim.contains(&as_posix) {
                     continue;
                 }
-                let contents = fs::read_to_string(&entry).unwrap();
+                // Icons are bytes, not text; reading them as UTF-8 would fail
+                // and there is nothing in them to render.
+                let Ok(contents) = fs::read_to_string(&entry) else { continue };
                 assert!(
                     !contents.contains("{{#") && !contents.contains("{{/"),
                     "{form} with {addons:?}: {} still contains a section marker",
@@ -103,7 +111,7 @@ fn every_rust_module_a_project_declares_exists() {
 }
 
 #[test]
-fn the_addons_a_form_does_not_have_are_refused() {
+fn an_unknown_addon_name_is_refused() {
     let dir = tempfile::tempdir().unwrap();
     // A typo in `--with` should stop the run, not silently produce a project
     // missing the thing that was asked for.
@@ -113,6 +121,38 @@ fn the_addons_a_form_does_not_have_are_refused() {
         .arg(dir.path().join("demo-tool"))
         .assert()
         .failure();
+}
+
+#[test]
+fn an_addon_belonging_to_another_form_is_refused() {
+    // The harder half: the name is real, so it parses - it just means nothing
+    // to this form. Accepting it would succeed and write none of it.
+    let dir = tempfile::tempdir().unwrap();
+    let root = dir.path().join("demo-tool");
+
+    Command::cargo_bin("lyrn")
+        .unwrap()
+        .args(["new", "demo-tool", "--form", "spa", "--yes", "--no-hooks", "--with", "keyring", "--path"])
+        .arg(&root)
+        .assert()
+        .failure()
+        .stderr(predicates::str::contains("has no `keyring` add-on"));
+
+    assert!(!root.exists(), "a refused add-on still created the project");
+}
+
+/// The files a form's manifest marks verbatim, as forward-slash paths.
+fn verbatim_of(form: &str) -> Vec<String> {
+    let manifest = std::fs::read_to_string(std::path::PathBuf::from(env!("CARGO_MANIFEST_DIR")).join(format!("src/templates/{form}/template.toml")))
+        .expect("a form has no manifest");
+
+    manifest
+        .lines()
+        .skip_while(|l| !l.trim_start().starts_with("verbatim"))
+        .take_while(|l| !l.trim().is_empty())
+        .flat_map(|l| l.split('"').skip(1).step_by(2))
+        .map(str::to_string)
+        .collect()
 }
 
 /// Every file under `root`, recursively.

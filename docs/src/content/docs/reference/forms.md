@@ -9,6 +9,8 @@ spa      Single-page app: Vite, React, TypeScript, Tailwind, dowel
 cli      Command-line tool: Rust, clap, anyhow, dialoguer
   --with keyring       Secrets in the OS keyring, never in a config file
   --with self-update   A `self-update` command that reads the releases page
+desktop  Desktop app: Tauri 2 around the spa stack
+  --with i18n          i18next, with a gate holding every locale to the source
 ```
 
 A form is the shape of the repository, not a choice of framework. The line runs
@@ -59,7 +61,46 @@ synced between machines, pasted into issues and committed by accident.
 It reads the tag from the redirect `/releases/latest` performs rather than the
 REST API, which is capped at 60 unauthenticated calls an hour per address.
 
+## desktop
+
+The `spa` stack with a Rust shell around it:
+
+| | |
+| --- | --- |
+| Shell | Tauri 2 |
+| Frontend | Everything the `spa` form writes |
+| Commands | `src-tauri/src/commands.rs`, reachable from the webview |
+| Permissions | `src-tauri/capabilities/`, granted per window |
+| CI | The frontend gate, plus Rust on three platforms |
+
+`main.rs` is deliberately thin - the application lives in `lib.rs`, which is
+what lets tests reach it without opening a window. On Windows the binary is
+built with `windows_subsystem = "windows"`, or a console would sit behind the
+app in release builds.
+
+### The icons
+
+`src-tauri/icons/` ships a placeholder: a graphite tile with `??`, plainly not
+a real mark. It is there because a Tauri build on Windows fails outright
+without an `.ico` - a generated project has to build on the first try.
+
+Replace it with `pnpm tauri icon path/to/mark.png` once the mark exists. In the
+`.ico` the **largest image must come first**: Windows reads the first entry for
+the taskbar and the title bar, and a 16px one there leaves the application
+looking blurred everywhere that matters.
+
+## Translation
+
+`--with i18n` is offered by `desktop`; `spa` gets it in 2.6, with its own add-ons. It writes i18next with English
+and Russian, and `tools/check-locales.mjs` into `pnpm lint`.
+
+English is the **source**, never a fallback. A missing translation fails the
+build rather than quietly rendering in English, because a half-translated
+screen is the kind of thing nobody reports and everybody notices. The gate also
+holds `{{placeholder}}` names to the source, so a translation cannot silently
+drop the one that carries a number.
+
 ## Coming in 2.x
 
-`desktop` (Tauri), `service` (axum with an SPA), `lib`, and the workspace and
-plugin shapes the line already uses.
+`service` (axum with an SPA), `lib`, and the workspace and plugin shapes the
+line already uses.

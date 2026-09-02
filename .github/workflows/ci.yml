@@ -128,3 +128,55 @@ jobs:
           cargo fmt --check
           cargo clippy --all-targets -- -D warnings
           cargo test
+
+  # The desktop form pulls the whole webview stack, so it runs on Linux only
+  # and stops short of bundling an installer: what is being checked is that
+  # the generated project holds together, not that Tauri can package.
+  template-desktop:
+    name: template desktop (${{ matrix.addons || 'none' }})
+    runs-on: ubuntu-latest
+    strategy:
+      fail-fast: false
+      matrix:
+        addons: ['', 'i18n']
+    steps:
+      - uses: actions/checkout@v7
+      - name: Install Tauri build deps
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y libwebkit2gtk-4.1-dev libappindicator3-dev librsvg2-dev patchelf
+      - uses: dtolnay/rust-toolchain@stable
+        with:
+          components: rustfmt, clippy
+      - uses: Swatinem/rust-cache@v2
+      - uses: pnpm/action-setup@v6
+        with:
+          version: 10
+      - uses: actions/setup-node@v7
+        with:
+          node-version: 22
+      - name: Build lyrn
+        run: cargo build --release
+      - name: Generate a project
+        shell: bash
+        run: |
+          args=(new demo-app --form desktop --accent '#6D7BF2' --yes --no-hooks --repo owner/demo-app --path "$RUNNER_TEMP/demo-app")
+          if [ -n "${{ matrix.addons }}" ]; then
+            args+=(--with "${{ matrix.addons }}")
+          fi
+          ./target/release/lyrn "${args[@]}"
+      - name: Install its dependencies
+        working-directory: ${{ runner.temp }}/demo-app
+        run: pnpm install --no-frozen-lockfile
+      - name: Run the frontend gate it ships with
+        working-directory: ${{ runner.temp }}/demo-app
+        run: pnpm lint
+      - name: Build the frontend
+        working-directory: ${{ runner.temp }}/demo-app
+        run: pnpm build
+      - name: Run the Rust gate it ships with
+        working-directory: ${{ runner.temp }}/demo-app/src-tauri
+        run: |
+          cargo fmt --check
+          cargo clippy --all-targets -- -D warnings
+          cargo test

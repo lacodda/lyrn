@@ -1,0 +1,25 @@
+//! The commands the webview can call.
+//!
+//! Everything crossing this boundary comes from the frontend, so a command
+//! validates its own arguments rather than trusting them.
+
+/// Greet somebody - replace this with the first real command.
+#[tauri::command]
+pub fn greet(name: &str) -> String {
+    format!("Hello, {name}!")
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    #[test]
+    fn greets_by_name() {
+        assert_eq!(greet("friend"), "Hello, friend!");
+    }
+
+    #[test]
+    fn an_empty_name_still_produces_a_greeting() {
+        assert_eq!(greet(""), "Hello, !");
+    }
+}

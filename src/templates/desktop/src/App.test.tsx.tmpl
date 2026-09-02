@@ -1,0 +1,21 @@
+import { render, screen } from '@testing-library/react'
+import { describe, expect, it, vi } from 'vitest'
+import { App } from '@/App'
+
+// The webview talks to Rust through `invoke`; in jsdom there is no Rust, so
+// the boundary is stubbed rather than the test being skipped.
+vi.mock('@tauri-apps/api/core', () => ({
+  invoke: vi.fn().mockResolvedValue('Hello, world!'),
+}))
+
+describe('App', () => {
+  it('offers the greeting button', () => {
+    render(<App />)
+    expect(screen.getByRole('button')).toBeTruthy()
+  })
+
+  it('shows a heading', () => {
+    render(<App />)
+    expect(screen.getByRole('heading')).toBeTruthy()
+  })
+})

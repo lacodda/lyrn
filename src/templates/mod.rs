@@ -4,6 +4,7 @@
 //! the binary so that `lyrn new` works offline.
 
 pub mod cli;
+pub mod desktop;
 pub mod spa;
 
 use crate::generate::SourceFile;
@@ -14,6 +15,7 @@ pub fn manifest_for(form: Form) -> &'static str {
     match form {
         Form::Spa => spa::MANIFEST,
         Form::Cli => cli::MANIFEST,
+        Form::Desktop => desktop::MANIFEST,
     }
 }
 
@@ -22,12 +24,14 @@ pub fn sources_for(form: Form) -> Vec<SourceFile> {
     match form {
         Form::Spa => spa::sources(),
         Form::Cli => cli::sources(),
+        Form::Desktop => desktop::sources(),
     }
 }
 
 #[cfg(test)]
 mod tests {
     use super::*;
+    use crate::generate::Contents;
     use crate::model::TemplateManifest;
     use crate::render;
 
@@ -48,6 +52,8 @@ mod tests {
         "msrv",
         "repo",
         "env_prefix",
+        "lib_name",
+        "owner",
     ];
 
     #[test]
@@ -58,7 +64,9 @@ mod tests {
                 if manifest.verbatim.iter().any(|v| v == source.path) {
                     continue;
                 }
-                for key in render::placeholders(source.contents).into_iter().chain(render::placeholders(source.path)) {
+                // Binary files carry no placeholders to check.
+                let Contents::Text(text) = source.contents else { continue };
+                for key in render::placeholders(text).into_iter().chain(render::placeholders(source.path)) {
                     assert!(
                         PROVIDED.contains(&key.as_str()),
                         "{form}: `{}` asks for `{{{{ {key} }}}}`, which the generator does not provide",
@@ -76,10 +84,16 @@ mod tests {
         // so the only person who sees the loss is whoever enables it later.
         for form in Form::ALL {
             for source in sources_for(*form) {
+                // Binary files have no sections to balance.
+                let Contents::Text(text) = source.contents else { continue };
                 let mut open: Option<&str> = None;
-                for (number, line) in source.contents.lines().enumerate() {
+                for (number, line) in text.lines().enumerate() {
                     let trimmed = line.trim();
-                    if let Some(name) = trimmed.strip_prefix("{{#").and_then(|r| r.strip_suffix("}}")) {
+                    let opener = trimmed
+                        .strip_prefix("{{#")
+                        .or_else(|| trimmed.strip_prefix("{{^"))
+                        .and_then(|r| r.strip_suffix("}}"));
+                    if let Some(name) = opener {
                         assert!(
                             open.is_none(),
                             "{form}: {} line {}: `{{{{#{name}}}}}` opens inside `{}`, which is still open",

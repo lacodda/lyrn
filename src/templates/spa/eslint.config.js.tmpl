@@ -22,7 +22,7 @@ export default tseslint.config(
   },
   // Build tooling runs under Node, not in the browser.
   {
-    files: ['*.config.{js,ts}'],
+    files: ['tools/**/*.mjs', '*.config.{js,ts}'],
     languageOptions: { globals: globals.node },
   },
 )

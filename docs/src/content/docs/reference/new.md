@@ -83,6 +83,10 @@ $ lyrn new my-tool --form cli --with keyring,self-update
 
 An add-on a form does not have is an error rather than a silent no-op.
 
+A form decides what an add-on means for it. `--with i18n` on a `desktop`
+project also writes the locale gate into `pnpm lint`; on a `spa` it writes the
+same runtime without the desktop shell around it.
+
 ## Hooks
 
 After the files are written, lyrn fetches what the project depends on - `pnpm

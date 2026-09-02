@@ -77,11 +77,11 @@ pub fn placeholders(input: &str) -> Vec<String> {
         let from_open = &rest[start..];
         let Some(end) = from_open.find("}}") else { break };
         // `${{ ... }}` is a GitHub Actions expression, not a placeholder; and
-        // `{{#addon}}` / `{{/addon}}` are section markers the generator strips
-        // before rendering.
+        // `{{#addon}}` / `{{^addon}}` / `{{/addon}}` are section markers the
+        // generator strips before rendering.
         let is_actions = rest[..start].ends_with('$');
         let key = from_open[2..end].trim();
-        if !is_actions && !key.starts_with('#') && !key.starts_with('/') {
+        if !is_actions && !key.starts_with(['#', '^', '/']) {
             found.push(key.to_string());
         }
         rest = &from_open[end + 2..];

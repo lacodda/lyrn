@@ -16,6 +16,21 @@ use crate::templates;
 pub fn build_context(args: &NewArgs, manifest: &TemplateManifest, interactive: bool) -> Result<Context, Box<dyn Error>> {
     naming::validate_name(&args.name)?;
 
+    // An add-on this form does not have would otherwise be accepted and write
+    // nothing: the command succeeds, and the thing that was asked for is
+    // simply absent. Clap only checks that the name exists at all.
+    for addon in &args.with {
+        if !args.form.addons().contains(addon) {
+            let known = args.form.addons().iter().map(|a| a.as_str()).collect::<Vec<_>>();
+            let offer = if known.is_empty() {
+                "it has none".to_string()
+            } else {
+                format!("it has: {}", known.join(", "))
+            };
+            return Err(format!("the `{}` form has no `{addon}` add-on - {offer}", args.form).into());
+        }
+    }
+
     let accent = match &args.accent {
         Some(value) => naming::resolve_accent(value)?,
         None if interactive => prompt_accent()?,
@@ -33,6 +48,10 @@ pub fn build_context(args: &NewArgs, manifest: &TemplateManifest, interactive: b
         None => git_config("user.name").unwrap_or_else(|| "The author".to_string()),
     };
 
+    // Resolved once: the lookup can spawn `gh`, and it is asked for twice.
+    let repo = repo(args);
+    let owner = repo.split('/').next().unwrap_or("OWNER").to_string();
+
     let mut context = Context::new();
     context
         .set("name", &args.name)
@@ -49,7 +68,12 @@ pub fn build_context(args: &NewArgs, manifest: &TemplateManifest, interactive: b
         // The repository the generated project will live in. Guessed from the
         // git identity so the installers and the update check point somewhere
         // real; `--repo` overrides it.
-        .set("repo", repo(args))
+        .set("repo", &repo)
+        // The owner alone, for a bundle identifier like `com.owner.my_app`.
+        .set("owner", owner)
+        // A Rust crate name cannot contain a hyphen where it is used as an
+        // identifier, which the Tauri shell does: `my_app::run()`.
+        .set("lib_name", args.name.replace('-', "_"))
         // Environment variables are shouted and hyphen-free: `MY_TOOL_VERSION`.
         .set("env_prefix", args.name.to_uppercase().replace('-', "_"))
         // Measured, not assumed: a number that is wrong is worse than absent,
@@ -128,6 +152,12 @@ fn print_next_steps(args: &NewArgs, root: &std::path::Path) {
         }
         Form::Cli => {
             println!("  cargo run -- hello");
+        }
+        Form::Desktop => {
+            if args.no_hooks {
+                println!("  pnpm install");
+            }
+            println!("  pnpm tauri dev");
         }
     }
 }

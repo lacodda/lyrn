@@ -1,0 +1,42 @@
+# {{ title }}
+
+{{ description }}
+
+A desktop application on the lacodda line's stack: [Tauri 2](https://tauri.app)
+around Vite, React, TypeScript, Tailwind and the
+[dowel](https://lacodda.github.io/dowel) design system. Scaffolded with
+[lyrn](https://github.com/lacodda/lyrn).
+
+## A day in the life
+
+```console
+$ pnpm install          # once
+$ pnpm tauri dev        # the app, in its own window
+$ pnpm lint             # eslint + types + tests, the same gate CI runs
+$ pnpm tauri build      # an installer in src-tauri/target/release/bundle
+```
+
+`pnpm dev` runs the frontend in a browser, which is faster for pure UI work -
+but anything calling into Rust needs the real window.
+
+## Layout
+
+| Path | What lives there |
+| --- | --- |
+| `src/` | The interface |
+| `src-tauri/src/lib.rs` | Where the application starts; `main.rs` is a thin shell |
+| `src-tauri/src/commands.rs` | What the webview is allowed to call |
+| `src-tauri/capabilities/` | The permissions the window is granted |
+| `docs/adr/` | Architecture decisions, newest last |
+
+## The icons
+
+`src-tauri/icons/` is empty until the mark exists. Generate the set with
+`pnpm tauri icon path/to/icon.png` (1024×1024 or larger). In the `.ico` the
+**largest image must come first**: Windows reads the first entry for the taskbar
+and the title bar, and a 16px one there leaves the app looking blurred
+everywhere it matters.
+
+## License
+
+MIT - see [LICENSE](LICENSE).

@@ -1,0 +1,7 @@
+// A console window would otherwise appear behind the app in Windows release
+// builds - the application looks broken before it has done anything.
+#![cfg_attr(not(debug_assertions), windows_subsystem = "windows")]
+
+fn main() {
+    {{ lib_name }}::run()
+}

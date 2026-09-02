@@ -16,16 +16,19 @@ pub enum Form {
     Spa,
     /// A Rust command-line tool: clap, anyhow, dialoguer.
     Cli,
+    /// A desktop application: Tauri 2 around the spa stack.
+    Desktop,
 }
 
 impl Form {
     /// Every form the binary carries built in.
-    pub const ALL: &'static [Form] = &[Form::Spa, Form::Cli];
+    pub const ALL: &'static [Form] = &[Form::Spa, Form::Cli, Form::Desktop];
 
     pub fn as_str(self) -> &'static str {
         match self {
             Form::Spa => "spa",
             Form::Cli => "cli",
+            Form::Desktop => "desktop",
         }
     }
 
@@ -34,25 +37,30 @@ impl Form {
         match self {
             Form::Spa => "Single-page app: Vite, React, TypeScript, Tailwind, dowel",
             Form::Cli => "Command-line tool: Rust, clap, anyhow, dialoguer",
+            Form::Desktop => "Desktop app: Tauri 2 around the spa stack",
         }
     }
 
     /// The add-ons this form understands.
     pub fn addons(self) -> &'static [Addon] {
         match self {
+            // spa gets `i18n` when its own add-ons land in 2.6; advertising
+            // it now would accept the flag and write nothing.
             Form::Spa => &[],
             Form::Cli => &[Addon::Keyring, Addon::SelfUpdate],
+            Form::Desktop => &[Addon::I18n],
         }
     }
 }
 
 /// An optional piece a form can be generated with.
 ///
-/// The line's four CLIs disagree about these: turnout and sefy keep secrets in
-/// the OS keyring, kasl and turnout update themselves. Putting either in every
-/// generated project would ship dead code and drag in dependencies - reqwest
-/// and an archive reader for one, a platform keyring for the other - that most
-/// projects never call.
+/// The line disagrees with itself about these, which is exactly why they are
+/// optional: turnout and sefy keep secrets in the OS keyring, kasl and turnout
+/// update themselves, kilna speaks two languages and nitid speaks one. Putting
+/// any of them in every generated project would ship dead code and the
+/// dependencies behind it - reqwest and an archive reader, a platform keyring,
+/// a translation runtime - to projects that never call them.
 #[derive(Debug, Clone, Copy, PartialEq, Eq, PartialOrd, Ord, Serialize, Deserialize)]
 #[serde(rename_all = "kebab-case")]
 pub enum Addon {
@@ -60,6 +68,8 @@ pub enum Addon {
     Keyring,
     /// `self-update`, checking the releases page for a newer version.
     SelfUpdate,
+    /// i18next with a gate holding every locale to the source language.
+    I18n,
 }
 
 impl Addon {
@@ -67,6 +77,7 @@ impl Addon {
         match self {
             Addon::Keyring => "keyring",
             Addon::SelfUpdate => "self-update",
+            Addon::I18n => "i18n",
         }
     }
 
@@ -74,6 +85,7 @@ impl Addon {
         match self {
             Addon::Keyring => "Secrets in the OS keyring, never in a config file",
             Addon::SelfUpdate => "A `self-update` command that reads the releases page",
+            Addon::I18n => "i18next, with a gate holding every locale to the source",
         }
     }
 }
@@ -91,7 +103,8 @@ impl std::str::FromStr for Addon {
         match s {
             "keyring" => Ok(Addon::Keyring),
             "self-update" => Ok(Addon::SelfUpdate),
-            other => Err(format!("unknown add-on `{other}` (known: keyring, self-update)")),
+            "i18n" => Ok(Addon::I18n),
+            other => Err(format!("unknown add-on `{other}` (known: keyring, self-update, i18n)")),
         }
     }
 }
@@ -109,6 +122,7 @@ impl std::str::FromStr for Form {
         match s {
             "spa" => Ok(Form::Spa),
             "cli" => Ok(Form::Cli),
+            "desktop" => Ok(Form::Desktop),
             other => Err(format!(
                 "unknown form `{other}` (known: {})",
                 Form::ALL.iter().map(|f| f.as_str()).collect::<Vec<_>>().join(", ")

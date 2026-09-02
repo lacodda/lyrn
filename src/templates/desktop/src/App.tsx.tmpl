@@ -1,0 +1,40 @@
+import { useState } from 'react'
+import { invoke } from '@tauri-apps/api/core'
+{{#i18n}}
+import { useTranslation } from 'react-i18next'
+{{/i18n}}
+
+export function App() {
+  const [greeting, setGreeting] = useState('')
+{{#i18n}}
+  const { t } = useTranslation()
+{{/i18n}}
+
+  return (
+    <main className="flex min-h-full flex-col items-center justify-center gap-6 p-8">
+{{#i18n}}
+      <h1 className="text-xl font-semibold text-text">{t('app.title')}</h1>
+      <p className="max-w-prose text-center text-dim">{t('app.tagline')}</p>
+{{/i18n}}
+{{^i18n}}
+      <h1 className="text-xl font-semibold text-text">{{ title }}</h1>
+      <p className="max-w-prose text-center text-dim">{{ description }}</p>
+{{/i18n}}
+      <button
+        type="button"
+        onClick={() => {
+          void invoke<string>('greet', { name: 'world' }).then(setGreeting)
+        }}
+        className="rounded-md bg-accent px-4 py-2 font-semibold text-on-accent hover:bg-accent-2"
+      >
+{{#i18n}}
+        {t('app.greet')}
+{{/i18n}}
+{{^i18n}}
+        Say hello
+{{/i18n}}
+      </button>
+      {greeting ? <p className="text-sm text-dim">{greeting}</p> : null}
+    </main>
+  )
+}
