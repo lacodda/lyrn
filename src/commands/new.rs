@@ -159,6 +159,10 @@ fn print_next_steps(args: &NewArgs, root: &std::path::Path) {
             }
             println!("  pnpm tauri dev");
         }
+        Form::Service => {
+            println!("  docker compose -f deploy/compose.yml up -d db");
+            println!("  cargo run");
+        }
     }
 }
 

@@ -11,6 +11,8 @@ cli      Command-line tool: Rust, clap, anyhow, dialoguer
   --with self-update   A `self-update` command that reads the releases page
 desktop  Desktop app: Tauri 2 around the spa stack
   --with i18n          i18next, with a gate holding every locale to the source
+service  HTTP service: axum, sqlx, Postgres
+  --with spa           A web UI compiled into the binary and served by it
 ```
 
 A form is the shape of the repository, not a choice of framework. The line runs
@@ -89,6 +91,38 @@ Replace it with `pnpm tauri icon path/to/mark.png` once the mark exists. In the
 the taskbar and the title bar, and a 16px one there leaves the application
 looking blurred everywhere that matters.
 
+## service
+
+An HTTP service:
+
+| | |
+| --- | --- |
+| Server | axum |
+| Database | Postgres through sqlx, migrations as plain SQL |
+| Config | Environment only - the same binary runs anywhere |
+| Errors | One type, mapped to status codes once |
+| Deploy | A Dockerfile and a compose file for a stand |
+
+Migrations run at startup, so a binary and the schema it expects travel
+together and there is no window where one is ahead of the other.
+
+The tests talk to a **real Postgres** and skip themselves when `DATABASE_URL`
+is unset - right on a laptop without one. The CI the form ships provides a
+database, so the suite is never green and blind.
+
+### `--with spa`
+
+Adds a web UI under `frontend/`, compiled into the binary with `rust-embed`. A
+self-hosted install is then one file, and the UI can never be from a different
+build than the API it calls.
+
+Anything the API has not claimed falls through to the app, which owns its own
+paths - without that, a refresh on any route but `/` would 404: the server has
+no such file, and only the app knows what to draw there.
+
+Left out, `--with spa` is what a service with no interface of its own needs -
+a sync relay, a webhook receiver, an API somebody else's frontend calls.
+
 ## Translation
 
 `--with i18n` is offered by `desktop`; `spa` gets it in 2.6, with its own add-ons. It writes i18next with English
@@ -102,5 +136,4 @@ drop the one that carries a number.
 
 ## Coming in 2.x
 
-`service` (axum with an SPA), `lib`, and the workspace and plugin shapes the
-line already uses.
+`lib`, and the workspace and plugin shapes the line already uses.

@@ -1,0 +1,40 @@
+# The stand: the service plus its database, built and run on the target machine.
+#
+# Secrets come from a .env file next to this one, which is never committed:
+#
+#   POSTGRES_PASSWORD=...
+services:
+  db:
+    image: postgres:18-alpine
+    restart: unless-stopped
+    environment:
+      POSTGRES_USER: {{ lib_name }}
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:?set POSTGRES_PASSWORD in .env}
+      POSTGRES_DB: {{ lib_name }}
+    volumes:
+      # postgres:18+ keeps data in a version-specific subdirectory; the mount
+      # sits one level up or the entrypoint refuses to start.
+      - db-data:/var/lib/postgresql
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U {{ lib_name }} -d {{ lib_name }}"]
+      interval: 5s
+      timeout: 3s
+      retries: 10
+    # No published port: only the service talks to it, over the private network.
+
+  server:
+    build:
+      context: ..
+      dockerfile: Dockerfile
+    restart: unless-stopped
+    depends_on:
+      db:
+        condition: service_healthy
+    environment:
+      DATABASE_URL: postgres://{{ lib_name }}:${POSTGRES_PASSWORD}@db:5432/{{ lib_name }}
+      RUST_LOG: info
+    ports:
+      - "8080:8080"
+
+volumes:
+  db-data:

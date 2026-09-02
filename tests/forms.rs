@@ -20,6 +20,7 @@ fn combinations(form: &str) -> Vec<Vec<&'static str>> {
     match form {
         "cli" => vec![vec![], vec!["keyring"], vec!["self-update"], vec!["keyring", "self-update"]],
         "desktop" => vec![vec![], vec!["i18n"]],
+        "service" => vec![vec![], vec!["spa"]],
         _ => vec![vec![]],
     }
 }
@@ -44,7 +45,7 @@ fn generate(form: &str, addons: &[&str], root: &Path) {
 
 #[test]
 fn every_combination_renders_completely() {
-    for form in ["spa", "cli", "desktop"] {
+    for form in ["spa", "cli", "desktop", "service"] {
         for addons in combinations(form) {
             let dir = tempfile::tempdir().unwrap();
             let root = dir.path().join("demo-tool");
@@ -84,16 +85,30 @@ fn every_combination_renders_completely() {
 fn every_rust_module_a_project_declares_exists() {
     // `mod secrets;` pointing at a file no combination writes compiles only
     // until somebody enables that add-on. Cheaper to catch here than in a
-    // generated project's CI.
-    for addons in combinations("cli") {
-        let dir = tempfile::tempdir().unwrap();
-        let root = dir.path().join("demo-tool");
-        generate("cli", &addons, &root);
+    // generated project's CI - and it applies to every Rust form, not just
+    // the one where it was first found.
+    for (form, roots) in [
+        ("cli", vec!["src/main.rs", "src/commands/mod.rs"]),
+        ("service", vec!["src/main.rs"]),
+        ("desktop", vec!["src-tauri/src/main.rs", "src-tauri/src/lib.rs"]),
+    ] {
+        for addons in combinations(form) {
+            let dir = tempfile::tempdir().unwrap();
+            let root = dir.path().join("demo-tool");
+            generate(form, &addons, &root);
+            check_modules(form, &addons, &root, &roots);
+        }
+    }
+}
 
-        let main = fs::read_to_string(root.join("src/main.rs")).unwrap();
-        let commands = fs::read_to_string(root.join("src/commands/mod.rs")).unwrap();
+/// Every `mod x;` in the named files has a file behind it.
+fn check_modules(form: &str, addons: &[&str], root: &Path, sources: &[&str]) {
+    for relative in sources {
+        let path = root.join(relative);
+        let source = fs::read_to_string(&path).unwrap_or_else(|e| panic!("{form}: cannot read {relative}: {e}"));
+        let dir_of = path.parent().unwrap().to_path_buf();
 
-        for (source, dir_of) in [(&main, root.join("src")), (&commands, root.join("src/commands"))] {
+        {
             for line in source.lines() {
                 let Some(rest) = line.trim().strip_prefix("mod ").or_else(|| line.trim().strip_prefix("pub mod ")) else {
                     continue;
@@ -103,7 +118,7 @@ fn every_rust_module_a_project_declares_exists() {
                 let as_dir = dir_of.join(module).join("mod.rs");
                 assert!(
                     as_file.is_file() || as_dir.is_file(),
-                    "cli with {addons:?}: `mod {module};` has no file behind it"
+                    "{form} with {addons:?}: `mod {module};` in {relative} has no file behind it"
                 );
             }
         }

@@ -1,0 +1,38 @@
+//! What the service needs to know, and where it reads it from.
+//!
+//! Everything comes from the environment, so the same binary runs in a
+//! container, on a stand and on a laptop without a config file to keep in
+//! step. A missing database URL is a startup failure, not a default that
+//! quietly points somewhere wrong.
+
+use std::net::SocketAddr;
+
+use anyhow::{Context, Result};
+use clap::Parser;
+use sqlx::postgres::{PgPool, PgPoolOptions};
+
+#[derive(Parser, Debug)]
+#[command(name = "{{ name }}", version, about = "{{ description }}")]
+pub struct Config {
+    /// Where to listen
+    #[arg(long, env = "{{ env_prefix }}_BIND", default_value = "0.0.0.0:8080")]
+    pub bind: SocketAddr,
+
+    /// Postgres connection string
+    #[arg(long, env = "DATABASE_URL")]
+    pub database_url: String,
+
+    /// How many database connections to keep
+    #[arg(long, env = "{{ env_prefix }}_POOL_SIZE", default_value_t = 5)]
+    pub pool_size: u32,
+}
+
+impl Config {
+    pub async fn pool(&self) -> Result<PgPool> {
+        PgPoolOptions::new()
+            .max_connections(self.pool_size)
+            .connect(&self.database_url)
+            .await
+            .context("connecting to the database")
+    }
+}

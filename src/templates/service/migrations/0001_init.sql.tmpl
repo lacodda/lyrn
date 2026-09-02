@@ -1,0 +1,7 @@
+-- The first migration exists to prove the mechanism, not to model anything.
+-- Replace it with the real schema before there is data to migrate.
+CREATE TABLE IF NOT EXISTS example (
+    id BIGINT GENERATED ALWAYS AS IDENTITY PRIMARY KEY,
+    label TEXT NOT NULL,
+    created_at TIMESTAMPTZ NOT NULL DEFAULT now()
+);

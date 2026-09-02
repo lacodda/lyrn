@@ -96,6 +96,7 @@ case its mark's colour is used.
 | `spa` | Single-page app: Vite, React, TypeScript, Tailwind, dowel |
 | `cli` | Command-line tool: Rust, clap, anyhow, dialoguer |
 | `desktop` | Desktop app: Tauri 2 around the spa stack |
+| `service` | HTTP service: axum, sqlx, Postgres |
 
 A form can carry optional pieces. The line's four CLIs agree on clap, anyhow
 and dialoguer and disagree about everything else, so the rest is asked for:
@@ -106,10 +107,11 @@ $ lyrn new my-tool --form cli --with keyring,self-update
 
 `keyring` puts secrets in the OS keyring rather than a config file;
 `self-update` adds a command that checks the releases page; `i18n` adds
-i18next with a gate that holds every locale to the source language. None is
-generated unless asked for — a project should not carry code it never calls.
+i18next with a gate that holds every locale to the source language; `spa` gives
+a service a web UI compiled into its binary. None is generated unless asked for
+— a project should not carry code it never calls.
 
-More forms — `service`, `lib` — follow in 2.x.
+More forms — `lib`, workspaces, plugins — follow in 2.x.
 
 ## Migrating from 1.x
 

@@ -1,0 +1,42 @@
+//! Serving the web UI.
+//!
+//! The built SPA is compiled into the binary: a self-hosted install is one
+//! file, and the UI can never be from a different build than the API it calls.
+//! In development the app is served by Vite, which proxies `/api` here, so
+//! this path is what a release does rather than what a developer waits for.
+
+use axum::{
+    http::{StatusCode, Uri, header},
+    response::{IntoResponse, Response},
+};
+use rust_embed::Embed;
+
+/// The contents of `frontend/dist`, as of compile time.
+///
+/// `allow_missing` because the directory is a build output: it is gitignored,
+/// and `pnpm build` empties it before writing. Without this a clean checkout
+/// would not compile at all, and a Rust-only contributor would be stopped by a
+/// missing Node toolchain. A binary built that way is honest about it - every
+/// path answers "no web UI was built into this binary" rather than a blank
+/// page.
+#[derive(Embed)]
+#[folder = "frontend/dist"]
+#[allow_missing = true]
+struct Assets;
+
+/// Answers a request that no API route matched: an asset if there is one at
+/// that path, `index.html` otherwise.
+pub async fn serve(uri: Uri) -> Response {
+    let path = uri.path().trim_start_matches('/');
+    let path = if path.is_empty() { "index.html" } else { path };
+
+    if let Some(file) = Assets::get(path) {
+        let mime = file.metadata.mimetype();
+        return ([(header::CONTENT_TYPE, mime)], file.data).into_response();
+    }
+
+    match Assets::get("index.html") {
+        Some(index) => ([(header::CONTENT_TYPE, "text/html")], index.data).into_response(),
+        None => (StatusCode::NOT_FOUND, "no web UI was built into this binary").into_response(),
+    }
+}

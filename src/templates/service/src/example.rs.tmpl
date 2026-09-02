@@ -1,0 +1,41 @@
+//! Two endpoints, so the pieces are wired together rather than described.
+//!
+//! Replace them with the first real resource; what is worth keeping is the
+//! shape - a handler returning `Result<_, Error>`, a query that borrows the
+//! pool from state, rows that serialize themselves, and the two failures every
+//! API has: the caller asked for something that is not there, or asked wrongly.
+
+use axum::{
+    Json,
+    extract::{Path, State},
+};
+use serde::Serialize;
+use sqlx::PgPool;
+
+use crate::error::Error;
+
+#[derive(Serialize, sqlx::FromRow)]
+pub struct Example {
+    pub id: i64,
+    pub label: String,
+}
+
+pub async fn list(State(pool): State<PgPool>) -> Result<Json<Vec<Example>>, Error> {
+    let rows = sqlx::query_as::<_, Example>("SELECT id, label FROM example ORDER BY id").fetch_all(&pool).await?;
+    Ok(Json(rows))
+}
+
+pub async fn get(State(pool): State<PgPool>, Path(id): Path<i64>) -> Result<Json<Example>, Error> {
+    // Validation happens before the query, so a bad request is answered as one
+    // rather than as an empty result that looks like a missing row.
+    if id <= 0 {
+        return Err(Error::BadRequest("id must be positive".into()));
+    }
+
+    sqlx::query_as::<_, Example>("SELECT id, label FROM example WHERE id = $1")
+        .bind(id)
+        .fetch_optional(&pool)
+        .await?
+        .map(Json)
+        .ok_or(Error::NotFound)
+}

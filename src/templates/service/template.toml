@@ -1,0 +1,28 @@
+name = "service"
+description = "HTTP service: axum, sqlx, Postgres"
+standard = "2026.09"
+
+# `cliff.toml` is a Tera template using bare `{{ }}` for its own variables.
+# GitHub Actions writes `${{ }}`, which the renderer skips on its own, and the
+# compose file uses `${VAR}` - a single brace, which is not a placeholder.
+verbatim = ["cliff.toml"]
+
+[[hooks]]
+name = "Fetching dependencies"
+run = ["cargo", "fetch"]
+optional = true
+
+[[hooks]]
+name = "Starting the repository"
+run = ["git", "init", "--initial-branch=main"]
+optional = true
+
+[[hooks]]
+name = "Staging the first commit"
+run = ["git", "add", "."]
+optional = true
+
+[[hooks]]
+name = "Creating the first commit"
+run = ["git", "commit", "-m", "feat: scaffold the project with lyrn"]
+optional = true

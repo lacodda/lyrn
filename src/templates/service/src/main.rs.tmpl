@@ -1,0 +1,43 @@
+mod app;
+mod config;
+mod error;
+mod example;
+mod health;
+{{#spa}}
+mod web;
+{{/spa}}
+
+use std::process::ExitCode;
+
+use clap::Parser;
+
+use crate::config::Config;
+
+#[tokio::main]
+async fn main() -> ExitCode {
+    tracing_subscriber::fmt().with_env_filter(tracing_subscriber::EnvFilter::from_default_env()).init();
+
+    match run(Config::parse()).await {
+        Ok(()) => ExitCode::SUCCESS,
+        Err(e) => {
+            // The chain matters: the top line says what failed, the causes say
+            // why. Printing only the outer error loses the actual reason.
+            eprintln!("error: {e:#}");
+            ExitCode::FAILURE
+        }
+    }
+}
+
+async fn run(config: Config) -> anyhow::Result<()> {
+    let pool = config.pool().await?;
+
+    // Migrations run at startup rather than as a separate deploy step: a
+    // binary and the schema it expects travel together, so there is no window
+    // where one is ahead of the other.
+    sqlx::migrate!().run(&pool).await?;
+
+    let listener = tokio::net::TcpListener::bind(config.bind).await?;
+    tracing::info!(address = %config.bind, "listening");
+    axum::serve(listener, app::router(pool)).await?;
+    Ok(())
+}

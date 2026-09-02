@@ -1,0 +1,39 @@
+//! One error type for the whole API surface.
+//!
+//! A handler returns `Result<T, Error>` and stops thinking about status codes;
+//! the mapping lives here, once, so two endpoints cannot disagree about what a
+//! missing row means.
+
+use axum::{
+    Json,
+    http::StatusCode,
+    response::{IntoResponse, Response},
+};
+use serde_json::json;
+
+#[derive(Debug, thiserror::Error)]
+pub enum Error {
+    #[error("not found")]
+    NotFound,
+    #[error("{0}")]
+    BadRequest(String),
+    #[error(transparent)]
+    Database(#[from] sqlx::Error),
+}
+
+impl IntoResponse for Error {
+    fn into_response(self) -> Response {
+        let (status, message) = match &self {
+            Error::NotFound => (StatusCode::NOT_FOUND, self.to_string()),
+            Error::BadRequest(m) => (StatusCode::BAD_REQUEST, m.clone()),
+            // The cause of a database error goes to the log, never to the
+            // client: it names tables and columns an outsider has no business
+            // learning about.
+            Error::Database(e) => {
+                tracing::error!(error = %e, "database error");
+                (StatusCode::INTERNAL_SERVER_ERROR, "internal error".to_string())
+            }
+        };
+        (status, Json(json!({ "error": message }))).into_response()
+    }
+}

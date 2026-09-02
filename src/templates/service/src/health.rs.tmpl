@@ -1,0 +1,23 @@
+//! Whether the service can do its job, not merely whether it is running.
+
+use axum::{Json, extract::State, http::StatusCode};
+use serde::Serialize;
+use sqlx::PgPool;
+
+#[derive(Serialize)]
+pub struct Health {
+    pub status: &'static str,
+    pub version: &'static str,
+}
+
+/// A health check that touches the database.
+///
+/// A process that answers while its database is unreachable is worse than one
+/// that does not answer at all: an orchestrator keeps sending it traffic.
+pub async fn health(State(pool): State<PgPool>) -> (StatusCode, Json<Health>) {
+    let version = env!("CARGO_PKG_VERSION");
+    match sqlx::query_scalar::<_, i32>("SELECT 1").fetch_one(&pool).await {
+        Ok(_) => (StatusCode::OK, Json(Health { status: "ok", version })),
+        Err(_) => (StatusCode::SERVICE_UNAVAILABLE, Json(Health { status: "database unreachable", version })),
+    }
+}

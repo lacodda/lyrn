@@ -18,17 +18,20 @@ pub enum Form {
     Cli,
     /// A desktop application: Tauri 2 around the spa stack.
     Desktop,
+    /// An HTTP service: axum, sqlx and Postgres.
+    Service,
 }
 
 impl Form {
     /// Every form the binary carries built in.
-    pub const ALL: &'static [Form] = &[Form::Spa, Form::Cli, Form::Desktop];
+    pub const ALL: &'static [Form] = &[Form::Spa, Form::Cli, Form::Desktop, Form::Service];
 
     pub fn as_str(self) -> &'static str {
         match self {
             Form::Spa => "spa",
             Form::Cli => "cli",
             Form::Desktop => "desktop",
+            Form::Service => "service",
         }
     }
 
@@ -38,6 +41,7 @@ impl Form {
             Form::Spa => "Single-page app: Vite, React, TypeScript, Tailwind, dowel",
             Form::Cli => "Command-line tool: Rust, clap, anyhow, dialoguer",
             Form::Desktop => "Desktop app: Tauri 2 around the spa stack",
+            Form::Service => "HTTP service: axum, sqlx, Postgres",
         }
     }
 
@@ -49,6 +53,7 @@ impl Form {
             Form::Spa => &[],
             Form::Cli => &[Addon::Keyring, Addon::SelfUpdate],
             Form::Desktop => &[Addon::I18n],
+            Form::Service => &[Addon::Spa],
         }
     }
 }
@@ -70,6 +75,8 @@ pub enum Addon {
     SelfUpdate,
     /// i18next with a gate holding every locale to the source language.
     I18n,
+    /// A web UI compiled into the binary, served by the same process.
+    Spa,
 }
 
 impl Addon {
@@ -78,6 +85,7 @@ impl Addon {
             Addon::Keyring => "keyring",
             Addon::SelfUpdate => "self-update",
             Addon::I18n => "i18n",
+            Addon::Spa => "spa",
         }
     }
 
@@ -86,6 +94,7 @@ impl Addon {
             Addon::Keyring => "Secrets in the OS keyring, never in a config file",
             Addon::SelfUpdate => "A `self-update` command that reads the releases page",
             Addon::I18n => "i18next, with a gate holding every locale to the source",
+            Addon::Spa => "A web UI compiled into the binary and served by it",
         }
     }
 }
@@ -104,7 +113,8 @@ impl std::str::FromStr for Addon {
             "keyring" => Ok(Addon::Keyring),
             "self-update" => Ok(Addon::SelfUpdate),
             "i18n" => Ok(Addon::I18n),
-            other => Err(format!("unknown add-on `{other}` (known: keyring, self-update, i18n)")),
+            "spa" => Ok(Addon::Spa),
+            other => Err(format!("unknown add-on `{other}` (known: keyring, self-update, i18n, spa)")),
         }
     }
 }
@@ -123,6 +133,7 @@ impl std::str::FromStr for Form {
             "spa" => Ok(Form::Spa),
             "cli" => Ok(Form::Cli),
             "desktop" => Ok(Form::Desktop),
+            "service" => Ok(Form::Service),
             other => Err(format!(
                 "unknown form `{other}` (known: {})",
                 Form::ALL.iter().map(|f| f.as_str()).collect::<Vec<_>>().join(", ")

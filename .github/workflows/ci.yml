@@ -180,3 +180,52 @@ jobs:
           cargo fmt --check
           cargo clippy --all-targets -- -D warnings
           cargo test
+
+  # The service form's own tests skip themselves without a database, so the
+  # gate has to provide one - otherwise this job would prove only that the
+  # project compiles.
+  template-service:
+    name: template service (${{ matrix.addons || 'none' }})
+    runs-on: ubuntu-latest
+    strategy:
+      fail-fast: false
+      matrix:
+        addons: ['', 'spa']
+    services:
+      postgres:
+        image: postgres:18-alpine
+        env:
+          POSTGRES_USER: demo_svc
+          POSTGRES_PASSWORD: demo_svc
+          POSTGRES_DB: demo_svc
+        options: >-
+          --health-cmd pg_isready
+          --health-interval 5s
+          --health-timeout 3s
+          --health-retries 10
+        ports:
+          - 5432:5432
+    steps:
+      - uses: actions/checkout@v7
+      - uses: dtolnay/rust-toolchain@stable
+        with:
+          components: rustfmt, clippy
+      - uses: Swatinem/rust-cache@v2
+      - name: Build lyrn
+        run: cargo build --release
+      - name: Generate a project
+        shell: bash
+        run: |
+          args=(new demo-svc --form service --yes --no-hooks --repo owner/demo-svc --path "$RUNNER_TEMP/demo-svc")
+          if [ -n "${{ matrix.addons }}" ]; then
+            args+=(--with "${{ matrix.addons }}")
+          fi
+          ./target/release/lyrn "${args[@]}"
+      - name: Run the gate it ships with
+        working-directory: ${{ runner.temp }}/demo-svc
+        env:
+          DATABASE_URL: postgres://demo_svc:demo_svc@localhost:5432/demo_svc
+        run: |
+          cargo fmt --check
+          cargo clippy --all-targets -- -D warnings
+          cargo test

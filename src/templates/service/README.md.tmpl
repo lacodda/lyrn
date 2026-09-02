@@ -1,0 +1,67 @@
+# {{ title }}
+
+{{ description }}
+
+An HTTP service on the lacodda line's stack: Rust, [axum](https://github.com/tokio-rs/axum),
+sqlx and Postgres. Scaffolded with [lyrn](https://github.com/lacodda/lyrn).
+
+## A day in the life
+
+```console
+$ docker compose -f deploy/compose.yml up -d db    # a database to talk to
+$ export DATABASE_URL=postgres://{{ lib_name }}:...@localhost:5432/{{ lib_name }}
+$ cargo run                                        # migrations run at startup
+$ curl localhost:8080/api/health
+{"status":"ok","version":"0.1.0"}
+```
+
+```console
+$ cargo fmt --check && cargo clippy --all-targets -- -D warnings && cargo test
+```
+
+That is the gate CI runs. The tests skip themselves when `DATABASE_URL` is
+unset, which is right on a laptop without a database - CI always provides one,
+so the suite is never green and blind.
+
+## Configuration
+
+Everything comes from the environment, so the same binary runs in a container,
+on a stand and on a laptop without a config file to keep in step:
+
+| Variable | Default | What it does |
+| --- | --- | --- |
+| `DATABASE_URL` | *required* | Postgres connection string |
+| `{{ env_prefix }}_BIND` | `0.0.0.0:8080` | Where to listen |
+| `{{ env_prefix }}_POOL_SIZE` | `5` | Database connections to keep |
+| `RUST_LOG` | — | `info`, `debug`, or a per-module filter |
+
+## Deploying
+
+```console
+$ cp deploy/env.example deploy/.env    # then edit it
+$ docker compose -f deploy/compose.yml up -d --build
+```
+
+The image is built on the target machine, which makes every deploy a proof
+that the code builds for that architecture.
+
+## Migrations
+
+`migrations/` holds plain SQL, applied at startup: a binary and the schema it
+expects travel together, so there is no window where one is ahead of the other.
+Add a file with a later prefix; never edit one that has run somewhere.
+
+## Layout
+
+| Path | What lives there |
+| --- | --- |
+| `src/app.rs` | Every route the service answers, in one place |
+| `src/config.rs` | What it needs to know, and where it reads it from |
+| `src/error.rs` | One error type, mapped to status codes once |
+| `migrations/` | The schema, as plain SQL |
+| `deploy/` | Compose file for a stand |
+| `docs/adr/` | Architecture decisions, newest last |
+
+## License
+
+MIT - see [LICENSE](LICENSE).

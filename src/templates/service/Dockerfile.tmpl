@@ -1,0 +1,45 @@
+# Build and run {{ name }} in a container.
+#
+# Built on the target machine, which also makes this the one place where a
+# build for that architecture is proven on every deploy rather than only at
+# release time.
+{{#spa}}
+
+# The web UI first: it is compiled into the binary, so the Rust build needs
+# `frontend/dist` to already hold the real thing.
+FROM node:22-slim AS web
+WORKDIR /web
+RUN corepack enable
+# Manifest and lockfile alone, so a source edit does not re-resolve the tree.
+COPY frontend/package.json frontend/pnpm-lock.yaml ./
+RUN pnpm install --frozen-lockfile
+COPY frontend/ ./
+RUN pnpm build
+{{/spa}}
+
+FROM rust:1-slim-trixie AS build
+WORKDIR /src
+
+# Dependencies first, so editing source does not re-download and rebuild the
+# whole tree. A stub main gives cargo something to compile them against.
+COPY Cargo.toml Cargo.lock ./
+RUN mkdir -p src frontend/dist \
+    && echo 'fn main() {}' > src/main.rs \
+    && cargo build --release \
+    && rm -rf src
+
+COPY . .
+{{#spa}}
+COPY --from=web /web/dist frontend/dist
+{{/spa}}
+# Touch the entry point so cargo rebuilds it rather than trusting the stub's
+# timestamp from the layer above.
+RUN touch src/main.rs && cargo build --release
+
+FROM debian:trixie-slim
+RUN apt-get update \
+    && apt-get install -y --no-install-recommends ca-certificates \
+    && rm -rf /var/lib/apt/lists/*
+COPY --from=build /src/target/release/{{ name }} /usr/local/bin/{{ name }}
+EXPOSE 8080
+CMD ["{{ name }}"]

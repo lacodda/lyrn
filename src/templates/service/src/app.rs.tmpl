@@ -1,0 +1,24 @@
+//! Where the routes are assembled.
+//!
+//! One place that knows every path the service answers, so the shape of the
+//! API is readable without walking the module tree.
+
+use axum::{Router, routing::get};
+use sqlx::PgPool;
+
+pub fn router(pool: PgPool) -> Router {
+    let api = Router::new()
+        .route("/health", get(crate::health::health))
+        .route("/example", get(crate::example::list))
+        .route("/example/{id}", get(crate::example::get));
+
+{{#spa}}
+    // Anything the API has not claimed belongs to the single-page app, which
+    // owns its own paths. Without this a refresh on any route but `/` would
+    // 404: the server has no such file, and only the app knows what to draw.
+    Router::new().nest("/api", api).fallback(crate::web::serve).with_state(pool)
+{{/spa}}
+{{^spa}}
+    Router::new().nest("/api", api).with_state(pool)
+{{/spa}}
+}

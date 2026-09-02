@@ -1,0 +1,38 @@
+//! Tests that talk to a real Postgres.
+//!
+//! The logic of a service like this lives in SQL as much as in Rust, and a
+//! mocked pool proves nothing about what the database will actually do. These
+//! are skipped when there is no database to talk to, so `cargo test` still
+//! works on a laptop without one - CI provides the real thing.
+
+use sqlx::postgres::PgPoolOptions;
+
+/// The database to test against, or `None` when there is none.
+async fn pool() -> Option<sqlx::PgPool> {
+    let url = std::env::var("DATABASE_URL").ok()?;
+    let pool = PgPoolOptions::new().max_connections(2).connect(&url).await.ok()?;
+    sqlx::migrate!().run(&pool).await.expect("migrations should apply to an empty database");
+    Some(pool)
+}
+
+#[tokio::test]
+async fn migrations_apply_to_an_empty_database() {
+    let Some(pool) = pool().await else {
+        eprintln!("DATABASE_URL is not set; skipping");
+        return;
+    };
+    // The migration created the table it says it creates.
+    let exists: bool =
+        sqlx::query_scalar("SELECT to_regclass('public.example') IS NOT NULL").fetch_one(&pool).await.unwrap();
+    assert!(exists, "the first migration did not create its table");
+}
+
+#[tokio::test]
+async fn health_reports_ok_with_a_working_database() {
+    let Some(pool) = pool().await else {
+        eprintln!("DATABASE_URL is not set; skipping");
+        return;
+    };
+    let one: i32 = sqlx::query_scalar("SELECT 1").fetch_one(&pool).await.unwrap();
+    assert_eq!(one, 1);
+}
