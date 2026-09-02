@@ -1,6 +1,20 @@
 # Changelog
 
+## 🎉 [2.2.0] - 2026-09-02
+
+### ✨ Features
+
+- Add the desktop form, with i18n as an add-on
+
+### 🛟 Miscellaneous Tasks
+
+- Skip publishing a version that is already in the registry
+
 ## 🎉 [2.1.1] - 2026-09-01
+
+### 📖 Documentation
+
+- Changelog for 2.1.1
 
 ### 🛠️ Bug Fixes
 
