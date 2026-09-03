@@ -21,6 +21,7 @@ fn combinations(form: &str) -> Vec<Vec<&'static str>> {
         "cli" => vec![vec![], vec!["keyring"], vec!["self-update"], vec!["keyring", "self-update"]],
         "desktop" => vec![vec![], vec!["i18n"]],
         "service" => vec![vec![], vec!["spa"]],
+        "workspace" => vec![vec![], vec!["keyring"], vec!["self-update"], vec!["keyring", "self-update"]],
         _ => vec![vec![]],
     }
 }
@@ -45,7 +46,7 @@ fn generate(form: &str, addons: &[&str], root: &Path) {
 
 #[test]
 fn every_combination_renders_completely() {
-    for form in ["spa", "cli", "desktop", "service"] {
+    for form in ["spa", "cli", "desktop", "service", "workspace"] {
         for addons in combinations(form) {
             let dir = tempfile::tempdir().unwrap();
             let root = dir.path().join("demo-tool");
@@ -91,6 +92,14 @@ fn every_rust_module_a_project_declares_exists() {
         ("cli", vec!["src/main.rs", "src/commands/mod.rs"]),
         ("service", vec!["src/main.rs"]),
         ("desktop", vec!["src-tauri/src/main.rs", "src-tauri/src/lib.rs"]),
+        (
+            "workspace",
+            vec![
+                "crates/demo-tool/src/main.rs",
+                "crates/demo-tool/src/commands/mod.rs",
+                "crates/demo-tool-core/src/lib.rs",
+            ],
+        ),
     ] {
         for addons in combinations(form) {
             let dir = tempfile::tempdir().unwrap();
@@ -123,6 +132,42 @@ fn check_modules(form: &str, addons: &[&str], root: &Path, sources: &[&str]) {
             }
         }
     }
+}
+
+#[test]
+fn a_workspace_leaves_no_rust_file_outside_its_crates() {
+    // A file cargo does not compile is worse than a missing one: it is there
+    // to be read and edited, and nothing says the edit had no effect. The
+    // workspace form places sources by rule, and a rule that stops applying
+    // fails silently - both halves get written, only one gets built.
+    for addons in combinations("workspace") {
+        let dir = tempfile::tempdir().unwrap();
+        let root = dir.path().join("demo-tool");
+        generate("workspace", &addons, &root);
+
+        let members = members_of(&root.join("Cargo.toml"));
+        assert!(!members.is_empty(), "the workspace manifest declares no members");
+
+        for entry in walk(&root) {
+            if entry.extension().is_none_or(|e| e != "rs") {
+                continue;
+            }
+            let relative = entry.strip_prefix(&root).unwrap().display().to_string().replace('\\', "/");
+            assert!(
+                members.iter().any(|member| relative.starts_with(&format!("{member}/"))),
+                "workspace with {addons:?}: {relative} is Rust that belongs to no member of the workspace"
+            );
+        }
+    }
+}
+
+/// The member directories a workspace manifest declares.
+fn members_of(manifest: &Path) -> Vec<String> {
+    let text = fs::read_to_string(manifest).expect("cannot read the workspace manifest");
+    text.lines()
+        .find(|l| l.trim_start().starts_with("members"))
+        .map(|line| line.split('"').skip(1).step_by(2).map(str::to_string).collect())
+        .unwrap_or_default()
 }
 
 #[test]

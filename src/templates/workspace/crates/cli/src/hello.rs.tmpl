@@ -1,0 +1,29 @@
+use anyhow::{Context, Result};
+
+use crate::cli::HelloArgs;
+
+/// The command is a wrapper: the library decides what the greeting is, and
+/// this function only turns the failure into something a person reads. Logic
+/// that belongs here instead of in the library is logic nobody else can call.
+pub fn run(args: HelloArgs) -> Result<()> {
+    let greeting = {{ lib_name }}_core::greet(&args.name).with_context(|| format!("cannot greet `{}`", args.name))?;
+    println!("{greeting}");
+    Ok(())
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    #[test]
+    fn greets_without_failing() {
+        let args = HelloArgs { name: "world".into() };
+        assert!(run(args).is_ok());
+    }
+
+    #[test]
+    fn a_library_error_reaches_the_caller() {
+        let args = HelloArgs { name: "  ".into() };
+        assert!(run(args).is_err());
+    }
+}

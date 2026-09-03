@@ -1,0 +1,43 @@
+[workspace]
+members = ["crates/{{ name }}", "crates/{{ name }}-core"]
+resolver = "3"
+
+# One version, one edition, one MSRV for the whole repository. A crate that
+# disagreed with its sibling about any of them would be discovered by whoever
+# ran `cargo install` on the wrong half.
+[workspace.package]
+version = "0.1.0"
+edition = "2024"
+rust-version = "{{ msrv }}"
+description = "{{ description }}"
+authors = ["{{ author }}"]
+license = "MIT"
+repository = "https://github.com/{{ repo }}"
+
+[workspace.dependencies]
+# The path and the version travel together: cargo builds against the path and
+# publishes the version, so a release cannot reference a crate nobody can get.
+{{ name }}-core = { path = "crates/{{ name }}-core", version = "0.1.0" }
+
+anyhow = "1"
+clap = { version = "4", features = ["derive"] }
+dialoguer = "0.12"
+thiserror = "2"
+{{#keyring}}
+keyring = { version = "4", features = ["v1"] }
+{{/keyring}}
+{{#self-update}}
+reqwest = { version = "0.13", default-features = false, features = ["rustls", "blocking"] }
+{{/self-update}}
+
+assert_cmd = "2"
+predicates = "3"
+tempfile = "3"
+
+# A release binary is downloaded far more often than it is built. Link-time
+# optimization across one codegen unit and a stripped symbol table roughly
+# halve it, at the cost of a slower release build.
+[profile.release]
+lto = true
+codegen-units = 1
+strip = true

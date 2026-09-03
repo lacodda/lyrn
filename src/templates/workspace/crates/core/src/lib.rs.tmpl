@@ -1,0 +1,62 @@
+//! The library behind `{{ name }}`.
+//!
+//! Everything the tool knows how to do lives here, and the binary in
+//! `crates/{{ name }}` is a thin layer that parses arguments and prints. That
+//! split is the point of the workspace: the logic is callable from another
+//! program, testable without a process, and documented on docs.rs - while the
+//! command-line surface stays free to change without breaking anyone.
+//!
+//! ```
+//! use {{ lib_name }}_core::greet;
+//!
+//! assert_eq!(greet("world").unwrap(), "Hello, world!");
+//! ```
+
+mod error;
+
+pub use error::Error;
+
+/// A greeting for `name`.
+///
+/// The example the form ships with, and the shape every other function in this
+/// crate follows: a plain input, a `Result` out, and a reason on the failure
+/// path rather than a panic.
+///
+/// # Errors
+///
+/// Returns [`Error::EmptyName`] when `name` is empty or only whitespace: a
+/// greeting addressed to nobody is a caller's mistake, not a blank line.
+///
+/// ```
+/// use {{ lib_name }}_core::{greet, Error};
+///
+/// assert!(matches!(greet("   "), Err(Error::EmptyName)));
+/// ```
+pub fn greet(name: &str) -> Result<String, Error> {
+    let name = name.trim();
+    if name.is_empty() {
+        return Err(Error::EmptyName);
+    }
+    Ok(format!("Hello, {name}!"))
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    #[test]
+    fn greets_by_name() {
+        assert_eq!(greet("world").unwrap(), "Hello, world!");
+    }
+
+    #[test]
+    fn surrounding_whitespace_is_not_part_of_the_name() {
+        assert_eq!(greet("  friend  ").unwrap(), "Hello, friend!");
+    }
+
+    #[test]
+    fn an_empty_name_is_an_error_rather_than_an_empty_greeting() {
+        assert!(matches!(greet(""), Err(Error::EmptyName)));
+        assert!(matches!(greet("   "), Err(Error::EmptyName)));
+    }
+}

@@ -5,14 +5,17 @@ description: The shapes a generated project can take.
 
 ```console
 $ lyrn forms
-spa      Single-page app: Vite, React, TypeScript, Tailwind, dowel
-cli      Command-line tool: Rust, clap, anyhow, dialoguer
+spa         Single-page app: Vite, React, TypeScript, Tailwind, dowel
+cli         Command-line tool: Rust, clap, anyhow, dialoguer
   --with keyring       Secrets in the OS keyring, never in a config file
   --with self-update   A `self-update` command that reads the releases page
-desktop  Desktop app: Tauri 2 around the spa stack
+desktop     Desktop app: Tauri 2 around the spa stack
   --with i18n          i18next, with a gate holding every locale to the source
-service  HTTP service: axum, sqlx, Postgres
+service     HTTP service: axum, sqlx, Postgres
   --with spa           A web UI compiled into the binary and served by it
+workspace   Cargo workspace: a library crate plus the CLI that uses it
+  --with keyring       Secrets in the OS keyring, never in a config file
+  --with self-update   A `self-update` command that reads the releases page
 ```
 
 A form is the shape of the repository, not a choice of framework. The line runs
@@ -123,6 +126,52 @@ no such file, and only the app knows what to draw there.
 Left out, `--with spa` is what a service with no interface of its own needs -
 a sync relay, a webhook receiver, an API somebody else's frontend calls.
 
+## workspace
+
+The `cli` form with its logic moved into a library crate of its own:
+
+| | |
+| --- | --- |
+| Layout | `crates/<name>-core` (the library) and `crates/<name>` (the binary) |
+| Version | One, in `[workspace.package]` - both crates release together |
+| Errors | An enum in the library, `anyhow` chains at the binary's edge |
+| Docs | rustdoc with doctests, checked by CI |
+| Publish | Two crates in order, the library first |
+
+Reach for it when the logic is worth depending on without the command line
+attached - which on this line is most of them once they grow: sefy publishes
+its core so a plugin can link it, and a library is the only shape another
+program can call.
+
+The library owns the reasons things fail. Its errors are an enum a caller can
+match on, not a formatted string; the binary turns them into a chain a person
+reads. That is the whole reason for the split, and it is why the form ships a
+`greet` that returns `Result` rather than a function that cannot fail.
+
+### Publishing two crates
+
+`publish.yml` publishes the library, waits for it to appear in the crates.io
+index, then publishes the binary. crates.io resolves the dependency at publish
+time and refuses a package whose dependency it cannot see yet - and the index
+does not carry a new version the instant `publish` returns.
+
+Both crates need **their own trusted publisher** on crates.io, and the first
+version of each has to go up by hand: a publisher cannot be attached to a crate
+that does not exist. Missing the second one fails with a message about an
+invalid token, which is not what is wrong.
+
+### The MSRV job
+
+CI reads `rust-version` as the **maximum** across the workspace's packages
+rather than from the first one cargo happens to list. `.packages[0]` is not a
+promise, and testing whichever crate came first is green on half a repository.
+
+### Add-ons
+
+The same two the `cli` form has, in the same place: `keyring` and
+`self-update` live in the binary, because a library has no business reaching
+for the user's keychain or replacing an executable on disk.
+
 ## Translation
 
 `--with i18n` is offered by `desktop`; `spa` gets it in 2.6, with its own add-ons. It writes i18next with English
@@ -136,4 +185,5 @@ drop the one that carries a number.
 
 ## Coming in 2.x
 
-`lib`, and the workspace and plugin shapes the line already uses.
+`vite-lib` and `mono` in 2.5, then the `egui`, plugin and docs shapes the line
+already uses.

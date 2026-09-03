@@ -20,11 +20,13 @@ pub enum Form {
     Desktop,
     /// An HTTP service: axum, sqlx and Postgres.
     Service,
+    /// A Cargo workspace: a library crate and the CLI that uses it.
+    Workspace,
 }
 
 impl Form {
     /// Every form the binary carries built in.
-    pub const ALL: &'static [Form] = &[Form::Spa, Form::Cli, Form::Desktop, Form::Service];
+    pub const ALL: &'static [Form] = &[Form::Spa, Form::Cli, Form::Desktop, Form::Service, Form::Workspace];
 
     pub fn as_str(self) -> &'static str {
         match self {
@@ -32,6 +34,7 @@ impl Form {
             Form::Cli => "cli",
             Form::Desktop => "desktop",
             Form::Service => "service",
+            Form::Workspace => "workspace",
         }
     }
 
@@ -42,6 +45,7 @@ impl Form {
             Form::Cli => "Command-line tool: Rust, clap, anyhow, dialoguer",
             Form::Desktop => "Desktop app: Tauri 2 around the spa stack",
             Form::Service => "HTTP service: axum, sqlx, Postgres",
+            Form::Workspace => "Cargo workspace: a library crate plus the CLI that uses it",
         }
     }
 
@@ -54,6 +58,9 @@ impl Form {
             Form::Cli => &[Addon::Keyring, Addon::SelfUpdate],
             Form::Desktop => &[Addon::I18n],
             Form::Service => &[Addon::Spa],
+            // The workspace inherits the cli form's add-ons: they are the same
+            // command-line tool, only with its logic moved into a library.
+            Form::Workspace => &[Addon::Keyring, Addon::SelfUpdate],
         }
     }
 }
@@ -134,6 +141,7 @@ impl std::str::FromStr for Form {
             "cli" => Ok(Form::Cli),
             "desktop" => Ok(Form::Desktop),
             "service" => Ok(Form::Service),
+            "workspace" => Ok(Form::Workspace),
             other => Err(format!(
                 "unknown form `{other}` (known: {})",
                 Form::ALL.iter().map(|f| f.as_str()).collect::<Vec<_>>().join(", ")

@@ -111,7 +111,11 @@ i18next with a gate that holds every locale to the source language; `spa` gives
 a service a web UI compiled into its binary. None is generated unless asked for
 — a project should not carry code it never calls.
 
-More forms — `lib`, workspaces, plugins — follow in 2.x.
+`--form workspace` is the `cli` form with its logic in a library crate of its
+own: `crates/<name>-core` publishes to crates.io beside the binary, so another
+program can call the logic without taking the command line with it.
+
+More forms — libraries, monorepos, plugins — follow in 2.x.
 
 ## Migrating from 1.x
 

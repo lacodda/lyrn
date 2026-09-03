@@ -229,3 +229,48 @@ jobs:
           cargo fmt --check
           cargo clippy --all-targets -- -D warnings
           cargo test
+
+  # The workspace form is the cli form in two crates, so the gate is the cli
+  # gate with `--workspace` - plus the two things only a workspace can get
+  # wrong: doctests in the library, and a library that does not package on its
+  # own. `cargo package` on the core crate is what catches a README path or an
+  # exclude that leaves the published crate unbuildable.
+  template-workspace:
+    name: template workspace (${{ matrix.addons || 'none' }}) on ${{ matrix.os }}
+    runs-on: ${{ matrix.os }}
+    strategy:
+      fail-fast: false
+      matrix:
+        os: [ubuntu-latest, windows-latest, macos-latest]
+        addons: ['', 'keyring,self-update']
+    steps:
+      - uses: actions/checkout@v7
+      - name: Install Linux build deps (keyring secret-service)
+        if: runner.os == 'Linux' && contains(matrix.addons, 'keyring')
+        run: sudo apt-get update && sudo apt-get install -y libdbus-1-dev pkg-config
+      - uses: dtolnay/rust-toolchain@stable
+        with:
+          components: rustfmt, clippy
+      - uses: Swatinem/rust-cache@v2
+      - name: Build lyrn
+        run: cargo build --release
+      - name: Generate a project
+        shell: bash
+        run: |
+          args=(new demo-tool --form workspace --yes --no-hooks --repo owner/demo-tool --path "$RUNNER_TEMP/demo-tool")
+          if [ -n "${{ matrix.addons }}" ]; then
+            args+=(--with "${{ matrix.addons }}")
+          fi
+          ./target/release/lyrn "${args[@]}"
+      - name: Run the gate it ships with
+        working-directory: ${{ runner.temp }}/demo-tool
+        run: |
+          cargo fmt --check
+          cargo clippy --workspace --all-targets -- -D warnings
+          cargo test --workspace
+          cargo test --workspace --doc
+      # A library that builds in place but not from its own tarball is a crate
+      # nobody can install - and it only shows on the day of the release.
+      - name: Package the library on its own
+        working-directory: ${{ runner.temp }}/demo-tool
+        run: cargo package --package demo-tool-core

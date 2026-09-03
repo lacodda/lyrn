@@ -7,6 +7,7 @@ pub mod cli;
 pub mod desktop;
 pub mod service;
 pub mod spa;
+pub mod workspace;
 
 use crate::generate::SourceFile;
 use crate::model::Form;
@@ -18,6 +19,7 @@ pub fn manifest_for(form: Form) -> &'static str {
         Form::Cli => cli::MANIFEST,
         Form::Desktop => desktop::MANIFEST,
         Form::Service => service::MANIFEST,
+        Form::Workspace => workspace::MANIFEST,
     }
 }
 
@@ -28,6 +30,7 @@ pub fn sources_for(form: Form) -> Vec<SourceFile> {
         Form::Cli => cli::sources(),
         Form::Desktop => desktop::sources(),
         Form::Service => service::sources(),
+        Form::Workspace => workspace::sources(),
     }
 }
 

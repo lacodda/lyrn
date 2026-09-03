@@ -1,0 +1,46 @@
+# 2. The logic lives in a library crate
+
+Date: {{ date }}
+
+## Status
+
+Accepted
+
+## Context
+
+This repository is a workspace: `crates/{{ name }}-core` holds the logic and
+`crates/{{ name }}` is the binary. A single crate with the same code in
+`src/lib.rs` and a `[[bin]]` alongside it would compile just as well, so the
+split has to earn itself.
+
+## Decision
+
+Two crates, published separately, sharing one version from
+`[workspace.package]`.
+
+The library is a dependency anyone can take without taking the command-line
+surface with it: its dependency list stays small, its errors are an enum a
+caller can match on rather than an `anyhow` chain meant for a human, and its
+reference is rustdoc on docs.rs rather than this repository's README. The
+binary keeps `clap`, `dialoguer` and the printing, and none of that reaches a
+program that only wanted the logic.
+
+One version for both, because they are released together. A separately
+versioned library in the same repository means two changelogs, two tags, and a
+question - "which library does this binary use?" - that has to be answered by
+reading a lockfile.
+
+Publishing is ordered: the library first, then a wait for the index, then the
+binary. crates.io resolves the dependency at publish time and refuses a package
+whose dependency it cannot see yet.
+
+## Consequences
+
+Both crates need a trusted publisher on crates.io, and the first version of
+each has to be published by hand - a trusted publisher cannot be attached to a
+crate that does not exist. Forgetting the second one fails with a message about
+an invalid token, which is not what is wrong.
+
+Moving a function from the binary into the library is a breaking change for
+nobody and a gift to the next caller; moving one the other way is a promise
+withdrawn. Prefer putting new logic in the library.

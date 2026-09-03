@@ -1,0 +1,75 @@
+# {{ title }}
+
+{{ description }}
+
+Built on the lacodda line's stack for command-line tools: Rust, clap, anyhow -
+with the logic in a library crate anyone can depend on.
+Scaffolded with [lyrn](https://github.com/lacodda/lyrn).
+
+## Install
+
+```console
+$ cargo install {{ name }}
+```
+
+Or without a package manager:
+
+```console
+$ curl -fsSL https://raw.githubusercontent.com/{{ repo }}/main/tools/install.sh | sh
+```
+
+```powershell
+irm https://raw.githubusercontent.com/{{ repo }}/main/tools/install.ps1 | iex
+```
+
+## A day in the life
+
+```console
+$ {{ name }} hello
+Hello, world!
+```
+
+## Using the library
+
+The tool is a thin shell over `{{ name }}-core`, which is published on its own:
+
+```console
+$ cargo add {{ name }}-core
+```
+
+```rust
+use {{ lib_name }}_core::greet;
+
+fn main() -> Result<(), {{ lib_name }}_core::Error> {
+    println!("{}", greet("world")?);
+    Ok(())
+}
+```
+
+The reference is on [docs.rs](https://docs.rs/{{ name }}-core).
+
+## Developing
+
+```console
+$ cargo fmt --check && cargo clippy --workspace --all-targets -- -D warnings && cargo test --workspace
+```
+
+That is the same gate CI runs, so a green terminal means a green pull request.
+
+## Layout
+
+| Path | What lives there |
+| --- | --- |
+| `crates/{{ name }}-core/` | The library: everything the tool knows how to do |
+| `crates/{{ name }}/` | The binary: argument parsing and printing, nothing else |
+| `crates/{{ name }}/tests/` | Tests that run the built binary, as a user would |
+| `docs/adr/` | Architecture decisions, newest last |
+| `tools/` | The installers the README points at |
+
+Both crates share one version, set in `[workspace.package]`: they are released
+together, and a version that only applies to half a repository is a version
+nobody can reason about.
+
+## License
+
+MIT - see [LICENSE](LICENSE).

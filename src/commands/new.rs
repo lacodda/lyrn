@@ -153,6 +153,11 @@ fn print_next_steps(args: &NewArgs, root: &std::path::Path) {
         Form::Cli => {
             println!("  cargo run -- hello");
         }
+        Form::Workspace => {
+            // Named, because a workspace has more than one binary target the
+            // moment anyone adds a second crate, and `cargo run` then refuses.
+            println!("  cargo run --package {} -- hello", args.name);
+        }
         Form::Desktop => {
             if args.no_hooks {
                 println!("  pnpm install");

@@ -1,0 +1,70 @@
+name: Publish
+
+# Triggered by the tag push directly (not the release event): releases here are
+# created by release.yml with GITHUB_TOKEN, and such events do not start other
+# workflows.
+on:
+  push:
+    tags: ['v*']
+  workflow_dispatch:
+    inputs:
+      tag:
+        description: Tag to publish
+        required: true
+
+permissions: {}
+
+jobs:
+  crates-io:
+    runs-on: ubuntu-latest
+    permissions:
+      id-token: write
+      contents: read
+    steps:
+      - uses: actions/checkout@v7
+        with:
+          ref: ${{ github.event_name == 'workflow_dispatch' && inputs.tag || github.ref }}
+      - uses: dtolnay/rust-toolchain@stable
+      # The first publish of each crate has to be manual: a trusted publisher
+      # cannot be attached to a crate that does not exist yet. Publish both by
+      # hand once, add a publisher to each on crates.io, and this job takes
+      # over - two crates means two publishers, and forgetting the second one
+      # fails with a message that reads like a token problem and is not.
+      - name: Get a crates.io token (OIDC trusted publishing)
+        uses: rust-lang/crates-io-auth-action@v1
+        id: auth
+      # From the workspace table, which is where the single version lives.
+      # `.packages[0]` would be whichever crate cargo listed first, and the
+      # answer would be right only by luck.
+      - name: Read the version being published
+        id: version
+        run: echo "value=$(cargo metadata --no-deps --format-version 1 | jq -r '[.packages[].version] | unique | .[0]')" >> "$GITHUB_OUTPUT"
+      # Order matters: the binary depends on the library, and crates.io refuses
+      # a package whose dependency it cannot resolve yet. Two `--package` steps
+      # rather than a workspace publish, so the order is stated rather than
+      # inferred.
+      - name: Publish {{ name }}-core
+        run: cargo publish --package {{ name }}-core
+        env:
+          CARGO_REGISTRY_TOKEN: ${{ steps.auth.outputs.token }}
+      # The index does not carry the new version the instant publish returns,
+      # and the next step resolves the library from it. Waiting for the version
+      # to appear beats a fixed sleep that is either too short or wasteful.
+      - name: Wait for {{ name }}-core to appear in the index
+        run: |
+          version='${{ steps.version.outputs.value }}'
+          for attempt in $(seq 1 30); do
+            if curl -sf "https://crates.io/api/v1/crates/{{ name }}-core/$version" \
+                 -H 'user-agent: {{ name }}-release' > /dev/null; then
+              echo "{{ name }}-core $version is available"
+              exit 0
+            fi
+            echo "attempt $attempt: not indexed yet"
+            sleep 10
+          done
+          echo "{{ name }}-core $version never appeared in the index" >&2
+          exit 1
+      - name: Publish {{ name }}
+        run: cargo publish --package {{ name }}
+        env:
+          CARGO_REGISTRY_TOKEN: ${{ steps.auth.outputs.token }}

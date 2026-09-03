@@ -1,0 +1,17 @@
+//! What can go wrong in this library.
+//!
+//! One enum for the whole crate, with a variant per reason rather than a
+//! string: a caller can match on the reason and decide, which is exactly what
+//! a library owes its callers. The binary turns these into `anyhow` chains at
+//! the edge, where a human is reading.
+
+use thiserror::Error as ThisError;
+
+/// A failure from `{{ name }}-core`.
+#[derive(Debug, ThisError, PartialEq, Eq)]
+#[non_exhaustive]
+pub enum Error {
+    /// A name was asked for and none was given.
+    #[error("a name is required")]
+    EmptyName,
+}

@@ -1,0 +1,22 @@
+[package]
+name = "{{ name }}-core"
+version.workspace = true
+edition.workspace = true
+rust-version.workspace = true
+description = "Core library for {{ name }}: {{ description }}"
+authors.workspace = true
+license.workspace = true
+repository.workspace = true
+# Outside the crate directory, and cargo still packages it: one README for all
+# three pages. Verified by inspecting the built .crate, not assumed.
+readme = "../../README.md"
+# The library's reference is its rustdoc; the CLI's is the repository.
+documentation = "https://docs.rs/{{ name }}-core"
+keywords = ["library"]
+categories = ["development-tools"]
+
+[dependencies]
+thiserror.workspace = true
+
+[dev-dependencies]
+tempfile.workspace = true

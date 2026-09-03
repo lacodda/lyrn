@@ -1,0 +1,37 @@
+[package]
+name = "{{ name }}"
+version.workspace = true
+edition.workspace = true
+rust-version.workspace = true
+description.workspace = true
+authors.workspace = true
+license.workspace = true
+repository.workspace = true
+readme = "../../README.md"
+keywords = ["cli", "command-line-utilities"]
+categories = ["command-line-utilities"]
+
+[[bin]]
+name = "{{ name }}"
+path = "src/main.rs"
+
+[target.'cfg(windows)'.build-dependencies]
+winresource = "0.1"
+
+[dependencies]
+{{ name }}-core.workspace = true
+
+anyhow.workspace = true
+clap.workspace = true
+dialoguer.workspace = true
+{{#keyring}}
+keyring.workspace = true
+{{/keyring}}
+{{#self-update}}
+reqwest.workspace = true
+{{/self-update}}
+
+[dev-dependencies]
+assert_cmd.workspace = true
+predicates.workspace = true
+tempfile.workspace = true

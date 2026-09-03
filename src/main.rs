@@ -33,12 +33,18 @@ fn main() -> ExitCode {
 }
 
 fn list_forms() {
+    // Measured, not assumed: a column wide enough for the longest name today
+    // is one character too narrow for whatever is added next, and the only
+    // sign is a listing whose second column no longer lines up.
+    let form_column = Form::ALL.iter().map(|f| f.as_str().len()).max().unwrap_or(0) + 2;
+    let addon_column = Form::ALL.iter().flat_map(|f| f.addons()).map(|a| a.as_str().len()).max().unwrap_or(0) + 2;
+
     for form in Form::ALL {
-        println!("{:<8} {}", form.as_str(), form.summary());
+        println!("{:<form_column$} {}", form.as_str(), form.summary());
         // Add-ons are listed under the form that understands them, because
         // `--with keyring` means nothing without knowing which forms take it.
         for addon in form.addons() {
-            println!("  --with {:<13} {}", addon.as_str(), addon.summary());
+            println!("  --with {:<addon_column$} {}", addon.as_str(), addon.summary());
         }
     }
 }
