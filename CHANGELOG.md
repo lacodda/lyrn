@@ -1,10 +1,20 @@
 # Changelog
 
+## 🎉 [2.4.0] - 2026-09-03
+
+### ✨ Features
+
+- Add the workspace form
+
 ## 🎉 [2.3.0] - 2026-09-02
 
 ### ✨ Features
 
 - Add the service form, with the web UI as an add-on
+
+### 📖 Documentation
+
+- Changelog for 2.3.0
 
 ## 🎉 [2.2.0] - 2026-09-02
 
