@@ -1,0 +1,16 @@
+// @vitest-environment jsdom
+//
+// Declared here rather than in the runner's config: this file is the one that
+// needs a DOM, and the package's tests - which are the bulk of the suite -
+// start far faster without one.
+import { render, screen } from '@testing-library/react'
+import { describe, expect, it } from 'vitest'
+
+import { App } from './App.js'
+
+describe('App', () => {
+  it('shows the greeting the package produces', () => {
+    render(<App />)
+    expect(screen.getByText('Hello, world!')).toBeDefined()
+  })
+})

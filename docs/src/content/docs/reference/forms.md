@@ -16,6 +16,8 @@ service     HTTP service: axum, sqlx, Postgres
 workspace   Cargo workspace: a library crate plus the CLI that uses it
   --with keyring       Secrets in the OS keyring, never in a config file
   --with self-update   A `self-update` command that reads the releases page
+mono        pnpm monorepo publishing a TypeScript package to npm
+  --with stand         A Vite page in the workspace where the package runs
 ```
 
 A form is the shape of the repository, not a choice of framework. The line runs
@@ -172,6 +174,54 @@ The same two the `cli` form has, in the same place: `keyring` and
 `self-update` live in the binary, because a library has no business reaching
 for the user's keychain or replacing an executable on disk.
 
+## mono
+
+A pnpm workspace that publishes a TypeScript package:
+
+| | |
+| --- | --- |
+| Layout | `packages/<name>` publishes; the root is `private: true` |
+| Build | `tsc`, not a bundler - a library ships modules |
+| Resolution | `nodenext` in the package, `bundler` everywhere else |
+| Tests | vitest at the workspace root, one runner for every member |
+| Publish | npm over OIDC, with provenance |
+
+The line has **no standalone publishable TypeScript package**: dowel, kjui and
+lyrnui are all monorepos whose root is private and whose shipped artefact sits
+under `packages/`. So this form is the monorepo, and the package lives inside
+it - one member today, room for the second the day it is needed.
+
+### Why not a bundler
+
+The package is compiled by `tsc` with `moduleResolution: nodenext`, and its
+sources import each other with the `.js` extension the emitted files will have.
+
+Under `bundler` - which is right for everything a bundler consumes, and is what
+the workspace's own `tsconfig.base.json` keeps - an extensionless specifier
+typechecks, `tsc` emits it unchanged, and the package builds, packs and
+publishes. Node's resolver then refuses it. The failure belongs entirely to
+whoever installs the package, and nothing in this repository would have caught
+it (ADR 0002).
+
+So CI installs the packed tarball into a scratch directory and imports it with
+a plain `node`. A different process, outside the workspace, resolving the way a
+consumer's does - which is the only thing that can answer this question.
+
+### `--with stand`
+
+Adds a second workspace member: a Vite page that imports the package **by its
+published name**. pnpm resolves that to the workspace member, so the page
+renders the built package rather than its source - if the build is broken, the
+stand is too, which is the point of having one.
+
+With a stand, `pnpm lint` builds the package first: the stand's typecheck
+resolves the package through its `exports`, which point at `dist`.
+
+Its test asks for a DOM in the file itself, with an `@vitest-environment`
+docblock, rather than in the runner's config. Only the stand renders anything,
+and a jsdom the package's tests never touch costs more than twenty seconds of
+start-up - once enough to push a healthy run past the worker timeout.
+
 ## Translation
 
 `--with i18n` is offered by `desktop`; `spa` gets it in 2.6, with its own add-ons. It writes i18next with English
@@ -185,5 +235,4 @@ drop the one that carries a number.
 
 ## Coming in 2.x
 
-`vite-lib` and `mono` in 2.5, then the `egui`, plugin and docs shapes the line
-already uses.
+The `egui`, plugin and docs shapes the line already uses.

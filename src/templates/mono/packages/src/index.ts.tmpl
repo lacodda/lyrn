@@ -1,0 +1,9 @@
+// The package's public surface. Everything a consumer can reach is re-exported
+// here and nowhere else: `exports` in package.json names this file alone, so a
+// module not listed here is private no matter where it sits in `dist`.
+//
+// Note the `.js` on the specifier. The source is `.ts`; the extension is the
+// one the emitted file will have, and Node's resolver needs it. Leaving it off
+// typechecks and publishes a package that cannot be imported.
+export { greet } from './greet.js'
+export type { GreetOptions } from './greet.js'

@@ -1,0 +1,21 @@
+{
+  "extends": "../../tsconfig.base.json",
+  "compilerOptions": {
+    // `nodenext`, not `bundler`, and the difference is not cosmetic: the
+    // published package is resolved by Node's own ESM resolver, which requires
+    // a file extension on every relative import. Under `bundler` an
+    // extensionless specifier typechecks and `tsc` emits it unchanged, so the
+    // package builds, publishes, and fails to import - visible only to whoever
+    // installs it.
+    "module": "nodenext",
+    "moduleResolution": "nodenext",
+    "types": ["node"],
+    "outDir": "dist",
+    "rootDir": "src",
+    "declaration": true,
+    "declarationMap": true,
+    "sourceMap": true
+  },
+  "include": ["src"],
+  "exclude": ["src/**/*.test.ts", "src/**/*.test.tsx"]
+}

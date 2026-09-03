@@ -1,0 +1,71 @@
+# {{ title }}
+
+{{ description }}
+
+A pnpm monorepo on the lacodda line's stack: TypeScript, published to npm.
+Scaffolded with [lyrn](https://github.com/lacodda/lyrn).
+
+## Install
+
+```console
+$ pnpm add {{ name }}
+```
+
+## A day in the life
+
+```ts
+import { greet } from '{{ name }}'
+
+greet('world')                 // 'Hello, world!'
+greet('Ada', { title: 'Dr' })  // 'Hello, Dr Ada!'
+```
+
+## Developing
+
+```console
+$ pnpm install
+$ pnpm lint
+```
+
+`lint` is the whole gate - eslint, the packages' typecheck and the tests - so a
+green terminal means a green pull request.
+{{#stand}}
+
+It **builds the package first**, and has to: the stand imports `{{ name }}` by
+its published name, whose `exports` point at `dist`. With no build, the
+typecheck fails on a module that is merely not compiled yet - which reads like
+a broken import and is not one.
+{{/stand}}
+
+```console
+$ pnpm build
+```
+{{#stand}}
+
+```console
+$ pnpm stand
+```
+
+The stand is a page that imports the package **by its published name**, which
+resolves to the workspace member. What it renders is the built package, not its
+source: if the build is broken, the stand is too, which is the point of having
+one.
+{{/stand}}
+
+## Layout
+
+| Path | What lives there |
+| --- | --- |
+| `packages/{{ name }}/` | The published package - the only thing that ships |
+{{#stand}}
+| `stand/` | A Vite page where the package is seen running |
+{{/stand}}
+| `tools/` | Build helpers the packages call |
+| `docs/adr/` | Architecture decisions, newest last |
+
+The repository root is `private: true`: it is a workspace, not a package, and
+nothing at the root is publishable. Only what is under `packages/` goes to npm.
+
+## License
+
+MIT - see [LICENSE](LICENSE).

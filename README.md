@@ -115,7 +115,13 @@ a service a web UI compiled into its binary. None is generated unless asked for
 own: `crates/<name>-core` publishes to crates.io beside the binary, so another
 program can call the logic without taking the command line with it.
 
-More forms — libraries, monorepos, plugins — follow in 2.x.
+`--form mono` is a pnpm workspace publishing a TypeScript package from
+`packages/<name>`: the shape dowel, kjui and lyrnui all take. It is built with
+`tsc` rather than a bundler, and CI installs the packed tarball elsewhere and
+imports it with a plain `node` — the only check that catches a package which
+builds and cannot be imported. `--with stand` adds a page where it runs.
+
+More forms — egui, plugins, docs sites — follow in 2.x.
 
 ## Migrating from 1.x
 

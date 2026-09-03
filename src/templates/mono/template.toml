@@ -1,0 +1,28 @@
+name = "mono"
+description = "pnpm monorepo publishing a TypeScript package to npm"
+standard = "2026.09"
+
+# `cliff.toml` is a Tera template using bare `{{ }}` for its own variables, so
+# it has to travel untouched. GitHub Actions expressions are `${{ }}` and the
+# renderer leaves those alone by itself.
+verbatim = ["cliff.toml"]
+
+[[hooks]]
+name = "Installing dependencies"
+run = ["pnpm", "install"]
+optional = true
+
+[[hooks]]
+name = "Starting the repository"
+run = ["git", "init", "--initial-branch=main"]
+optional = true
+
+[[hooks]]
+name = "Staging the first commit"
+run = ["git", "add", "."]
+optional = true
+
+[[hooks]]
+name = "Creating the first commit"
+run = ["git", "commit", "-m", "feat: scaffold the project with lyrn"]
+optional = true

@@ -1,0 +1,65 @@
+name: CI
+
+on:
+  push:
+    branches: [main]
+    paths-ignore: ['docs/**']
+  pull_request:
+    paths-ignore: ['docs/**']
+
+concurrency:
+  group: ${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  check:
+    name: ${{ matrix.os }}
+    runs-on: ${{ matrix.os }}
+    strategy:
+      fail-fast: false
+      matrix:
+        os: [ubuntu-latest, windows-latest]
+    steps:
+      - uses: actions/checkout@v7
+      - uses: pnpm/action-setup@v6
+      - uses: actions/setup-node@v7
+        with:
+          node-version: 22
+          cache: pnpm
+      - run: pnpm install --frozen-lockfile
+      # `lint` is the whole gate: eslint, the packages' typecheck and the
+      # tests. One script means the command that passes locally is the one CI
+      # runs. With a stand it builds the package first, because the stand
+      # imports it by its published name and that resolves to `dist`.
+      - name: Gate
+        run: pnpm lint
+      - name: Build
+        run: pnpm build
+      # A package that builds but cannot be imported is a package nobody can
+      # install, and typechecking never sees it: `tsc` resolves an
+      # extensionless specifier that Node then refuses. So install the tarball
+      # somewhere else and import it with a plain `node` - a different process,
+      # outside the workspace, resolving the way a consumer's will.
+      - name: Import the package the way a consumer does
+        shell: bash
+        run: |
+          set -eu
+          tarball="$(cd packages/{{ name }} && pnpm pack --silent | tail -n1)"
+          tarball="$PWD/packages/{{ name }}/$tarball"
+          consumer="$RUNNER_TEMP/consumer"
+          mkdir -p "$consumer"
+          cd "$consumer"
+          npm init -y > /dev/null
+          npm pkg set type=module > /dev/null
+          npm install --no-audit --no-fund "$tarball" > /dev/null
+          # Single-quoted so the shell leaves the script alone: a double-quoted
+          # heredoc would expand every JavaScript identifier that follows a
+          # dollar sign before node ever saw it.
+          node --input-type=module -e '
+            import { greet } from "{{ name }}"
+            const actual = greet("world")
+            if (actual !== "Hello, world!") {
+              throw new Error("the installed package returned " + actual)
+            }
+            console.log("imported from the tarball:", actual)
+          '

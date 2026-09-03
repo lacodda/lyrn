@@ -1,0 +1,23 @@
+import js from '@eslint/js'
+import globals from 'globals'
+import tseslint from 'typescript-eslint'
+
+export default tseslint.config(
+  { ignores: ['**/dist', 'coverage'] },
+  js.configs.recommended,
+  tseslint.configs.recommended,
+  {
+    files: ['**/*.{ts,tsx}'],
+    languageOptions: {
+      ecmaVersion: 2022,
+      globals: globals.browser,
+    },
+  },
+  // Build tooling and tests run under Node, not in a browser. Without this the
+  // scripts under `tools/` fail on every `process` and `console` they use -
+  // eight `no-undef` errors for a file that is doing nothing wrong.
+  {
+    files: ['tools/**/*.mjs', '*.config.{js,ts}', '**/*.test.{ts,tsx}'],
+    languageOptions: { globals: globals.node },
+  },
+)

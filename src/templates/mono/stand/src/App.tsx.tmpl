@@ -1,0 +1,28 @@
+import { useState } from 'react'
+
+// Imported by the published name, not by a path into `src`: the stand shows
+// the package as a consumer gets it. If the build is broken, this page is too,
+// which is the point of having it.
+import { greet } from '{{ name }}'
+
+export function App() {
+  const [name, setName] = useState('world')
+
+  let greeting: string
+  try {
+    greeting = greet(name)
+  } catch (error) {
+    greeting = error instanceof Error ? error.message : String(error)
+  }
+
+  return (
+    <main>
+      <h1>{{ title }}</h1>
+      <label>
+        Name{' '}
+        <input value={name} onChange={(event) => setName(event.target.value)} />
+      </label>
+      <output>{greeting}</output>
+    </main>
+  )
+}

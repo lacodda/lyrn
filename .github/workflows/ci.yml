@@ -274,3 +274,66 @@ jobs:
       - name: Package the library on its own
         working-directory: ${{ runner.temp }}/demo-tool
         run: cargo package --package demo-tool-core
+
+  # The mono form is checked with pnpm, and the check that matters most is the
+  # last one: a package can build, typecheck and pass its tests while being
+  # impossible to import, because `tsc` resolves specifiers Node then refuses.
+  # Only a different process, outside the workspace, finds that.
+  template-mono:
+    name: template mono (${{ matrix.addons || 'none' }}) on ${{ matrix.os }}
+    runs-on: ${{ matrix.os }}
+    strategy:
+      fail-fast: false
+      matrix:
+        os: [ubuntu-latest, windows-latest]
+        addons: ['', 'stand']
+    steps:
+      - uses: actions/checkout@v7
+      - uses: dtolnay/rust-toolchain@stable
+      - uses: Swatinem/rust-cache@v2
+      - uses: pnpm/action-setup@v6
+        with:
+          version: 10
+      - uses: actions/setup-node@v7
+        with:
+          node-version: 22
+      - name: Build lyrn
+        run: cargo build --release
+      - name: Generate a project
+        shell: bash
+        run: |
+          args=(new demo-lib --form mono --yes --no-hooks --repo owner/demo-lib --path "$RUNNER_TEMP/demo-lib")
+          if [ -n "${{ matrix.addons }}" ]; then
+            args+=(--with "${{ matrix.addons }}")
+          fi
+          ./target/release/lyrn "${args[@]}"
+      - name: Install its dependencies
+        working-directory: ${{ runner.temp }}/demo-lib
+        run: pnpm install --no-frozen-lockfile
+      - name: Run the gate it ships with
+        working-directory: ${{ runner.temp }}/demo-lib
+        run: pnpm lint
+      - name: Build it
+        working-directory: ${{ runner.temp }}/demo-lib
+        run: pnpm build
+      - name: Import the package the way a consumer does
+        shell: bash
+        working-directory: ${{ runner.temp }}/demo-lib
+        run: |
+          set -eu
+          tarball="$(cd packages/demo-lib && pnpm pack --silent | tail -n1)"
+          consumer="$RUNNER_TEMP/consumer"
+          rm -rf "$consumer" && mkdir -p "$consumer"
+          cp "packages/demo-lib/$tarball" "$consumer/"
+          cd "$consumer"
+          npm init -y > /dev/null
+          npm pkg set type=module > /dev/null
+          npm install --no-audit --no-fund "./$tarball" > /dev/null
+          node --input-type=module -e '
+            import { greet } from "demo-lib"
+            const actual = greet("world")
+            if (actual !== "Hello, world!") {
+              throw new Error("the installed package returned " + actual)
+            }
+            console.log("imported from the tarball:", actual)
+          '

@@ -1,0 +1,39 @@
+import { defineConfig } from 'vitest/config'
+
+// One runner for the whole workspace: a package's tests and anything the
+// repository itself checks run under a single command, so `pnpm test` means
+// the same thing here as it does in CI.
+export default defineConfig({
+  test: {
+    globals: true,
+    // The default worker start-up timeout is generous on an idle machine and
+    // not on a busy one: a run that shares the box with an install or a
+    // compile can lose the race and report "Timeout waiting for worker to
+    // respond", which looks like a broken suite and is a loaded CPU. Seen on
+    // Windows while the workspace was installing next to it.
+    forks: { startupTimeout: 120_000 },
+    include: [
+      'packages/*/src/**/*.test.{ts,tsx}',
+{{#stand}}
+      'stand/src/**/*.test.{ts,tsx}',
+{{/stand}}
+    ],
+{{#stand}}
+    // No workspace-wide `environment`. Only the stand renders anything, and
+    // giving the package's tests a jsdom they never touch costs more than
+    // twenty seconds of startup - once enough to push the run past the worker
+    // timeout, turning a healthy suite red for no reason of its own. The
+    // stand's own files ask for the DOM with an `@vitest-environment` docblock,
+    // which is the one place that cannot drift from the file it applies to.
+    // The stand imports `{{ name }}` by its published name, which resolves to
+    // `dist`. Under the test runner that would mean building first, so here it
+    // resolves to the source instead: these tests are about behaviour, and
+    // waiting on a compile to check behaviour is a slow way to learn nothing.
+    //
+    // What this alias deliberately does not check is whether the published
+    // package can be imported at all - a different question, answered in CI by
+    // installing the packed tarball and importing it with a plain `node`.
+    alias: { '{{ name }}': new URL('./packages/{{ name }}/src/index.ts', import.meta.url).pathname },
+{{/stand}}
+  },
+})

@@ -1,0 +1,44 @@
+# 2. The package is built by tsc, resolved as nodenext
+
+Date: {{ date }}
+
+## Status
+
+Accepted
+
+## Context
+
+This repository publishes a TypeScript package. The obvious build is the one
+every application in the workspace already uses - Vite, in library mode - and
+the obvious `moduleResolution` is `bundler`, which is what the repository's
+own tooling wants.
+
+Both are wrong for a published package, and wrong in a way that passes every
+check. Under `bundler`, an extensionless relative specifier - `./greet` -
+typechecks; `tsc` emits it unchanged; the package builds, packs and publishes.
+Node's ESM resolver then refuses it, because it requires the extension. The
+failure belongs entirely to whoever installs the package.
+
+## Decision
+
+The package is compiled by `tsc` with `module` and `moduleResolution` set to
+`nodenext`, and its sources import each other with the `.js` extension the
+emitted files will have.
+
+The workspace's own `tsconfig.base.json` keeps `bundler`, which is right for
+anything a bundler consumes. The published package overrides it, because it is
+consumed by Node.
+
+No bundler in the package build: there is nothing to bundle. A library ships
+modules, and a consumer's bundler does the bundling with far better
+information than this repository has.
+
+## Consequences
+
+- Relative imports inside the package carry `.js`, which reads oddly next to a
+  `.ts` file and is correct: the extension names the emitted file.
+- CI installs the packed tarball into a scratch directory and imports it with a
+  plain `node`, outside the workspace. Typechecking cannot catch this class -
+  it is the resolver that disagrees - so a different process has to try.
+- `exports` names the entry points explicitly. A module not listed there is
+  private however it is laid out under `dist`.

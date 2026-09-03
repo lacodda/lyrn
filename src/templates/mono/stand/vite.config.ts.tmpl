@@ -1,0 +1,10 @@
+import react from '@vitejs/plugin-react'
+import { defineConfig } from 'vite'
+
+// No alias to the package's source. The stand imports `{{ name }}` by its
+// published name and pnpm resolves it to the workspace member, so what the
+// page renders is the built package - the same artefact an installer gets.
+// An alias into `src` would make the stand green while the build is broken.
+export default defineConfig({
+  plugins: [react()],
+})

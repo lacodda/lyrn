@@ -5,6 +5,7 @@
 
 pub mod cli;
 pub mod desktop;
+pub mod mono;
 pub mod service;
 pub mod spa;
 pub mod workspace;
@@ -20,6 +21,7 @@ pub fn manifest_for(form: Form) -> &'static str {
         Form::Desktop => desktop::MANIFEST,
         Form::Service => service::MANIFEST,
         Form::Workspace => workspace::MANIFEST,
+        Form::Mono => mono::MANIFEST,
     }
 }
 
@@ -31,6 +33,7 @@ pub fn sources_for(form: Form) -> Vec<SourceFile> {
         Form::Desktop => desktop::sources(),
         Form::Service => service::sources(),
         Form::Workspace => workspace::sources(),
+        Form::Mono => mono::sources(),
     }
 }
 

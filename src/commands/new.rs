@@ -153,6 +153,17 @@ fn print_next_steps(args: &NewArgs, root: &std::path::Path) {
         Form::Cli => {
             println!("  cargo run -- hello");
         }
+        Form::Mono => {
+            if args.no_hooks {
+                println!("  pnpm install");
+            }
+            // The package is what ships, so building it is the first thing
+            // worth seeing; the stand has nothing to render until it exists.
+            println!("  pnpm build");
+            if args.with.contains(&crate::model::Addon::Stand) {
+                println!("  pnpm stand");
+            }
+        }
         Form::Workspace => {
             // Named, because a workspace has more than one binary target the
             // moment anyone adds a second crate, and `cargo run` then refuses.

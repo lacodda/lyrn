@@ -22,11 +22,13 @@ pub enum Form {
     Service,
     /// A Cargo workspace: a library crate and the CLI that uses it.
     Workspace,
+    /// A pnpm monorepo publishing a TypeScript package.
+    Mono,
 }
 
 impl Form {
     /// Every form the binary carries built in.
-    pub const ALL: &'static [Form] = &[Form::Spa, Form::Cli, Form::Desktop, Form::Service, Form::Workspace];
+    pub const ALL: &'static [Form] = &[Form::Spa, Form::Cli, Form::Desktop, Form::Service, Form::Workspace, Form::Mono];
 
     pub fn as_str(self) -> &'static str {
         match self {
@@ -35,6 +37,7 @@ impl Form {
             Form::Desktop => "desktop",
             Form::Service => "service",
             Form::Workspace => "workspace",
+            Form::Mono => "mono",
         }
     }
 
@@ -46,6 +49,7 @@ impl Form {
             Form::Desktop => "Desktop app: Tauri 2 around the spa stack",
             Form::Service => "HTTP service: axum, sqlx, Postgres",
             Form::Workspace => "Cargo workspace: a library crate plus the CLI that uses it",
+            Form::Mono => "pnpm monorepo publishing a TypeScript package to npm",
         }
     }
 
@@ -61,6 +65,7 @@ impl Form {
             // The workspace inherits the cli form's add-ons: they are the same
             // command-line tool, only with its logic moved into a library.
             Form::Workspace => &[Addon::Keyring, Addon::SelfUpdate],
+            Form::Mono => &[Addon::Stand],
         }
     }
 }
@@ -84,6 +89,8 @@ pub enum Addon {
     I18n,
     /// A web UI compiled into the binary, served by the same process.
     Spa,
+    /// A Vite page inside the workspace where the package is seen running.
+    Stand,
 }
 
 impl Addon {
@@ -93,6 +100,7 @@ impl Addon {
             Addon::SelfUpdate => "self-update",
             Addon::I18n => "i18n",
             Addon::Spa => "spa",
+            Addon::Stand => "stand",
         }
     }
 
@@ -102,6 +110,7 @@ impl Addon {
             Addon::SelfUpdate => "A `self-update` command that reads the releases page",
             Addon::I18n => "i18next, with a gate holding every locale to the source",
             Addon::Spa => "A web UI compiled into the binary and served by it",
+            Addon::Stand => "A Vite page in the workspace where the package runs",
         }
     }
 }
@@ -121,7 +130,8 @@ impl std::str::FromStr for Addon {
             "self-update" => Ok(Addon::SelfUpdate),
             "i18n" => Ok(Addon::I18n),
             "spa" => Ok(Addon::Spa),
-            other => Err(format!("unknown add-on `{other}` (known: keyring, self-update, i18n, spa)")),
+            "stand" => Ok(Addon::Stand),
+            other => Err(format!("unknown add-on `{other}` (known: keyring, self-update, i18n, spa, stand)")),
         }
     }
 }
@@ -142,6 +152,7 @@ impl std::str::FromStr for Form {
             "desktop" => Ok(Form::Desktop),
             "service" => Ok(Form::Service),
             "workspace" => Ok(Form::Workspace),
+            "mono" => Ok(Form::Mono),
             other => Err(format!(
                 "unknown form `{other}` (known: {})",
                 Form::ALL.iter().map(|f| f.as_str()).collect::<Vec<_>>().join(", ")

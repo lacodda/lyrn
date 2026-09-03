@@ -1,0 +1,53 @@
+name: Publish
+
+# Triggered by the tag push directly (not the release event): releases here are
+# created by release.yml with GITHUB_TOKEN, and such events do not start other
+# workflows.
+on:
+  push:
+    tags: ['v*']
+  workflow_dispatch:
+    inputs:
+      tag:
+        description: Tag to publish
+        required: true
+
+permissions: {}
+
+jobs:
+  npm:
+    runs-on: ubuntu-latest
+    permissions:
+      id-token: write
+      contents: read
+    steps:
+      - uses: actions/checkout@v7
+        with:
+          ref: ${{ github.event_name == 'workflow_dispatch' && inputs.tag || github.ref }}
+      - uses: pnpm/action-setup@v6
+      # npm >= 11.5.1 exchanges the OIDC token itself (trusted publishing);
+      # provenance is attached automatically.
+      - uses: actions/setup-node@v7
+        with:
+          node-version: 24
+          cache: pnpm
+          registry-url: https://registry.npmjs.org
+      - run: pnpm install --frozen-lockfile
+      - run: pnpm build
+      # The root README reaches the npm page through the package's `prepack`
+      # script, so a hand-run `npm publish` ships the same file as CI does.
+      #
+      # Skipped when the version is already in the registry. The first release
+      # is always published by hand - a trusted publisher cannot be attached to
+      # a package that does not exist yet - and re-running a tag should not
+      # turn a perfectly good release red.
+      - name: Publish
+        working-directory: packages/{{ name }}
+        run: |
+          name=$(node -p "require('./package.json').name")
+          version=$(node -p "require('./package.json').version")
+          if npm view "$name@$version" version >/dev/null 2>&1; then
+            echo "$name@$version is already published; nothing to do."
+          else
+            npm publish
+          fi

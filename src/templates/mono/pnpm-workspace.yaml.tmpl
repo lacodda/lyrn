@@ -1,0 +1,8 @@
+packages:
+  - packages/*
+{{#stand}}
+  # The stand imports the package by its published name, which resolves only
+  # because it is a workspace member: outside the workspace it would have to
+  # install a copy, and then the page would show a build that is not this one.
+  - stand
+{{/stand}}

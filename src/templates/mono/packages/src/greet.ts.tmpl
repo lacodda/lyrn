@@ -1,0 +1,30 @@
+/** How {@link greet} should address someone. */
+export interface GreetOptions {
+  /** Added before the name, when the caller has one. */
+  readonly title?: string
+}
+
+/**
+ * A greeting for `name`.
+ *
+ * The example this package ships with, and the shape the rest of it follows:
+ * a plain input, a value out, and a thrown error on the path a caller got
+ * wrong rather than a quietly empty string.
+ *
+ * @throws {RangeError} when `name` is empty or only whitespace - a greeting
+ * addressed to nobody is a mistake at the call site, not an empty line.
+ *
+ * @example
+ * ```ts
+ * greet('world')                        // 'Hello, world!'
+ * greet('Ada', { title: 'Dr' })         // 'Hello, Dr Ada!'
+ * ```
+ */
+export function greet(name: string, options: GreetOptions = {}): string {
+  const trimmed = name.trim()
+  if (trimmed === '') {
+    throw new RangeError('a name is required')
+  }
+  const title = options.title?.trim()
+  return title ? `Hello, ${title} ${trimmed}!` : `Hello, ${trimmed}!`
+}

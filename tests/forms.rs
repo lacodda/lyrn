@@ -22,6 +22,7 @@ fn combinations(form: &str) -> Vec<Vec<&'static str>> {
         "desktop" => vec![vec![], vec!["i18n"]],
         "service" => vec![vec![], vec!["spa"]],
         "workspace" => vec![vec![], vec!["keyring"], vec!["self-update"], vec!["keyring", "self-update"]],
+        "mono" => vec![vec![], vec!["stand"]],
         _ => vec![vec![]],
     }
 }
@@ -46,7 +47,7 @@ fn generate(form: &str, addons: &[&str], root: &Path) {
 
 #[test]
 fn every_combination_renders_completely() {
-    for form in ["spa", "cli", "desktop", "service", "workspace"] {
+    for form in ["spa", "cli", "desktop", "service", "workspace", "mono"] {
         for addons in combinations(form) {
             let dir = tempfile::tempdir().unwrap();
             let root = dir.path().join("demo-tool");
@@ -168,6 +169,41 @@ fn members_of(manifest: &Path) -> Vec<String> {
         .find(|l| l.trim_start().starts_with("members"))
         .map(|line| line.split('"').skip(1).step_by(2).map(str::to_string).collect())
         .unwrap_or_default()
+}
+
+#[test]
+fn a_mono_workspace_has_a_home_for_every_file_it_writes() {
+    // A config at the root of a workspace whose tooling is not there is dead
+    // weight: nothing reads it, and whoever edits it gets no effect and no
+    // warning. So every root config has to name a tool the workspace actually
+    // depends on - checked against the dependency list, by exact name, because
+    // a substring match would let `vite.config.ts` pass on the strength of
+    // `vitest` and wave through exactly the file this exists to catch.
+    for addons in combinations("mono") {
+        let dir = tempfile::tempdir().unwrap();
+        let root = dir.path().join("demo-lib");
+        generate("mono", &addons, &root);
+
+        let manifest = fs::read_to_string(root.join("package.json")).unwrap();
+        let declared: Vec<String> = manifest
+            .lines()
+            .filter_map(|line| line.trim().strip_prefix('"'))
+            .filter_map(|rest| rest.split_once('"'))
+            .map(|(key, _)| key.to_string())
+            .collect();
+
+        for entry in fs::read_dir(&root).unwrap() {
+            let name = entry.unwrap().file_name().to_string_lossy().into_owned();
+            if !name.ends_with(".config.ts") && !name.ends_with(".config.js") {
+                continue;
+            }
+            let tool = name.split('.').next().unwrap().to_string();
+            assert!(
+                declared.contains(&tool),
+                "mono with {addons:?}: {name} sits at the root, and `{tool}` is not a dependency of the workspace"
+            );
+        }
+    }
 }
 
 #[test]
