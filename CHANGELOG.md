@@ -1,10 +1,24 @@
 # Changelog
 
+## 🎉 [2.5.0] - 2026-09-03
+
+### ✨ Features
+
+- Add the mono form
+
+### 🛠️ Bug Fixes
+
+- Refresh the action versions the frontend forms pin
+
 ## 🎉 [2.4.0] - 2026-09-03
 
 ### ✨ Features
 
 - Add the workspace form
+
+### 📖 Documentation
+
+- Changelog for 2.4.0
 
 ## 🎉 [2.3.0] - 2026-09-02
 
