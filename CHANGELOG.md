@@ -1,10 +1,19 @@
 # Changelog
 
-## 🎉 [2.5.0] - 2026-09-03
+## 🎉 [2.5.0] - 2026-09-15
 
 ### ✨ Features
 
 - Add the mono form
+
+### 📖 Documentation
+
+- Give the readme a status section
+- Changelog for 2.5.0
+
+### 🛟 Miscellaneous Tasks
+
+- Trim the debug profile to line-table info
 
 ### 🛠️ Bug Fixes
 
