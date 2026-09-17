@@ -1,10 +1,13 @@
-<p align="center">
-  <img src="https://raw.githubusercontent.com/lacodda/lyrn/main/assets/banner.svg" width="720" alt="lyrn">
-</p>
-<h1 align="center">lyrn</h1>
-<p align="center">Start a new web application on one finished stack — with one command.</p>
+<p align="center"><img src="https://raw.githubusercontent.com/lacodda/lyrn/main/assets/banner.svg" alt="lyrn - a new app of the line, one command" width="720"></p>
 
-[![NPM Version][npm-image]][npm-url] ![License][license-url]
+> Start a new web application on the lacodda line's stack with one command - one stack assembled to the end, and a repository ready to work in from the first commit.
+
+<p align="center">
+  <a href="https://crates.io/crates/lyrn"><img src="https://img.shields.io/crates/v/lyrn?style=flat-square" alt="crates.io"></a>
+  <a href="https://www.npmjs.com/package/lyrn"><img src="https://img.shields.io/npm/v/lyrn?style=flat-square" alt="npm"></a>
+  <a href="https://github.com/lacodda/lyrn/actions"><img src="https://img.shields.io/github/actions/workflow/status/lacodda/lyrn/ci.yml?style=flat-square" alt="CI"></a>
+  <a href="https://github.com/lacodda/lyrn/blob/main/LICENSE"><img src="https://img.shields.io/github/license/lacodda/lyrn?style=flat-square" alt="License"></a>
+</p>
 
 ## What it is
 
@@ -140,8 +143,4 @@ configuration for anyway.
 
 ## License
 
-MIT — see [LICENSE](LICENSE).
-
-[npm-image]: https://img.shields.io/npm/v/lyrn.svg
-[npm-url]: https://www.npmjs.com/package/lyrn
-[license-url]: https://img.shields.io/npm/l/lyrn.svg
+MIT (c) [Kirill Lakhtachev](https://lacodda.com)
