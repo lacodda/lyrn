@@ -166,6 +166,80 @@ fn the_docs_site_and_the_crate_describe_the_same_product() {
     );
 }
 
+/// Where the docs site is served from has to be said the same way in every
+/// place that says it.
+///
+/// This is the check that was missing. The site moved to `lyrn.lacodda.com`,
+/// `docs/astro.config.mjs` kept `site: 'https://lacodda.github.io'` with
+/// `base: '/lyrn'`, and every page then asked for `/lyrn/_astro/…` on a domain
+/// that serves those files from the root. Every stylesheet 404'd, the site
+/// rendered as unstyled HTML, and nothing here noticed - the pages built, the
+/// links resolved, the descriptions matched. The owner saw it in a browser.
+///
+/// A project site on `lacodda.github.io/<name>` and a site on its own domain
+/// are two consistent arrangements; the failure is a mixture of the two. So
+/// the rule is stated as a choice between them rather than as one fixed
+/// address, and the other storefronts are held to whichever one is in force.
+#[test]
+fn the_docs_site_agrees_with_itself_about_where_it_lives() {
+    let astro = read("docs/astro.config.mjs");
+    let site = astro
+        .lines()
+        .find_map(|line| line.trim().strip_prefix("site:"))
+        .map(|value| value.trim().trim_matches(|c| c == '\'' || c == ',' || c == '"').to_string())
+        .expect("`site` not found in docs/astro.config.mjs");
+
+    // `base` is only meaningful when it is not commented out.
+    let has_base = astro
+        .lines()
+        .any(|line| !line.trim_start().starts_with("//") && line.trim().starts_with("base:"));
+
+    let cname_path = repo_root().join("docs/public/CNAME");
+    let cname = fs::read_to_string(&cname_path).ok().map(|text| text.trim().to_string());
+
+    match &cname {
+        Some(domain) => {
+            // A custom domain serves from the root. A `base` here is what
+            // makes the pages ask for assets under a path that does not exist.
+            assert_eq!(
+                site,
+                format!("https://{domain}"),
+                "docs/public/CNAME says `{domain}` but astro.config.mjs builds for `{site}`"
+            );
+            assert!(
+                !has_base,
+                "astro.config.mjs keeps a `base` while docs/public/CNAME serves `{domain}` from the root - \
+                 every asset URL will carry a prefix the domain does not have"
+            );
+            assert!(
+                !astro.contains("href: '/lyrn/"),
+                "a head link still carries the `/lyrn/` prefix, which the custom domain does not serve"
+            );
+        }
+        None => {
+            // A github.io project site: the base path is what makes it work.
+            assert_eq!(
+                site, "https://lacodda.github.io",
+                "no docs/public/CNAME, so the site must build for lacodda.github.io"
+            );
+            assert!(has_base, "a github.io project site needs `base`, or every asset resolves to the wrong path");
+        }
+    }
+
+    // npm renders `homepage` as the package's link; a stale one sends readers
+    // to a redirect at best.
+    let homepage = json_field("npm/package.json", "homepage");
+    let expected = match &cname {
+        Some(domain) => format!("https://{domain}"),
+        None => "https://lacodda.github.io/lyrn/".to_string(),
+    };
+    assert_eq!(
+        homepage.trim_end_matches('/'),
+        expected.trim_end_matches('/'),
+        "npm/package.json points readers somewhere other than where the docs are served"
+    );
+}
+
 #[test]
 fn every_embedded_template_file_survives_packaging() {
     // `include_str!` reads from the source tree, so a template file the crate
