@@ -58,6 +58,9 @@ lib-cov/
 # Added by cargo
 target/
 
+# The asset exporter in tools/ is Python, and running it leaves bytecode behind
+__pycache__/
+
 # Docs
 docs/booknpm/README.md
 npm/lyrn

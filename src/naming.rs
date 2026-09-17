@@ -25,6 +25,18 @@ pub const LINE_ACCENTS: &[(&str, &str)] = &[
 
 /// The accent a product without its own mark starts with: neutral graphite,
 /// a placeholder that reads as "the mark has not been drawn yet".
+///
+/// Deliberately *not* the `#8E9AA3` the umbrella mark's tile is drawn in,
+/// though both are the same placeholder graphite by intent. An accent is UI
+/// colour - dowel derives text, borders and button fills from it - and
+/// `#8E9AA3` carries 2.88:1 against white, below the floor for anything
+/// readable; this one carries 4.93:1. The tile has no such duty: its colour
+/// only has to part from the near-black plate behind it, which it does at
+/// 5.65:1. Two roles, two values, one meaning. Measured before splitting them.
+///
+/// The tile's colour lives in `tools/render-placeholder-icon.py`, where it is
+/// drawn, and is held there by `tests/placeholder_icon.rs`; a second copy here
+/// would only be one more thing to fall out of step.
 pub const PLACEHOLDER_ACCENT: &str = "#6E7079";
 
 /// Why a name cannot be used.

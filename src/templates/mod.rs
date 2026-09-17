@@ -51,6 +51,7 @@ mod tests {
         "title",
         "description",
         "accent",
+        "mark",
         "author",
         "form",
         "year",

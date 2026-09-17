@@ -37,6 +37,14 @@ pub fn build_context(args: &NewArgs, manifest: &TemplateManifest, interactive: b
         None => PLACEHOLDER_ACCENT.to_string(),
     };
 
+    // Whether this project still wears the line's placeholder rather than a
+    // mark of its own. Written into `lyrn.toml` as a fact rather than left for
+    // `lyrn doctor` to infer: the alternative is the doctor comparing icon
+    // bytes against a copy of the placeholder it carries, which goes stale the
+    // first time the placeholder is redrawn and then reports every project as
+    // branded. The generator knows the answer; it says so.
+    let mark_chosen = accent != PLACEHOLDER_ACCENT;
+
     let description = match &args.description {
         Some(value) => value.clone(),
         None if interactive => prompt_line("What is it, in one line?", &format!("A {} on the lacodda line's stack.", args.form))?,
@@ -58,6 +66,7 @@ pub fn build_context(args: &NewArgs, manifest: &TemplateManifest, interactive: b
         .set("title", naming::title_from_name(&args.name))
         .set("description", description)
         .set("accent", accent)
+        .set("mark", if mark_chosen { "chosen" } else { "placeholder" })
         .set("author", author)
         .set("form", args.form.as_str())
         .set("year", current_year())
@@ -318,6 +327,44 @@ mod tests {
         a.accent = Some("kilna".to_string());
         let context = build_context(&a, &manifest, false).unwrap();
         assert_eq!(context.get("accent"), Some("#D9569E"));
+    }
+
+    /// A project generated without an accent still wears the umbrella mark,
+    /// and `lyrn.toml` says so. The doctor reads this rather than comparing
+    /// the icon against a copy of the placeholder it would have to carry.
+    #[test]
+    fn a_project_without_an_accent_is_recorded_as_unmarked() {
+        let manifest = TemplateManifest::default();
+        let context = build_context(&args("demo-app"), &manifest, false).unwrap();
+        assert_eq!(context.get("mark"), Some("placeholder"));
+    }
+
+    /// Naming a colour is what choosing a mark looks like from here: the
+    /// accent is the one thing `lyrn new` learns about a product's identity,
+    /// and dowel derives the rest of the palette from it.
+    #[test]
+    fn choosing_an_accent_is_choosing_a_mark() {
+        let manifest = TemplateManifest::default();
+        let mut a = args("demo-app");
+        a.accent = Some("kilna".to_string());
+        assert_eq!(build_context(&a, &manifest, false).unwrap().get("mark"), Some("chosen"));
+
+        // A literal colour counts too - a product may have a mark before it
+        // has a place in the line's registry.
+        let mut b = args("demo-app");
+        b.accent = Some("#123456".to_string());
+        assert_eq!(build_context(&b, &manifest, false).unwrap().get("mark"), Some("chosen"));
+    }
+
+    /// The placeholder's own hex, given explicitly, is still the placeholder.
+    /// Otherwise `--accent '#6E7079'` would silently promote an unmarked
+    /// project to a marked one, and the doctor would stop asking.
+    #[test]
+    fn spelling_out_the_placeholder_colour_is_not_choosing_a_mark() {
+        let manifest = TemplateManifest::default();
+        let mut a = args("demo-app");
+        a.accent = Some(PLACEHOLDER_ACCENT.to_string());
+        assert_eq!(build_context(&a, &manifest, false).unwrap().get("mark"), Some("placeholder"));
     }
 
     #[test]

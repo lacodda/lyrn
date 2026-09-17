@@ -87,14 +87,27 @@ app in release builds.
 
 ### The icons
 
-`src-tauri/icons/` ships a placeholder: a graphite tile with `??`, plainly not
-a real mark. It is there because a Tauri build on Windows fails outright
-without an `.ico` - a generated project has to build on the first try.
+`src-tauri/icons/` ships the line's umbrella mark - a lambda on a graphite
+tile - as a placeholder. It is there because a Tauri build on Windows fails
+outright without an `.ico`, and a generated project has to build on the first
+try. It says "a project of this line whose own mark is not drawn yet" rather
+than nothing at all, and `lyrn.toml` records the same fact as
+`mark = "placeholder"`, so tooling does not have to guess it from the bytes.
 
-Replace it with `pnpm tauri icon path/to/mark.png` once the mark exists. In the
-`.ico` the **largest image must come first**: Windows reads the first entry for
-the taskbar and the title bar, and a 16px one there leaves the application
-looking blurred everywhere that matters.
+The placeholder follows the line's level rule, which applies to **each image
+inside the `.ico`**, not to the file as a whole: the filled tile at 27px and
+below, where an outline would collapse into noise, and the outlined mark on a
+dark plate above that.
+
+Replace it with `pnpm tauri icon path/to/mark.png` once the mark exists, and
+set `mark = "chosen"`. Two things to keep when you do:
+
+- **The largest image comes first.** Windows picks by nearest size and ignores
+  order, but `tauri-codegen` takes the first entry verbatim for the window, so
+  a 16px one there leaves the title bar blurred.
+- **The level rule, per size.** A single drawing scaled to every size gives
+  either a flat lozenge on the desktop or mush in the title bar, depending on
+  which drawing you picked.
 
 ## service
 

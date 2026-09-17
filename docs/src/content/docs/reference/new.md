@@ -57,7 +57,23 @@ derives the rest from it:
 ```
 
 A project with no mark of its own yet gets neutral graphite — a placeholder
-that reads as "this has not been drawn yet".
+that reads as "this has not been drawn yet". `lyrn.toml` records which of the
+two happened:
+
+```toml
+[project]
+accent = "#6E7079"
+mark = "placeholder"   # or `chosen`, once the product has a mark
+```
+
+Naming an accent is what choosing a mark looks like from here — it is the one
+thing `lyrn new` learns about a product's identity, and the whole palette is
+derived from it. Giving the placeholder's own hex explicitly still counts as
+unmarked, so nothing is quietly promoted.
+
+On the `desktop` form the placeholder is visible rather than implied: the
+application icon is the line's umbrella mark until you replace it. See
+[the desktop form](/reference/forms/#the-icons).
 
 ## The repository
 

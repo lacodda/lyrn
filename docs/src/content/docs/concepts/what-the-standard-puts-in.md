@@ -16,7 +16,7 @@ is there because leaving it out costs more later.
 | `.editorconfig` | Indentation stops being a matter of whose editor opened the file |
 | `.gitattributes` | `eol=lf`, so a tool that rewrites a file to CRLF cannot hide the real change in the diff |
 | `components.json` | `shadcn add` knows where to copy a dowel primitive |
-| `lyrn.toml` | What this was generated from, for `doctor` and `upgrade` later |
+| `lyrn.toml` | What this was generated from, and whether it has a mark yet, for `doctor` and `upgrade` later |
 
 ## The gate is one script
 

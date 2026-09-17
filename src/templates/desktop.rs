@@ -122,10 +122,15 @@ pub fn sources() -> Vec<SourceFile> {
             addon: None,
         },
         // A Tauri build on Windows fails outright without an .ico, so the form
-        // ships a placeholder: a graphite tile with `??`, obviously not a real
-        // mark. Deliberately plain - a pretty placeholder is one nobody
-        // replaces. In the .ico the largest image comes first, because Windows
-        // reads the first entry for the taskbar and the title bar.
+        // ships one before the product has a mark: the line's umbrella mark,
+        // lambda on graphite, which reads as "a lacodda project whose own mark
+        // is not drawn yet" rather than as Tauri's anonymous `??`.
+        //
+        // Drawn by `tools/render-placeholder-icon.py`, and held to the line's
+        // level rule per image inside the container by `tests/placeholder_icon.rs`:
+        // the filled tile at 27px and below, the plated mark above it, largest
+        // image first. `lyrn.toml` records `mark = "placeholder"` so the doctor
+        // can say so without reading these bytes.
         SourceFile {
             path: "src-tauri/icons/icon.png",
             contents: Contents::Binary(include_bytes!("desktop/icons/icon.png")),
