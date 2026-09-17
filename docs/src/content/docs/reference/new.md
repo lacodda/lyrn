@@ -26,13 +26,13 @@ error: the name starts with `D`; it has to start with a lowercase letter
 
 | Option | Default | What it does |
 | --- | --- | --- |
-| `--form <form>` | `spa` | The shape of the project; see [Forms](/lyrn/reference/forms/) |
+| `--form <form>` | `spa` | The shape of the project; see [Forms](/reference/forms/) |
 | `--accent <colour>` | asked, else graphite | A product of the line, or a `#rrggbb` value |
 | `--description <text>` | asked, else generic | One line describing what the project is |
 | `--author <name>` | `git config user.name` | Recorded in LICENSE |
 | `--path <path>` | `./<name>` | Where to create it |
 | `--repo <owner/name>` | looked up | The GitHub repository it will live in |
-| `--with <addon,...>` | none | Optional pieces, per form; see [Forms](/lyrn/reference/forms/) |
+| `--with <addon,...>` | none | Optional pieces, per form; see [Forms](/reference/forms/) |
 | `-y`, `--yes` | — | Accept the defaults instead of asking |
 | `--dry-run` | — | Show what would be written, and write nothing |
 | `--no-hooks` | — | Skip installing dependencies and starting the repository |

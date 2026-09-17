@@ -180,6 +180,42 @@ fn the_docs_site_and_the_crate_describe_the_same_product() {
 /// are two consistent arrangements; the failure is a mixture of the two. So
 /// the rule is stated as a choice between them rather than as one fixed
 /// address, and the other storefronts are held to whichever one is in force.
+/// Every docs source, with absolute URLs stripped out.
+///
+/// `/lyrn/` is a legitimate part of `github.com/lacodda/lyrn/...` and of the
+/// raw-content URLs the install snippets use, so those are removed before the
+/// text is searched; what is left is site-relative links, where the prefix is
+/// either required or forbidden depending on how the site is served.
+fn prefixed_link_sources() -> Vec<(String, String)> {
+    fn walk(dir: &Path, out: &mut Vec<(String, String)>) {
+        let Ok(entries) = fs::read_dir(dir) else { return };
+        for entry in entries.flatten() {
+            let path = entry.path();
+            // Built output and dependencies are not sources, and walking them
+            // turns a millisecond test into a slow one.
+            if path
+                .file_name()
+                .is_some_and(|name| name == "node_modules" || name == "dist" || name == ".astro")
+            {
+                continue;
+            }
+            if path.is_dir() {
+                walk(&path, out);
+            } else if path.extension().is_some_and(|e| e == "md" || e == "mdx" || e == "mjs") {
+                let relative = path.strip_prefix(repo_root()).unwrap_or(&path).display().to_string().replace('\\', "/");
+                let text = fs::read_to_string(&path).unwrap_or_default();
+                // Drop every absolute URL; only site-relative paths remain.
+                let stripped = text.split_whitespace().filter(|word| !word.contains("://")).collect::<Vec<_>>().join(" ");
+                out.push((relative, stripped));
+            }
+        }
+    }
+
+    let mut out = Vec::new();
+    walk(&repo_root().join("docs"), &mut out);
+    out
+}
+
 #[test]
 fn the_docs_site_agrees_with_itself_about_where_it_lives() {
     let astro = read("docs/astro.config.mjs");
@@ -211,10 +247,18 @@ fn the_docs_site_agrees_with_itself_about_where_it_lives() {
                 "astro.config.mjs keeps a `base` while docs/public/CNAME serves `{domain}` from the root - \
                  every asset URL will carry a prefix the domain does not have"
             );
-            assert!(
-                !astro.contains("href: '/lyrn/"),
-                "a head link still carries the `/lyrn/` prefix, which the custom domain does not serve"
-            );
+            // The config is not the only place the old prefix hides. Content
+            // links are written by hand, and three of them survived the move
+            // to the domain - including the front page's "Get started"
+            // button, which 404'd while every asset around it loaded. Found by
+            // walking the live site, not by reading the config.
+            for (file, text) in prefixed_link_sources() {
+                assert!(
+                    !text.contains("/lyrn/"),
+                    "{file} links to `/lyrn/...`, a path the custom domain does not serve - \
+                     with no `base`, an internal link is written from the root"
+                );
+            }
         }
         None => {
             // A github.io project site: the base path is what makes it work.
