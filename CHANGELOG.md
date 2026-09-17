@@ -1,6 +1,16 @@
 # Changelog
 
+## 🎉 [2.5.3] - 2026-09-17
+
+### 🛠️ Bug Fixes
+
+- Drop the leftover path prefix from internal links
+
 ## 🎉 [2.5.2] - 2026-09-17
+
+### 📖 Documentation
+
+- Changelog for 2.5.2
 
 ### 🛠️ Bug Fixes
 
