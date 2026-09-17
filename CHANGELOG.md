@@ -1,5 +1,11 @@
 # Changelog
 
+## 🎉 [2.5.1] - 2026-09-17
+
+### ✨ Features
+
+- Ship the line's umbrella mark as the placeholder icon
+
 ## 🎉 [2.5.0] - 2026-09-15
 
 ### ✨ Features
@@ -8,6 +14,7 @@
 
 ### 📖 Documentation
 
+- Changelog for 2.5.0
 - Give the readme a status section
 - Changelog for 2.5.0
 
