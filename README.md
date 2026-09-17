@@ -125,16 +125,10 @@ More forms — egui, plugins, docs sites — follow in 2.x.
 
 ## Status
 
-The six forms above work today: each one is generated and put through its own
-gate on Linux, macOS and Windows on every push. What is next:
-
-- [ ] **More forms** - plugins, then a docs site
-- [ ] **`lyrn doctor`** - an existing repository read against the standard, and
-      `lyrn upgrade` to move it forward when the standard moves
-- [ ] **Repository chores** - creating it, its branch protection, its stand
-
-Released versions and what landed in each:
-[the Releases page](https://github.com/lacodda/lyrn/releases).
+v2.5.3, in daily use. All six forms work today, and each one is generated and
+put through its own gate on Linux, macOS and Windows on every push. What landed
+in each version:
+[CHANGELOG](https://github.com/lacodda/lyrn/blob/main/CHANGELOG.md).
 
 ## Migrating from 1.x
 
