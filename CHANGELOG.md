@@ -1,10 +1,20 @@
 # Changelog
 
+## 🎉 [2.5.2] - 2026-09-17
+
+### 🛠️ Bug Fixes
+
+- Build the site for its own domain
+
 ## 🎉 [2.5.1] - 2026-09-17
 
 ### ✨ Features
 
 - Ship the line's umbrella mark as the placeholder icon
+
+### 📖 Documentation
+
+- Changelog for 2.5.1
 
 ## 🎉 [2.5.0] - 2026-09-15
 
