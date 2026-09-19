@@ -5,19 +5,22 @@ description: The shapes a generated project can take.
 
 ```console
 $ lyrn forms
-spa         Single-page app: Vite, React, TypeScript, Tailwind, dowel
-cli         Command-line tool: Rust, clap, anyhow, dialoguer
+spa            Single-page app: Vite, React, TypeScript, Tailwind, dowel
+cli            Command-line tool: Rust, clap, anyhow, dialoguer
   --with keyring       Secrets in the OS keyring, never in a config file
   --with self-update   A `self-update` command that reads the releases page
-desktop     Desktop app: Tauri 2 around the spa stack
+desktop        Desktop app: Tauri 2 around the spa stack
   --with i18n          i18next, with a gate holding every locale to the source
-service     HTTP service: axum, sqlx, Postgres
+service        HTTP service: axum, sqlx, Postgres
   --with spa           A web UI compiled into the binary and served by it
-workspace   Cargo workspace: a library crate plus the CLI that uses it
+workspace      Cargo workspace: a library crate plus the CLI that uses it
   --with keyring       Secrets in the OS keyring, never in a config file
   --with self-update   A `self-update` command that reads the releases page
-mono        pnpm monorepo publishing a TypeScript package to npm
+mono           pnpm monorepo publishing a TypeScript package to npm
   --with stand         A Vite page in the workspace where the package runs
+plugin         Plugin for a host of the line: an executable speaking JSON over stdio
+  --host kilna         a desktop workbench for content makers
+tauri-plugin   Tauri 2 plugin: a Rust crate and the npm package that calls it
 ```
 
 A form is the shape of the repository, not a choice of framework. The line runs
@@ -246,6 +249,73 @@ screen is the kind of thing nobody reports and everybody notices. The gate also
 holds `{{placeholder}}` names to the source, so a translation cannot silently
 drop the one that carries a number.
 
+## plugin
+
+A plugin for an application of the line: an ordinary executable that speaks
+JSON over stdio.
+
+| | |
+| --- | --- |
+| Shape | One binary, `<host>-plugin-<name>` |
+| Protocol | `--manifest` on stdout, `run` with an invocation on stdin |
+| Errors | A reason on stderr and a non-zero exit, or an `error` in the reply |
+| Tests | `tests/protocol.rs`, running the binary as the host runs it |
+| Release | Three targets, binaries attached to the GitHub release |
+
+```console
+$ lyrn new wordcount --form plugin --host kilna
+```
+
+It is not a library and not a sandboxed runtime. Rust has no stable ABI, so a
+dynamically loaded plugin would break on every host release; and the
+integrations a plugin exists for - a mail client, a corporate API, a device -
+are exactly the ones a sandbox forbids. The generated ADR 0002 says so in the
+repository itself.
+
+The plugin lives for the duration of one call and holds no state. The host
+sends the whole subject rather than an identifier, so the first thing a plugin
+does is never a request for the data back.
+
+### `--host`
+
+The form has no default host, because the answer changes what the generated
+project is: the protocol version it declares, the points it may extend, and the
+name the host discovers it by.
+
+Only applications that accept plugins **today** are offered. `lyrn forms` lists
+them. Asking for one whose turn has not come is refused with that reason rather
+than accepted:
+
+```console
+$ lyrn new demo --form plugin --host kasl
+error: `kasl` does not accept plugins yet; when it does it will be listed here (known: kilna)
+```
+
+A preset written against a protocol nobody implements cannot be checked by
+anything: the project would compile and its protocol test would pass, because
+both would be measured against an invention.
+
+## tauri-plugin
+
+A Tauri 2 plugin: the Rust crate an application registers, and the npm package
+its webview calls.
+
+| | |
+| --- | --- |
+| Rust | `tauri-plugin-<name>`, published to crates.io |
+| Webview | `tauri-plugin-<name>-api`, published to npm |
+| Permissions | Generated from `COMMANDS` in `build.rs` |
+| Tests | Both halves, each holding the strings the other depends on |
+| Release | One tag, both registries |
+
+Both halves ship from one repository and under one tag. They agree on three
+spellings - the plugin name, the command key, and the permission generated from
+it - and a disagreement between them is not a build failure. It is a permission
+error in the webview, at run time, in the application that installed the plugin.
+
+CI holds all three against each other after generating the project, because
+neither half's own gate can see the other.
+
 ## Coming in 2.x
 
-The `egui`, plugin and docs shapes the line already uses.
+The `egui` and docs shapes the line already uses.

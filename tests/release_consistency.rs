@@ -339,3 +339,65 @@ fn the_installers_agree_on_the_repository() {
         );
     }
 }
+
+/// Every form the binary carries is named in both shopfronts, and neither
+/// names one it does not carry.
+///
+/// The drift this catches is the quiet kind: a form is added, the code and its
+/// tests are right, and the README goes on describing the set that existed
+/// before. It happened on this very version - the README said "all six forms"
+/// while the binary carried eight - and nothing was red.
+#[test]
+fn both_shopfronts_list_exactly_the_forms_the_binary_carries() {
+    let listing = String::from_utf8(Command::cargo_bin("lyrn").unwrap().arg("forms").output().unwrap().stdout).unwrap();
+
+    // The forms are the lines that do not begin with an option's indent.
+    let forms: Vec<String> = listing
+        .lines()
+        .filter(|line| !line.starts_with(' ') && !line.trim().is_empty())
+        .filter_map(|line| line.split_whitespace().next().map(str::to_string))
+        .collect();
+
+    assert!(forms.len() >= 2, "no forms parsed out of `lyrn forms`");
+
+    let readme = read("README.md");
+    let docs = read("docs/src/content/docs/reference/forms.md");
+
+    for form in &forms {
+        assert!(readme.contains(&format!("`{form}`")), "README does not name the `{form}` form");
+        assert!(docs.contains(&format!("## {form}")), "docs/reference/forms.md has no `## {form}` section");
+    }
+
+    // The other direction: a section left behind after a form is renamed
+    // documents something nobody can ask for.
+    for line in docs.lines() {
+        let Some(heading) = line.strip_prefix("## ") else { continue };
+        let heading = heading.trim();
+        // The page carries prose sections too; only the ones that look like a
+        // form name are claims about the binary.
+        if heading.contains(' ') || heading.chars().any(|c| c.is_uppercase()) {
+            continue;
+        }
+        assert!(
+            forms.iter().any(|f| f == heading),
+            "docs/reference/forms.md documents the `{heading}` form, which the binary does not carry"
+        );
+    }
+}
+
+/// The transcript in the docs is what `lyrn forms` actually prints.
+///
+/// A hand-edited transcript is a screenshot of a version that no longer
+/// exists, and it is the first thing a reader trusts.
+#[test]
+fn the_forms_transcript_is_the_one_the_binary_prints() {
+    let listing = String::from_utf8(Command::cargo_bin("lyrn").unwrap().arg("forms").output().unwrap().stdout).unwrap();
+    let docs = read("docs/src/content/docs/reference/forms.md");
+
+    for line in listing.lines().filter(|l| !l.trim().is_empty()) {
+        assert!(
+            docs.contains(line.trim_end()),
+            "docs/reference/forms.md no longer shows what `lyrn forms` prints; this line is missing:\n  {line}"
+        );
+    }
+}

@@ -63,6 +63,7 @@ $ lyrn forms
 | Option | What it does |
 | --- | --- |
 | `--form <form>` | The shape of the project (default: `spa`) |
+| `--host <host>` | The application a plugin extends; `--form plugin` only |
 | `--accent <colour>` | A product of the line, or a `#rrggbb` value |
 | `--description <text>` | One line describing what the project is |
 | `--author <name>` | Recorded in LICENSE; defaults to `git config user.name` |
@@ -100,6 +101,10 @@ case its mark's colour is used.
 | `cli` | Command-line tool: Rust, clap, anyhow, dialoguer |
 | `desktop` | Desktop app: Tauri 2 around the spa stack |
 | `service` | HTTP service: axum, sqlx, Postgres |
+| `workspace` | Cargo workspace: a library crate plus the CLI that uses it |
+| `mono` | pnpm monorepo publishing a TypeScript package to npm |
+| `plugin` | Plugin for a host of the line: an executable speaking JSON over stdio |
+| `tauri-plugin` | Tauri 2 plugin: a Rust crate and the npm package that calls it |
 
 A form can carry optional pieces. The line's four CLIs agree on clap, anyhow
 and dialoguer and disagree about everything else, so the rest is asked for:
@@ -124,11 +129,23 @@ program can call the logic without taking the command line with it.
 imports it with a plain `node` — the only check that catches a package which
 builds and cannot be imported. `--with stand` adds a page where it runs.
 
-More forms — egui, plugins, docs sites — follow in 2.x.
+`--form plugin` writes a plugin for an application of the line: an ordinary
+executable that answers `--manifest` with what it offers and `run` with an
+invocation on stdin. `--host` names the application, and there is no default —
+the host decides the protocol the plugin declares, so a guess would produce a
+plugin nothing runs. The generated project carries a test that runs the binary
+exactly as the host does.
+
+`--form tauri-plugin` writes both halves of a Tauri 2 plugin, the crate and the
+npm package, from one repository and under one tag. They agree on three
+spellings, and a disagreement is a permission error in somebody else's
+application rather than a build failure here — so CI holds them to each other.
+
+More forms — egui, docs sites — follow in 2.x.
 
 ## Status
 
-v2.5.3, in daily use. All six forms work today, and each one is generated and
+v2.6.0, in daily use. All eight forms work today, and each one is generated and
 put through its own gate on Linux, macOS and Windows on every push. What landed
 in each version:
 [CHANGELOG](https://github.com/lacodda/lyrn/blob/main/CHANGELOG.md).
