@@ -1,6 +1,25 @@
 # Changelog
 
+## 🎉 [2.6.0] - 2026-09-19
+
+### ✨ Features
+
+- Add the plugin and tauri-plugin forms
+
+### 📖 Documentation
+
+- Give the readme the line's header
+- Replace the status checklist with what ships today
+
+### 🧪 Testing
+
+- Hold the shopfronts to the forms the binary carries
+
 ## 🎉 [2.5.3] - 2026-09-17
+
+### 📖 Documentation
+
+- Changelog for 2.5.3
 
 ### 🛠️ Bug Fixes
 
