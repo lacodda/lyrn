@@ -1,0 +1,75 @@
+# {{ title }}
+
+{{ description }}
+
+A [Tauri 2](https://tauri.app) plugin for the lacodda line.
+Scaffolded with [lyrn](https://github.com/lacodda/lyrn).
+
+## Install
+
+Two halves, published together and versioned together.
+
+```console
+$ cargo add tauri-plugin-{{ name }}
+$ pnpm add tauri-plugin-{{ name }}-api
+```
+
+Register the Rust half on the builder:
+
+```rust
+tauri::Builder::default()
+    .plugin(tauri_plugin_{{ lib_name }}::init())
+    .run(tauri::generate_context!())
+    .expect("error while running the application");
+```
+
+Grant the permission set in `src-tauri/capabilities/default.json`:
+
+```json
+{ "permissions": ["{{ name }}:default"] }
+```
+
+Then call it from the webview:
+
+```ts
+import { {{ command_camel }} } from 'tauri-plugin-{{ name }}-api'
+
+const answer = await {{ command_camel }}()
+```
+
+## The two halves
+
+A Tauri plugin is a Rust crate the application registers and an npm package the
+webview calls, and they only work if they agree on three spellings: the plugin
+name, the command key, and the permission generated from it. All three are
+declared once here - `NAME` in `src/lib.rs`, `COMMANDS` in `build.rs`, and the
+`plugin:{{ name }}|{{ command_key }}` string in `guest-js/index.ts` - and the
+tests on both sides hold them to each other.
+
+They are published from one repository for the same reason: a release that
+moved one half and not the other would fail in the webview, at run time, with a
+permission error rather than a build failure.
+
+## Developing
+
+```console
+$ cargo fmt --check && cargo clippy --all-targets -- -D warnings && cargo test
+$ pnpm install && pnpm lint && pnpm test && pnpm build
+```
+
+That is the same gate CI runs, so a green terminal means a green pull request.
+
+## Layout
+
+| Path | What lives there |
+| --- | --- |
+| `src/lib.rs` | The plugin, its state and the builder that registers it |
+| `src/commands.rs` | The surface the webview may call |
+| `build.rs` | The command list Tauri generates permissions from |
+| `permissions/` | The permission set an application grants |
+| `guest-js/` | The npm package the webview imports |
+| `docs/adr/` | Architecture decisions, newest last |
+
+## License
+
+MIT (c) [{{ author }}](https://lacodda.com)

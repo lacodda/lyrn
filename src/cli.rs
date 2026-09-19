@@ -15,7 +15,11 @@ pub struct Cli {
 #[derive(Subcommand)]
 pub enum Command {
     /// Create a new project
-    New(NewArgs),
+    ///
+    /// Boxed: `NewArgs` grew past the point where carrying it inline makes
+    /// every `Command` the size of the largest variant, and the enum is moved
+    /// around far more often than a new project is created.
+    New(Box<NewArgs>),
     /// List the forms a project can take
     Forms,
 }
@@ -28,6 +32,10 @@ pub struct NewArgs {
     /// The shape of the project
     #[arg(long, value_name = "FORM", default_value = "spa")]
     pub form: Form,
+
+    /// The application a plugin extends (see `lyrn forms`); `--form plugin` only
+    #[arg(long, value_name = "HOST")]
+    pub host: Option<String>,
 
     /// The product's colour: a product of the line, or a `#rrggbb` value
     #[arg(long, value_name = "COLOUR")]

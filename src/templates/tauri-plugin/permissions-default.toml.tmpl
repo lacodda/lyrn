@@ -1,0 +1,10 @@
+"$schema" = "schemas/schema.json"
+
+[default]
+description = """
+What an application gets by registering this plugin without saying more.
+"""
+# Generated from `COMMANDS` in build.rs. A command left out here is registered
+# in Rust and denied in the webview, which looks like the plugin is broken
+# rather than like a permission is missing.
+permissions = ["allow-{{ command_key }}"]

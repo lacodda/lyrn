@@ -1,6 +1,7 @@
 mod cli;
 mod commands;
 mod generate;
+mod host;
 mod model;
 mod naming;
 mod render;
@@ -16,7 +17,7 @@ fn main() -> ExitCode {
     let cli = cli::Cli::parse();
 
     let result = match cli.command {
-        cli::Command::New(args) => commands::new::run(args),
+        cli::Command::New(args) => commands::new::run(*args),
         cli::Command::Forms => {
             list_forms();
             Ok(())
@@ -45,6 +46,14 @@ fn list_forms() {
         // `--with keyring` means nothing without knowing which forms take it.
         for addon in form.addons() {
             println!("  --with {:<addon_column$} {}", addon.as_str(), addon.summary());
+        }
+        // A form generated against a host is useless without knowing which
+        // hosts exist: `--host` has no default worth guessing, and the answer
+        // changes as the line's applications grow plugin hosts of their own.
+        if form.takes_a_host() {
+            for host in host::ALL {
+                println!("  --host {:<addon_column$} {}", host.name, host.about);
+            }
         }
     }
 }

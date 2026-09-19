@@ -24,11 +24,24 @@ pub enum Form {
     Workspace,
     /// A pnpm monorepo publishing a TypeScript package.
     Mono,
+    /// A subprocess plugin for a host application of the line.
+    Plugin,
+    /// A Tauri 2 plugin: a Rust crate and the npm package that calls it.
+    TauriPlugin,
 }
 
 impl Form {
     /// Every form the binary carries built in.
-    pub const ALL: &'static [Form] = &[Form::Spa, Form::Cli, Form::Desktop, Form::Service, Form::Workspace, Form::Mono];
+    pub const ALL: &'static [Form] = &[
+        Form::Spa,
+        Form::Cli,
+        Form::Desktop,
+        Form::Service,
+        Form::Workspace,
+        Form::Mono,
+        Form::Plugin,
+        Form::TauriPlugin,
+    ];
 
     pub fn as_str(self) -> &'static str {
         match self {
@@ -38,6 +51,8 @@ impl Form {
             Form::Service => "service",
             Form::Workspace => "workspace",
             Form::Mono => "mono",
+            Form::Plugin => "plugin",
+            Form::TauriPlugin => "tauri-plugin",
         }
     }
 
@@ -50,6 +65,8 @@ impl Form {
             Form::Service => "HTTP service: axum, sqlx, Postgres",
             Form::Workspace => "Cargo workspace: a library crate plus the CLI that uses it",
             Form::Mono => "pnpm monorepo publishing a TypeScript package to npm",
+            Form::Plugin => "Plugin for a host of the line: an executable speaking JSON over stdio",
+            Form::TauriPlugin => "Tauri 2 plugin: a Rust crate and the npm package that calls it",
         }
     }
 
@@ -66,7 +83,16 @@ impl Form {
             // command-line tool, only with its logic moved into a library.
             Form::Workspace => &[Addon::Keyring, Addon::SelfUpdate],
             Form::Mono => &[Addon::Stand],
+            // A plugin lives for the duration of one call: it has nothing to
+            // keep in a keyring and nothing to update itself from.
+            Form::Plugin => &[],
+            Form::TauriPlugin => &[],
         }
+    }
+
+    /// Whether this form is generated against a host application.
+    pub fn takes_a_host(self) -> bool {
+        matches!(self, Form::Plugin)
     }
 }
 
@@ -153,6 +179,8 @@ impl std::str::FromStr for Form {
             "service" => Ok(Form::Service),
             "workspace" => Ok(Form::Workspace),
             "mono" => Ok(Form::Mono),
+            "plugin" => Ok(Form::Plugin),
+            "tauri-plugin" => Ok(Form::TauriPlugin),
             other => Err(format!(
                 "unknown form `{other}` (known: {})",
                 Form::ALL.iter().map(|f| f.as_str()).collect::<Vec<_>>().join(", ")

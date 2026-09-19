@@ -1,0 +1,31 @@
+# ADR 0002: Both halves ship from one repository
+
+- Status: accepted
+- Date: {{ date }}
+
+## Context
+
+A Tauri plugin is two artefacts: a crate the application registers on its
+builder, and an npm package the webview imports. They agree on three spellings
+- the plugin name, the command key, and the permission generated from it - and
+a disagreement in any of them is not a build failure. It is a permission error
+in the webview, at run time, in the application that depends on the plugin.
+
+Splitting them into two repositories is possible and is what a Rust crate and a
+TypeScript package would normally do.
+
+## Decision
+
+Both halves live here and are released under one tag. The crate publishes to
+crates.io and the package to npm from the same workflow, at the same version.
+
+## Consequences
+
+A change that moves one half cannot be released without the other, and the two
+tests that hold the shared strings - the Rust one asserting the registered name
+and the TypeScript one asserting the `plugin:name|command` prefix - run in the
+same gate.
+
+The price is a repository with two toolchains in it, and a version number that
+moves on npm because the Rust half changed. That is cheaper than a version pair
+that has to be reasoned about by whoever installs the plugin.

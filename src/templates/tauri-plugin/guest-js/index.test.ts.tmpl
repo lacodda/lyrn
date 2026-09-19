@@ -1,0 +1,33 @@
+import { describe, expect, it, vi } from 'vitest'
+
+// The mock is declared before the module under test is imported, because
+// `vi.mock` is hoisted above the imports and the real `@tauri-apps/api` would
+// otherwise try to reach a Tauri runtime that is not there.
+const invoke = vi.fn()
+vi.mock('@tauri-apps/api/core', () => ({ invoke: (...args: unknown[]) => invoke(...args) }))
+
+// Imported under a namespace rather than by name: a command is named after
+// what it does, and sooner or later that is a word vitest also exports. The
+// collision is a parse error in this file, which reads as the test file being
+// broken rather than as the command being badly named.
+import * as plugin from './index'
+
+describe('{{ command_camel }}', () => {
+  it('calls the command under the prefix the permissions grant', async () => {
+    // The prefix is the whole contract with Tauri: `plugin:name|command`.
+    // Spelled any other way the call is refused, and whoever installed the
+    // plugin sees a permission error rather than a missing function.
+    invoke.mockResolvedValue('answered')
+
+    await expect(plugin.{{ command_camel }}()).resolves.toBe('answered')
+    expect(invoke).toHaveBeenCalledWith('plugin:{{ name }}|{{ command_key }}')
+  })
+
+  it('lets a failure from the Rust half through rather than swallowing it', async () => {
+    // An error crossing from Rust arrives as its message. Catching it here
+    // would leave the caller with a resolved promise and no answer.
+    invoke.mockRejectedValue('nothing to report')
+
+    await expect(plugin.{{ command_camel }}()).rejects.toBe('nothing to report')
+  })
+})

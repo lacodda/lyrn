@@ -1,0 +1,110 @@
+//! {{ title }}: {{ description }}
+//!
+//! A Tauri 2 plugin has two halves that have to agree: this crate, which the
+//! application registers on its builder, and the npm package under `guest-js/`,
+//! which the webview calls. Both are published from this repository so they
+//! cannot drift apart between releases.
+//!
+//! The snippet is `ignore` rather than `no_run`: `generate_context!` reads the
+//! application's `tauri.conf.json` at compile time, and a plugin repository has
+//! none - it is the application that has one.
+//!
+//! ```ignore
+//! tauri::Builder::default()
+//!     .plugin(tauri_plugin_{{ lib_name }}::init())
+//!     .run(tauri::generate_context!())
+//!     .expect("error while running the application");
+//! ```
+
+use tauri::{
+    Manager, Runtime,
+    plugin::{Builder, TauriPlugin},
+};
+
+mod commands;
+mod error;
+
+pub use error::{Error, Result};
+
+/// The name the application and the webview both know this plugin by.
+///
+/// One constant rather than a string in three places: the permission set, the
+/// `links` key in the manifest and the JavaScript import all have to spell it
+/// the same, and a typo in any of them fails at a different moment.
+pub const NAME: &str = "{{ name }}";
+
+/// What the plugin keeps for the lifetime of the application.
+///
+/// A plugin's state is reached through `app.state()`, never through a global:
+/// an application may run more than one Tauri instance in its tests, and a
+/// global would have them share it.
+pub struct {{ type_name }}<R: Runtime> {
+    #[allow(dead_code)]
+    app: tauri::AppHandle<R>,
+}
+
+impl<R: Runtime> {{ type_name }}<R> {
+    /// The plugin's own work. Replace it with what the plugin is for.
+    pub fn describe(&self) -> String {
+        Self::description()
+    }
+
+    /// The same answer, without an application to ask it of.
+    ///
+    /// Separated so that it can be tested: everything reachable through the
+    /// plugin needs a Tauri runtime to exist, and the mock runtime links the
+    /// system webview, which a build machine does not have.
+    fn description() -> String {
+        format!("{{ title }} {}", env!("CARGO_PKG_VERSION"))
+    }
+}
+
+/// Reach the plugin from anywhere that holds the application.
+pub trait {{ type_name }}Ext<R: Runtime> {
+    fn {{ lib_name }}(&self) -> tauri::State<'_, {{ type_name }}<R>>;
+}
+
+impl<R: Runtime, T: Manager<R>> {{ type_name }}Ext<R> for T {
+    fn {{ lib_name }}(&self) -> tauri::State<'_, {{ type_name }}<R>> {
+        self.state::<{{ type_name }}<R>>()
+    }
+}
+
+/// Register the plugin on a Tauri builder.
+pub fn init<R: Runtime>() -> TauriPlugin<R> {
+    Builder::new(NAME)
+        .invoke_handler(tauri::generate_handler![commands::{{ command_fn }}])
+        .setup(|app, _api| {
+            app.manage({{ type_name }} { app: app.clone() });
+            Ok(())
+        })
+        .build()
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    #[test]
+    fn the_name_the_plugin_registers_under_is_the_one_the_permissions_grant() {
+        // Tauri generates the permission set as `<NAME>:allow-<command>` and
+        // the webview invokes `plugin:<NAME>|<command>`. Registered under any
+        // other name the plugin is denied every call, and the only symptom is
+        // a permission error in an application that installed it.
+        //
+        // Checked against the literal rather than against `init()`: building a
+        // plugin needs a Tauri runtime, and the mock runtime links the system
+        // webview, which is not there on a build machine. A test that cannot
+        // run is not a gate.
+        assert_eq!(NAME, "{{ name }}");
+    }
+
+    #[test]
+    fn the_plugin_describes_itself_with_the_version_it_was_built_at() {
+        // A hard-coded version would drift from Cargo.toml at the first
+        // release and every application would report the wrong one.
+        let described = {{ type_name }}::<tauri::test::MockRuntime>::description();
+
+        assert!(described.ends_with(env!("CARGO_PKG_VERSION")), "`{described}` does not carry the package version");
+    }
+}

@@ -5,6 +5,7 @@ use std::process::Command as Process;
 
 use crate::cli::NewArgs;
 use crate::generate;
+use crate::host;
 use crate::model::{Context, Form, TemplateManifest};
 use crate::naming::{self, PLACEHOLDER_ACCENT};
 use crate::templates;
@@ -30,6 +31,24 @@ pub fn build_context(args: &NewArgs, manifest: &TemplateManifest, interactive: b
             return Err(format!("the `{}` form has no `{addon}` add-on - {offer}", args.form).into());
         }
     }
+
+    // `--host` given to a form that has no host would be accepted and ignored:
+    // the generated project would be right about everything except the one
+    // thing the flag was for.
+    let host = match (&args.host, args.form.takes_a_host()) {
+        (Some(name), true) => Some(host::find(name)?),
+        (Some(name), false) => {
+            return Err(format!("the `{}` form is not generated against a host, so `--host {name}` means nothing", args.form).into());
+        }
+        (None, true) => {
+            return Err(format!(
+                "`--form plugin` needs the application the plugin extends: `--host {}` (see `lyrn forms`)",
+                host::ALL.first().map(|h| h.name).unwrap_or("HOST")
+            )
+            .into());
+        }
+        (None, false) => None,
+    };
 
     let accent = match &args.accent {
         Some(value) => naming::resolve_accent(value)?,
@@ -88,6 +107,48 @@ pub fn build_context(args: &NewArgs, manifest: &TemplateManifest, interactive: b
         // Measured, not assumed: a number that is wrong is worse than absent,
         // because `cargo install` believes it.
         .set("msrv", msrv());
+
+    // The Tauri plugin's Rust type, e.g. `WordCount`, and the single command
+    // both halves agree on. Derived from the name rather than asked for: a
+    // scaffold has exactly one command, and naming it separately would be a
+    // second thing to keep in step with nothing gained.
+    if args.form == Form::TauriPlugin {
+        // `version` rather than `describe`: the command's name is imported
+        // into the webview test beside vitest's own globals, and `describe` is
+        // one of them - the generated test failed to parse at all. A scaffold
+        // that does not build is worse than one that is dull.
+        const COMMAND: &str = "version";
+
+        context
+            .set("type_name", naming::type_from_name(&args.name))
+            .set("command_key", COMMAND)
+            .set("command_fn", COMMAND)
+            .set("command_camel", naming::camel_from_key(COMMAND))
+            .set("bin_name", format!("tauri-plugin-{}", args.name));
+    }
+
+    if let Some(host) = host {
+        let target = host.primary_target();
+        context
+            .set("host", host.name)
+            .set("prefix", host.prefix())
+            .set("host_about", host.about)
+            .set("host_lookup", host.lookup)
+            .set("protocol_version", host.protocol_version.to_string())
+            .set("subject_about", host.subject)
+            .set("target", target.key)
+            .set("target_about", target.about)
+            // Every point the host offers, for the generated protocol test to
+            // hold a command against. Written out as the Rust literal the test
+            // reads, so the test needs no parsing of its own.
+            .set(
+                "target_list",
+                host.targets.iter().map(|t| format!("\"{}\"", t.key)).collect::<Vec<_>>().join(", "),
+            )
+            .set("command_key", "run")
+            .set("command_label", format!("Run {}", naming::title_from_name(&args.name)))
+            .set("bin_name", format!("{}{}", host.prefix(), args.name));
+    }
 
     Ok(context)
 }
@@ -187,6 +248,23 @@ fn print_next_steps(args: &NewArgs, root: &std::path::Path) {
         Form::Service => {
             println!("  docker compose -f deploy/compose.yml up -d db");
             println!("  cargo run");
+        }
+        Form::Plugin => {
+            // The protocol test is what says the plugin is one, so it is the
+            // first thing worth running - before the binary is put anywhere.
+            println!("  cargo test");
+            if let Some(host) = &args.host {
+                println!("  cargo run -- --manifest    # what {host} will read");
+            }
+        }
+        Form::TauriPlugin => {
+            if args.no_hooks {
+                println!("  pnpm install");
+            }
+            // Both halves, because a plugin whose halves disagree passes
+            // either gate alone.
+            println!("  cargo test");
+            println!("  pnpm test");
         }
     }
 }
@@ -293,6 +371,7 @@ mod tests {
         NewArgs {
             name: name.to_string(),
             form: Form::Spa,
+            host: None,
             accent: None,
             description: None,
             author: Some("Tester".to_string()),

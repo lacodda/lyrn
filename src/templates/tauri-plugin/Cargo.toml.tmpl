@@ -1,0 +1,43 @@
+[package]
+name = "tauri-plugin-{{ name }}"
+version = "0.1.0"
+edition = "2024"
+rust-version = "{{ msrv }}"
+description = "{{ description }}"
+authors = ["{{ author }}"]
+license = "MIT"
+readme = "README.md"
+repository = "https://github.com/{{ repo }}"
+keywords = ["tauri", "plugin"]
+categories = ["gui"]
+# Tauri reads this to tie the crate to its permission set. Without it, a second
+# crate could claim the same plugin name and the capabilities would collide.
+links = "tauri-plugin-{{ name }}"
+
+exclude = [
+    "/guest-js",
+    "/package.json",
+    "/tsconfig.json",
+    "/docs",
+    "/.github",
+    "cliff.toml",
+    "rustfmt.toml",
+]
+
+[build-dependencies]
+tauri-plugin = { version = "2", features = ["build"] }
+
+[dependencies]
+serde = { version = "1", features = ["derive"] }
+tauri = "2"
+thiserror = "2"
+
+[dev-dependencies]
+tauri = { version = "2", features = ["test"] }
+serde_json = "1"
+
+[lints.rust]
+unsafe_code = "forbid"
+
+[lints.clippy]
+all = { level = "deny", priority = -1 }

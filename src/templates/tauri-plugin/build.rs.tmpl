@@ -1,0 +1,9 @@
+// Every command the webview may call. Tauri generates a permission for each
+// one from this list at build time, so a command missing here is unreachable
+// from JavaScript however the Rust side is wired - and a stale name here
+// generates a permission that grants nothing.
+const COMMANDS: &[&str] = &["{{ command_key }}"];
+
+fn main() {
+    tauri_plugin::Builder::new(COMMANDS).build();
+}

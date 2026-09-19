@@ -1,0 +1,69 @@
+# {{ title }}
+
+{{ description }}
+
+A plugin for [{{ host }}](https://github.com/lacodda/{{ host }}), {{ host_about }}.
+Scaffolded with [lyrn](https://github.com/lacodda/lyrn).
+
+## Install
+
+Download the binary for your platform from [Releases](https://github.com/{{ repo }}/releases)
+and put it where {{ host }} looks: {{ host_lookup }}.
+
+{{ host }} finds anything named `{{ prefix }}*` there and shows
+**{{ command_label }}** once this one is installed.
+
+## The protocol
+
+A plugin is an ordinary executable. {{ host }} runs it twice:
+
+```console
+$ {{ bin_name }} --manifest   # what it offers, as JSON on stdout
+$ {{ bin_name }} run          # invocation as JSON on stdin, outcome on stdout
+```
+
+The manifest declares the protocol version, a name, and the commands this
+plugin contributes:
+
+```jsonc
+{
+  "protocol_version": {{ protocol_version }},
+  "name": "{{ name }}",
+  "version": "0.1.0",
+  "commands": [
+    { "key": "{{ command_key }}", "label": "{{ command_label }}", "target": "{{ target }}" }
+  ]
+}
+```
+
+An invocation arrives as `{"command": "{{ command_key }}", "target": "{{ target }}", "subject": {…}}`,
+where `subject` is {{ subject_about }}. The reply may carry `meta` (merged into
+the row - a plugin adds and overwrites its own keys but never clears the rest),
+`message` (shown to the user), or `error`.
+
+Plugins live for the duration of one call. Nothing here starts a service.
+
+## Developing
+
+```console
+$ cargo fmt --check && cargo clippy --all-targets -- -D warnings && cargo test
+```
+
+That is the same gate CI runs, so a green terminal means a green pull request.
+
+`tests/protocol.rs` runs the built binary the way {{ host }} runs it and holds
+the answers to what the host accepts - a plugin that passes its unit tests and
+fails there is one {{ host }} would list and refuse.
+
+## Layout
+
+| Path | What lives there |
+| --- | --- |
+| `src/main.rs` | The manifest and the plugin's own work |
+| `src/protocol.rs` | The wire: an invocation in, an outcome out |
+| `tests/protocol.rs` | The plugin run as the host runs it |
+| `docs/adr/` | Architecture decisions, newest last |
+
+## License
+
+MIT (c) [{{ author }}](https://lacodda.com)

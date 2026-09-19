@@ -1,0 +1,72 @@
+name: Publish
+
+# Triggered by the tag push directly (not the release event): releases here are
+# created by release.yml with GITHUB_TOKEN, and such events do not start other
+# workflows.
+on:
+  push:
+    tags: ['v*']
+  workflow_dispatch:
+    inputs:
+      tag:
+        description: Tag to publish
+        required: true
+
+permissions: {}
+
+jobs:
+  # Both halves of the plugin go out under one tag. They are separate jobs
+  # rather than steps so that a registry outage on one side does not hide
+  # whether the other made it.
+  crate:
+    runs-on: ubuntu-latest
+    permissions:
+      id-token: write
+      contents: read
+    steps:
+      - uses: actions/checkout@v7
+        with:
+          ref: ${{ github.event_name == 'workflow_dispatch' && inputs.tag || github.ref }}
+      - name: System dependencies
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y libwebkit2gtk-4.1-dev libgtk-3-dev libsoup-3.0-dev libjavascriptcoregtk-4.1-dev
+      - uses: dtolnay/rust-toolchain@stable
+      - uses: rust-lang/crates-io-auth-action@v1
+        id: auth
+      # The first publication is always done by hand: a trusted publisher
+      # cannot be attached to a crate that does not exist yet.
+      - run: cargo publish
+        env:
+          CARGO_REGISTRY_TOKEN: ${{ steps.auth.outputs.token }}
+
+  npm:
+    runs-on: ubuntu-latest
+    permissions:
+      id-token: write
+      contents: read
+    steps:
+      - uses: actions/checkout@v7
+        with:
+          ref: ${{ github.event_name == 'workflow_dispatch' && inputs.tag || github.ref }}
+      - uses: pnpm/action-setup@v6
+      # npm >= 11.5.1 exchanges the OIDC token itself (trusted publishing);
+      # provenance is attached automatically.
+      - uses: actions/setup-node@v7
+        with:
+          node-version: 24
+          cache: pnpm
+          registry-url: https://registry.npmjs.org
+      - run: pnpm install --frozen-lockfile
+      - run: pnpm build
+      # Skipped when the version is already in the registry: re-running a tag
+      # should not turn a perfectly good release red.
+      - name: Publish
+        run: |
+          name=$(node -p "require('./package.json').name")
+          version=$(node -p "require('./package.json').version")
+          if npm view "$name@$version" version >/dev/null 2>&1; then
+            echo "$name@$version is already published; nothing to do."
+          else
+            npm publish
+          fi

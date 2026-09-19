@@ -1,0 +1,113 @@
+//! {{ title }}: a plugin for {{ host }}, {{ host_about }}.
+//!
+//! Two calls, following the line's plugin convention:
+//!
+//!   {{ bin_name }} --manifest   -> what this plugin offers, as JSON on stdout
+//!   {{ bin_name }} run          -> invocation as JSON on stdin, outcome on stdout
+//!
+//! It lives for the duration of one call and holds no state. Nothing here
+//! starts a service.
+
+mod protocol;
+
+use protocol::{Invocation, Outcome};
+
+/// The protocol version {{ host }} speaks. A plugin declaring anything else is
+/// listed by the host and refused, with the mismatch shown - so the number is
+/// a promise, not a decoration.
+const PROTOCOL_VERSION: u32 = {{ protocol_version }};
+
+fn main() {
+    let argument = std::env::args().nth(1).unwrap_or_default();
+
+    match argument.as_str() {
+        "--manifest" => print!("{}", manifest()),
+        "run" => run(),
+        other => {
+            // A plugin that cannot be understood says so on stderr and exits
+            // non-zero: the host shows the reason rather than hiding the
+            // plugin, because a silently missing integration is
+            // indistinguishable from one that was never installed.
+            eprintln!("unknown argument `{other}`; expected --manifest or run");
+            std::process::exit(2);
+        }
+    }
+}
+
+/// What this plugin tells {{ host }} about itself.
+fn manifest() -> String {
+    serde_json::json!({
+        "protocol_version": PROTOCOL_VERSION,
+        "name": "{{ name }}",
+        "version": env!("CARGO_PKG_VERSION"),
+        "description": "{{ description }}",
+        "commands": [{
+            "key": "{{ command_key }}",
+            "label": "{{ command_label }}",
+            "description": "{{ description }}",
+            "target": "{{ target }}"
+        }]
+    })
+    .to_string()
+}
+
+fn run() {
+    let invocation = match Invocation::read(std::io::stdin()) {
+        Ok(invocation) => invocation,
+        Err(message) => protocol::fail(&message),
+    };
+
+    protocol::emit(answer(&invocation));
+}
+
+/// The plugin's own work, kept apart from the plumbing so that it can be
+/// tested without a process: everything above reads and writes, this decides.
+///
+/// Replace it with what your plugin is for. What it returns is merged into the
+/// subject's fields by the host - a plugin adds and overwrites its own keys and
+/// never clears the rest.
+fn answer(invocation: &Invocation) -> Outcome {
+    // The host sends the whole row, not an identifier, so the first thing a
+    // plugin does is never a request for data back.
+    let described = invocation.subject_summary();
+
+    let mut outcome = Outcome::default();
+    outcome.set("{{ lib_name }}_seen", serde_json::json!(true));
+    outcome.message = Some(format!("{{ title }} ran on {described}."));
+    outcome
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+    use serde_json::{Value, json};
+
+    #[test]
+    fn the_manifest_is_valid_json_and_declares_the_protocol() {
+        let parsed: Value = serde_json::from_str(&manifest()).unwrap();
+
+        assert_eq!(parsed["protocol_version"], json!(PROTOCOL_VERSION));
+        assert_eq!(parsed["name"], json!("{{ name }}"));
+        assert_eq!(parsed["commands"][0]["target"], json!("{{ target }}"));
+        assert_eq!(parsed["commands"][0]["key"], json!("{{ command_key }}"));
+    }
+
+    #[test]
+    fn the_manifest_reports_the_version_the_package_was_built_at() {
+        // A hard-coded version would drift from Cargo.toml at the first
+        // release and the host would show the wrong number for ever after.
+        let parsed: Value = serde_json::from_str(&manifest()).unwrap();
+
+        assert_eq!(parsed["version"], json!(env!("CARGO_PKG_VERSION")));
+    }
+
+    #[test]
+    fn an_answer_carries_something_for_the_host_to_merge() {
+        let invocation = Invocation::for_test(json!({"title": "A subject"}));
+
+        let outcome = answer(&invocation);
+
+        assert!(!outcome.meta.is_empty(), "the host would have nothing to record");
+        assert!(outcome.error.is_none());
+    }
+}

@@ -1,0 +1,17 @@
+/**
+ * {{ title }}: the webview half of the plugin.
+ *
+ * Every call goes through `invoke` with the plugin's own prefix, which is what
+ * ties it to the permission set generated from `build.rs`.
+ */
+import { invoke } from '@tauri-apps/api/core'
+
+/** The name the Rust half registers under. Both halves spell it once. */
+const PLUGIN = '{{ name }}'
+
+/**
+ * {{ description }}
+ */
+export async function {{ command_camel }}(): Promise<string> {
+  return await invoke<string>(`plugin:${PLUGIN}|{{ command_key }}`)
+}

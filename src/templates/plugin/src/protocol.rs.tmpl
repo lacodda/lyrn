@@ -1,0 +1,154 @@
+//! The wire between {{ host }} and this plugin.
+//!
+//! Both sides of one call: an invocation read from stdin, an outcome written
+//! to stdout. Kept in its own module so that the plugin's own work is a
+//! function of a value rather than a function of a process.
+
+use serde::{Deserialize, Serialize};
+use serde_json::{Map, Value};
+
+/// What {{ host }} sends when a command runs.
+#[derive(Debug, Clone, Deserialize)]
+pub struct Invocation {
+    /// The command's key, as declared in the manifest.
+    #[allow(dead_code)]
+    pub command: String,
+    /// Where it was invoked: {{ target_about }}.
+    #[serde(default)]
+    #[allow(dead_code)]
+    pub target: Option<String>,
+    /// {{ subject_about }}.
+    pub subject: Value,
+}
+
+impl Invocation {
+    /// Read one invocation from a reader, usually stdin.
+    pub fn read(mut source: impl std::io::Read) -> Result<Self, String> {
+        let mut input = String::new();
+        source.read_to_string(&mut input).map_err(|error| format!("could not read the request: {error}"))?;
+
+        serde_json::from_str(&input).map_err(|error| format!("could not read the request: {error}"))
+    }
+
+    /// A short description of what the command was invoked on, for messages.
+    ///
+    /// The host does not promise a title on every subject, so the fallback is
+    /// part of the contract rather than a guard: a plugin that printed
+    /// `the ` with nothing after it would look broken to the user.
+    pub fn subject_summary(&self) -> String {
+        match self.subject.get("title").and_then(Value::as_str) {
+            Some(title) if !title.trim().is_empty() => format!("`{title}`"),
+            _ => "it".to_string(),
+        }
+    }
+
+    /// An invocation built in a test, without a process on either side.
+    #[cfg(test)]
+    pub fn for_test(subject: Value) -> Self {
+        Self { command: "{{ command_key }}".into(), target: Some("{{ target }}".into()), subject }
+    }
+}
+
+/// What this plugin sends back.
+///
+/// Every field is optional and omitted when empty: silence is success with
+/// nothing to say, and the host treats it as such.
+#[derive(Debug, Default, Serialize)]
+pub struct Outcome {
+    /// Fields merged into the subject's own. The host adds and overwrites
+    /// these keys and leaves the rest of the row alone.
+    #[serde(skip_serializing_if = "Map::is_empty")]
+    pub meta: Map<String, Value>,
+    /// One line shown to the user.
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub message: Option<String>,
+    /// Failure reported without a non-zero exit: the plugin worked, the answer
+    /// is that it could not.
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub error: Option<String>,
+}
+
+impl Outcome {
+    /// Record one field for the host to merge.
+    pub fn set(&mut self, key: impl Into<String>, value: Value) -> &mut Self {
+        self.meta.insert(key.into(), value);
+        self
+    }
+}
+
+/// Write the outcome to stdout.
+pub fn emit(outcome: Outcome) {
+    match serde_json::to_string(&outcome) {
+        Ok(json) => print!("{json}"),
+        Err(error) => fail(&format!("could not write the reply: {error}")),
+    }
+}
+
+/// Stop with a reason on stderr. The host shows it to the user.
+pub fn fail(message: &str) -> ! {
+    eprintln!("{message}");
+    std::process::exit(1);
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+    use serde_json::json;
+
+    #[test]
+    fn an_invocation_is_read_from_the_bytes_the_host_writes() {
+        let raw = r#"{"command":"{{ command_key }}","target":"{{ target }}","subject":{"title":"A subject"}}"#;
+
+        let invocation = Invocation::read(raw.as_bytes()).unwrap();
+
+        assert_eq!(invocation.command, "{{ command_key }}");
+        assert_eq!(invocation.subject_summary(), "`A subject`");
+    }
+
+    #[test]
+    fn an_invocation_without_a_target_still_reads() {
+        // `target` is absent wherever a host offers only one point of
+        // extension. Requiring it would refuse a call the host considers valid.
+        let raw = r#"{"command":"{{ command_key }}","subject":{}}"#;
+
+        assert!(Invocation::read(raw.as_bytes()).is_ok());
+    }
+
+    #[test]
+    fn a_subject_without_a_title_is_described_anyway() {
+        let invocation = Invocation::for_test(json!({}));
+
+        assert_eq!(invocation.subject_summary(), "it");
+    }
+
+    #[test]
+    fn a_blank_title_is_not_a_title() {
+        let invocation = Invocation::for_test(json!({"title": "   "}));
+
+        assert_eq!(invocation.subject_summary(), "it");
+    }
+
+    #[test]
+    fn nonsense_on_stdin_is_refused_rather_than_guessed() {
+        assert!(Invocation::read(b"not json at all".as_slice()).is_err());
+    }
+
+    #[test]
+    fn an_empty_outcome_serialises_to_an_empty_object() {
+        // The host reads "{}" as success with nothing to say. Serialising
+        // nulls instead would make it merge emptiness into the row.
+        let json = serde_json::to_string(&Outcome::default()).unwrap();
+
+        assert_eq!(json, "{}");
+    }
+
+    #[test]
+    fn a_recorded_field_reaches_the_wire() {
+        let mut outcome = Outcome::default();
+        outcome.set("words", json!(12));
+
+        let json = serde_json::to_string(&outcome).unwrap();
+
+        assert_eq!(json, r#"{"meta":{"words":12}}"#);
+    }
+}

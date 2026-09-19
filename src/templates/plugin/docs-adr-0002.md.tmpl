@@ -1,0 +1,34 @@
+# ADR 0002: The plugin is a subprocess, not a library
+
+- Status: accepted
+- Date: {{ date }}
+
+## Context
+
+A plugin has to reach into whatever it integrates with - a mail client, a
+corporate API, a device - and it has to be shipped and updated separately from
+the application it extends.
+
+Three shapes were available. A dynamic library loaded into the host: Rust has
+no stable ABI, so every host release would break every plugin built against the
+previous one. A sandboxed runtime such as WebAssembly: the integrations a
+plugin exists for are exactly the ones a sandbox forbids, and the engine is
+heavy for a call that lasts milliseconds. Or an ordinary executable, the shape
+git, cargo and kubectl already use.
+
+## Decision
+
+A plugin is an executable named `{{ prefix }}*`, found on `PATH` or in
+{{ host }}'s own plugins directory. It answers `--manifest` with JSON on stdout
+and `run` with an invocation on stdin and an outcome on stdout.
+
+It lives for the duration of one call and holds no state. It may be written in
+any language; this one is written in Rust because the line is.
+
+## Consequences
+
+The plugin ships as its own repository with its own releases, and a host
+upgrade cannot break it as long as the protocol version holds. Any language
+will do. The price is a process per call, which is why the host sends the whole
+subject rather than an identifier: without it, the first thing every plugin
+would do is ask for the data back.

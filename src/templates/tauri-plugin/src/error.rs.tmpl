@@ -1,0 +1,35 @@
+//! What can go wrong, in the one shape the webview reads.
+//!
+//! An error crossing into JavaScript is serialised as its message: the webview
+//! has no way to match on a Rust variant, and a structured payload would be a
+//! second contract to keep in step with `guest-js`.
+
+use serde::{Serialize, Serializer};
+
+pub type Result<T> = std::result::Result<T, Error>;
+
+#[derive(Debug, thiserror::Error)]
+pub enum Error {
+    #[error(transparent)]
+    Io(#[from] std::io::Error),
+    #[error("{0}")]
+    Other(String),
+}
+
+impl Serialize for Error {
+    fn serialize<S: Serializer>(&self, serializer: S) -> std::result::Result<S::Ok, S::Error> {
+        serializer.serialize_str(&self.to_string())
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    #[test]
+    fn an_error_reaches_the_webview_as_its_message() {
+        let error = Error::Other("nothing to describe".into());
+
+        assert_eq!(serde_json::to_string(&error).unwrap(), r#""nothing to describe""#);
+    }
+}

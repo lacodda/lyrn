@@ -6,8 +6,10 @@
 pub mod cli;
 pub mod desktop;
 pub mod mono;
+pub mod plugin;
 pub mod service;
 pub mod spa;
+pub mod tauri_plugin;
 pub mod workspace;
 
 use crate::generate::SourceFile;
@@ -22,6 +24,8 @@ pub fn manifest_for(form: Form) -> &'static str {
         Form::Service => service::MANIFEST,
         Form::Workspace => workspace::MANIFEST,
         Form::Mono => mono::MANIFEST,
+        Form::Plugin => plugin::MANIFEST,
+        Form::TauriPlugin => tauri_plugin::MANIFEST,
     }
 }
 
@@ -34,6 +38,8 @@ pub fn sources_for(form: Form) -> Vec<SourceFile> {
         Form::Service => service::sources(),
         Form::Workspace => workspace::sources(),
         Form::Mono => mono::sources(),
+        Form::Plugin => plugin::sources(),
+        Form::TauriPlugin => tauri_plugin::sources(),
     }
 }
 
@@ -64,6 +70,24 @@ mod tests {
         "env_prefix",
         "lib_name",
         "owner",
+        // Only the plugin forms fill these; the check below asks each form for
+        // its own, so a variable no form of this shape provides is still an
+        // error rather than a name on a list.
+        "host",
+        "prefix",
+        "host_about",
+        "host_lookup",
+        "protocol_version",
+        "subject_about",
+        "target",
+        "target_about",
+        "target_list",
+        "command_key",
+        "command_label",
+        "command_fn",
+        "command_camel",
+        "type_name",
+        "bin_name",
     ];
 
     #[test]

@@ -124,6 +124,30 @@ pub fn title_from_name(name: &str) -> String {
         .join(" ")
 }
 
+/// Turn a project name into a Rust type name: `my-plugin` -> `MyPlugin`.
+///
+/// The title is not reusable here: it separates words with a space, which a
+/// type name cannot contain, and a template that used it would produce code
+/// that does not compile rather than code that reads oddly.
+pub fn type_from_name(name: &str) -> String {
+    title_from_name(name).split_whitespace().collect()
+}
+
+/// Turn a hyphenated key into the JavaScript spelling: `read-file` -> `readFile`.
+pub fn camel_from_key(key: &str) -> String {
+    let mut parts = key.split('-').filter(|part| !part.is_empty());
+    let first = parts.next().unwrap_or_default().to_string();
+
+    parts.fold(first, |mut out, part| {
+        let mut chars = part.chars();
+        if let Some(head) = chars.next() {
+            out.push(head.to_ascii_uppercase());
+            out.push_str(chars.as_str());
+        }
+        out
+    })
+}
+
 #[cfg(test)]
 mod tests {
     use super::*;
@@ -192,6 +216,19 @@ mod tests {
             assert!(is_hex_colour(hex), "{product} has a malformed accent: {hex}");
         }
         assert!(is_hex_colour(PLACEHOLDER_ACCENT));
+    }
+
+    #[test]
+    fn builds_a_type_name_without_the_spaces_a_title_has() {
+        assert_eq!(type_from_name("word-count"), "WordCount");
+        assert_eq!(type_from_name("plain"), "Plain");
+    }
+
+    #[test]
+    fn builds_the_javascript_spelling_of_a_command_key() {
+        assert_eq!(camel_from_key("read-file"), "readFile");
+        assert_eq!(camel_from_key("describe"), "describe");
+        assert_eq!(camel_from_key("a-b-c"), "aBC");
     }
 
     #[test]

@@ -27,6 +27,7 @@ error: the name starts with `D`; it has to start with a lowercase letter
 | Option | Default | What it does |
 | --- | --- | --- |
 | `--form <form>` | `spa` | The shape of the project; see [Forms](/reference/forms/) |
+| `--host <host>` | — | The application a plugin extends; `--form plugin` only |
 | `--accent <colour>` | asked, else graphite | A product of the line, or a `#rrggbb` value |
 | `--description <text>` | asked, else generic | One line describing what the project is |
 | `--author <name>` | `git config user.name` | Recorded in LICENSE |
@@ -102,6 +103,29 @@ An add-on a form does not have is an error rather than a silent no-op.
 A form decides what an add-on means for it. `--with i18n` on a `desktop`
 project also writes the locale gate into `pnpm lint`; on a `spa` it writes the
 same runtime without the desktop shell around it.
+
+## The host
+
+`--form plugin` is generated against the application the plugin extends, and
+`--host` names it. There is no default: the host decides the protocol version
+the plugin declares, the point it extends and the name it is discovered by, so
+a guess would produce a plugin nothing runs.
+
+```console
+$ lyrn new wordcount --form plugin --host kilna
+```
+
+`lyrn forms` lists the hosts on offer. They are the applications that accept
+plugins today; one whose turn has not come is refused with that reason, and so
+is `--host` on a form that has no host:
+
+```console
+$ lyrn new demo --form plugin --host kasl
+error: `kasl` does not accept plugins yet; when it does it will be listed here (known: kilna)
+
+$ lyrn new demo --form cli --host kilna
+error: the `cli` form is not generated against a host, so `--host kilna` means nothing
+```
 
 ## Hooks
 

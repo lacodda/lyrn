@@ -1,0 +1,39 @@
+{
+  "name": "tauri-plugin-{{ name }}-api",
+  "version": "0.1.0",
+  "description": "{{ description }}",
+  "license": "MIT",
+  "author": "{{ author }}",
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/{{ repo }}.git"
+  },
+  "type": "module",
+  "types": "./dist/index.d.ts",
+  "main": "./dist/index.js",
+  "exports": {
+    ".": {
+      "types": "./dist/index.d.ts",
+      "import": "./dist/index.js"
+    }
+  },
+  "files": [
+    "dist",
+    "README.md",
+    "LICENSE"
+  ],
+  "scripts": {
+    "build": "tsc",
+    "lint": "tsc --noEmit",
+    "test": "vitest run",
+    "prepack": "pnpm build"
+  },
+  "dependencies": {
+    "@tauri-apps/api": "^2"
+  },
+  "devDependencies": {
+    "typescript": "^6",
+    "vitest": "^4"
+  },
+  "packageManager": "pnpm@10.18.2"
+}

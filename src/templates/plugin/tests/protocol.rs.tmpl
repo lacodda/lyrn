@@ -1,0 +1,121 @@
+//! The plugin against the host's side of the protocol.
+//!
+//! The unit tests check that the pieces are right. These run the built binary
+//! exactly as {{ host }} runs it - `--manifest`, then `run` with JSON on stdin -
+//! and hold the answers to what the host will accept. A plugin that passes its
+//! unit tests and fails here is one {{ host }} would list and refuse.
+
+use std::io::Write;
+use std::process::{Command, Stdio};
+
+use assert_cmd::cargo::cargo_bin;
+use serde_json::{Value, json};
+
+/// The protocol version {{ host }} speaks. Written out rather than read from
+/// the plugin: a test that asks the code what it should be agrees with any
+/// answer, including a wrong one.
+const HOST_PROTOCOL_VERSION: u32 = {{ protocol_version }};
+
+/// The points {{ host }} offers. A command aimed anywhere else is refused by
+/// the host, which reads the manifest with a closed set of targets.
+const HOST_TARGETS: &[&str] = &[{{ target_list }}];
+
+fn plugin() -> Command {
+    Command::new(cargo_bin("{{ bin_name }}"))
+}
+
+fn manifest() -> Value {
+    let output = plugin().arg("--manifest").output().expect("the plugin should run");
+
+    assert!(output.status.success(), "`--manifest` failed: {}", String::from_utf8_lossy(&output.stderr));
+
+    serde_json::from_slice(&output.stdout).expect("the manifest should be JSON")
+}
+
+/// Run the plugin the way the host does: the invocation in over stdin, the
+/// outcome out over stdout.
+fn invoke(request: &Value) -> Value {
+    let mut child =
+        plugin().arg("run").stdin(Stdio::piped()).stdout(Stdio::piped()).stderr(Stdio::piped()).spawn().expect("the plugin should run");
+
+    child
+        .stdin
+        .take()
+        .expect("stdin should be open")
+        .write_all(request.to_string().as_bytes())
+        .expect("the plugin should take its request");
+
+    let output = child.wait_with_output().expect("the plugin should finish");
+
+    assert!(output.status.success(), "`run` failed: {}", String::from_utf8_lossy(&output.stderr));
+
+    let stdout = String::from_utf8_lossy(&output.stdout);
+    if stdout.trim().is_empty() {
+        // Silence is success with nothing to say, and the host reads it as an
+        // empty outcome.
+        return json!({});
+    }
+
+    serde_json::from_str(&stdout).expect("the outcome should be JSON")
+}
+
+#[test]
+fn it_describes_itself_in_the_shape_the_host_reads() {
+    let manifest = manifest();
+
+    assert_eq!(manifest["protocol_version"], json!(HOST_PROTOCOL_VERSION), "{{ host }} would list this plugin and refuse it");
+    assert!(manifest["name"].is_string(), "the manifest declares no name");
+    assert!(manifest["version"].is_string(), "the manifest declares no version");
+}
+
+#[test]
+fn every_command_aims_at_a_point_the_host_offers() {
+    let manifest = manifest();
+    let commands = manifest["commands"].as_array().expect("a plugin that contributes nothing has no reason to exist");
+
+    assert!(!commands.is_empty(), "the manifest offers no command");
+
+    for command in commands {
+        let target = command["target"].as_str().expect("a command without a target");
+        assert!(HOST_TARGETS.contains(&target), "`{target}` is not a point {{ host }} offers ({HOST_TARGETS:?})");
+        assert!(command["key"].as_str().is_some_and(|key| !key.is_empty()), "a command without a key");
+        assert!(command["label"].as_str().is_some_and(|label| !label.is_empty()), "a command without a label");
+    }
+}
+
+#[test]
+fn an_invocation_is_answered_with_something_the_host_can_merge() {
+    let manifest = manifest();
+    let command = manifest["commands"][0]["key"].as_str().unwrap().to_string();
+
+    let outcome = invoke(&json!({
+        "command": command,
+        "target": manifest["commands"][0]["target"],
+        "subject": {"title": "A subject", "meta": {}},
+    }));
+
+    assert!(outcome.is_object(), "the outcome should be a JSON object");
+    assert!(outcome.get("error").is_none(), "the plugin reported: {:?}", outcome.get("error"));
+    assert!(
+        outcome.get("meta").is_some() || outcome.get("message").is_some(),
+        "the plugin answered with neither fields nor a message, so nothing reaches the user"
+    );
+}
+
+#[test]
+fn a_subject_the_plugin_cannot_use_is_still_answered() {
+    // The host sends whatever the row holds. A plugin that panics on a thin
+    // subject fails with an exit status, and the user sees the integration
+    // break rather than decline.
+    let outcome = invoke(&json!({"command": "unknown-to-this-plugin", "subject": {}}));
+
+    assert!(outcome.is_object());
+}
+
+#[test]
+fn an_unknown_argument_is_refused_rather_than_treated_as_run() {
+    let output = plugin().arg("nonesuch").output().expect("the plugin should run");
+
+    assert!(!output.status.success(), "an unknown argument was accepted");
+    assert!(!output.stderr.is_empty(), "the host would show an empty reason");
+}

@@ -1,0 +1,20 @@
+//! The surface the webview may call.
+//!
+//! One function per entry in `build.rs`'s `COMMANDS`. A command that is not
+//! listed there has no permission generated for it and cannot be reached from
+//! JavaScript, whatever this file says.
+
+use tauri::{Runtime, command};
+
+// The extension trait is named in full at the call site rather than imported.
+// rustfmt sorts imports, and where a name derived from the project sorts
+// against `Result` depends on the project - so any order written here is
+// correct for some names and reformatted for others, and the generated
+// project fails `cargo fmt --check` on the day it is created.
+use crate::Result;
+
+/// {{ description }}
+#[command]
+pub async fn {{ command_fn }}<R: Runtime>(app: tauri::AppHandle<R>) -> Result<String> {
+    Ok(crate::{{ type_name }}Ext::{{ lib_name }}(&app).describe())
+}
