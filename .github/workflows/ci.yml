@@ -496,11 +496,13 @@ jobs:
           set -eu
           lyrn="$PWD/target/release/lyrn"
           "$lyrn" new demo-tool --form cli --yes --no-hooks --repo owner/demo-tool --path "$RUNNER_TEMP/demo-tool"
+          # sha256sum is missing on macOS and shasum on the Windows runner.
+          if command -v sha256sum > /dev/null; then sum=(sha256sum); else sum=(shasum -a 256); fi
           cd "$RUNNER_TEMP/demo-tool"
-          find . -type f | sort | xargs shasum -a 256 > "$RUNNER_TEMP/before.txt"
+          find . -type f | sort | xargs "${sum[@]}" > "$RUNNER_TEMP/before.txt"
           "$lyrn" new demo-tool --form docs --yes --no-hooks --repo owner/demo-tool \
             --description "The demo tool's manual: every command, exactly."
-          shasum -a 256 -c "$RUNNER_TEMP/before.txt" > /dev/null
+          "${sum[@]}" -c "$RUNNER_TEMP/before.txt" > /dev/null
           echo "every file that was there is unchanged"
       - name: Install the site
         working-directory: ${{ runner.temp }}/demo-tool/docs
