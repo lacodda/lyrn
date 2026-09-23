@@ -1,5 +1,11 @@
 # Changelog
 
+## 🎉 [2.7.0] - 2026-09-23
+
+### ✨ Features
+
+- Add the docs form
+
 ## 🎉 [2.6.0] - 2026-09-19
 
 ### ✨ Features
