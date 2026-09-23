@@ -466,3 +466,64 @@ jobs:
           grep -qF "|$key\`" guest-js/index.ts
           grep -qF "const PLUGIN = 'demo-shelf'" guest-js/index.ts
           echo "the halves agree on: $key"
+
+  # The docs form adds to a repository, so it is generated into one: a cli
+  # project, which already carries docs/adr/. The run then holds the three
+  # promises the form makes - nothing that was there changes, the site builds
+  # without a warning, and the build writes the machine-readable twins.
+  template-docs:
+    name: template docs on ${{ matrix.os }}
+    runs-on: ${{ matrix.os }}
+    strategy:
+      fail-fast: false
+      matrix:
+        os: [ubuntu-latest, macos-latest, windows-latest]
+    steps:
+      - uses: actions/checkout@v7
+      - uses: dtolnay/rust-toolchain@stable
+      - uses: Swatinem/rust-cache@v2
+      - uses: pnpm/action-setup@v6
+        with:
+          version: 10
+      - uses: actions/setup-node@v7
+        with:
+          node-version: 22
+      - name: Build lyrn
+        run: cargo build --release
+      - name: Generate a repository, then add docs to it
+        shell: bash
+        run: |
+          set -eu
+          lyrn="$PWD/target/release/lyrn"
+          "$lyrn" new demo-tool --form cli --yes --no-hooks --repo owner/demo-tool --path "$RUNNER_TEMP/demo-tool"
+          cd "$RUNNER_TEMP/demo-tool"
+          find . -type f | sort | xargs shasum -a 256 > "$RUNNER_TEMP/before.txt"
+          "$lyrn" new demo-tool --form docs --yes --no-hooks --repo owner/demo-tool \
+            --description "The demo tool's manual: every command, exactly."
+          shasum -a 256 -c "$RUNNER_TEMP/before.txt" > /dev/null
+          echo "every file that was there is unchanged"
+      - name: Install the site
+        working-directory: ${{ runner.temp }}/demo-tool/docs
+        run: pnpm install --no-frozen-lockfile
+      - name: Build it, without a warning
+        shell: bash
+        working-directory: ${{ runner.temp }}/demo-tool/docs
+        run: |
+          set -eu
+          pnpm build 2>&1 | tee build.log
+          if grep -E '\[WARN\]' build.log; then
+            echo "the generated site builds with warnings"
+            exit 1
+          fi
+      - name: Check what the build wrote for agents
+        shell: bash
+        working-directory: ${{ runner.temp }}/demo-tool/docs/dist
+        run: |
+          set -eu
+          head -1 llms.txt | grep -qx '# Demo Tool'
+          grep -q 'https://owner.github.io/demo-tool/guides/writing-a-page.md' llms.txt
+          for twin in index.md getting-started.md guides/writing-a-page.md reference/site.md; do
+            test -s "$twin" || { echo "no Markdown twin: $twin"; exit 1; }
+          done
+          test -s llms-full.txt
+          echo "llms.txt, llms-full.txt and every twin are there"

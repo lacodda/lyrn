@@ -11,3 +11,4 @@ earlier one says so; the earlier one is marked superseded rather than deleted.
 | [0004](0004-service-not-two-forms.md) | One service form, not two | Accepted |
 | [0005](0005-forms-are-placed-by-rule.md) | A derived form places its files by rule, not by list | Accepted |
 | [0006](0006-mono-not-vite-lib.md) | One monorepo form, not a standalone library form | Accepted |
+| [0007](0007-a-form-that-adds.md) | A form that adds to a repository never replaces a file | Accepted |

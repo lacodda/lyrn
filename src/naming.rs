@@ -109,6 +109,28 @@ fn is_hex_colour(s: &str) -> bool {
     digits.len() == 6 && digits.chars().all(|c| c.is_ascii_hexdigit())
 }
 
+/// A value as a JSON string literal, quotes included.
+///
+/// Also a valid JavaScript string and a valid YAML double-quoted scalar, which
+/// is why templates that paste text into either use it.
+pub fn json_string(value: &str) -> String {
+    let mut out = String::with_capacity(value.len() + 2);
+    out.push('"');
+    for c in value.chars() {
+        match c {
+            '"' => out.push_str("\\\""),
+            '\\' => out.push_str("\\\\"),
+            '\n' => out.push_str("\\n"),
+            '\r' => out.push_str("\\r"),
+            '\t' => out.push_str("\\t"),
+            c if (c as u32) < 0x20 => out.push_str(&format!("\\u{:04x}", c as u32)),
+            c => out.push(c),
+        }
+    }
+    out.push('"');
+    out
+}
+
 /// Turn a project name into the title a README and an `<h1>` show.
 pub fn title_from_name(name: &str) -> String {
     name.split('-')

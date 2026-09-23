@@ -28,6 +28,18 @@ pub enum Form {
     Plugin,
     /// A Tauri 2 plugin: a Rust crate and the npm package that calls it.
     TauriPlugin,
+    /// A Starlight documentation site, added to a repository that has none.
+    Docs,
+}
+
+/// Where a form's files go.
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+pub enum Placement {
+    /// A directory of its own, which must not exist or must be empty.
+    NewDirectory,
+    /// An existing repository, beside what is already there. Nothing present
+    /// is overwritten: a single file in the way refuses the whole generation.
+    IntoExisting,
 }
 
 impl Form {
@@ -41,6 +53,7 @@ impl Form {
         Form::Mono,
         Form::Plugin,
         Form::TauriPlugin,
+        Form::Docs,
     ];
 
     pub fn as_str(self) -> &'static str {
@@ -53,6 +66,7 @@ impl Form {
             Form::Mono => "mono",
             Form::Plugin => "plugin",
             Form::TauriPlugin => "tauri-plugin",
+            Form::Docs => "docs",
         }
     }
 
@@ -67,6 +81,7 @@ impl Form {
             Form::Mono => "pnpm monorepo publishing a TypeScript package to npm",
             Form::Plugin => "Plugin for a host of the line: an executable speaking JSON over stdio",
             Form::TauriPlugin => "Tauri 2 plugin: a Rust crate and the npm package that calls it",
+            Form::Docs => "Documentation site added to an existing repository: Starlight, llms.txt",
         }
     }
 
@@ -87,12 +102,21 @@ impl Form {
             // keep in a keyring and nothing to update itself from.
             Form::Plugin => &[],
             Form::TauriPlugin => &[],
+            Form::Docs => &[],
         }
     }
 
     /// Whether this form is generated against a host application.
     pub fn takes_a_host(self) -> bool {
         matches!(self, Form::Plugin)
+    }
+
+    /// Whether this form starts a repository or adds to one.
+    pub fn placement(self) -> Placement {
+        match self {
+            Form::Docs => Placement::IntoExisting,
+            _ => Placement::NewDirectory,
+        }
     }
 }
 
@@ -181,6 +205,7 @@ impl std::str::FromStr for Form {
             "mono" => Ok(Form::Mono),
             "plugin" => Ok(Form::Plugin),
             "tauri-plugin" => Ok(Form::TauriPlugin),
+            "docs" => Ok(Form::Docs),
             other => Err(format!(
                 "unknown form `{other}` (known: {})",
                 Form::ALL.iter().map(|f| f.as_str()).collect::<Vec<_>>().join(", ")
@@ -222,6 +247,11 @@ pub struct Hook {
     /// Skip the hook when the tool it needs is missing, rather than failing.
     #[serde(default)]
     pub optional: bool,
+    /// The directory to run it in, relative to the project root. A form that
+    /// adds a subproject to an existing repository installs that subproject,
+    /// not the repository around it.
+    #[serde(default)]
+    pub dir: Option<String>,
 }
 
 /// The answers a generation runs with, and the source of every placeholder.

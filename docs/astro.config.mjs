@@ -2,17 +2,28 @@
 import { defineConfig } from 'astro/config';
 import starlight from '@astrojs/starlight';
 
+import address from './src/integrations/address.mjs';
+import llms from './src/integrations/llms.mjs';
+
+// Said once: the site, llms.txt and the page metadata all read these.
+const title = 'lyrn';
+const description = "Start a new web application on the lacodda line's stack with one command.";
+
 // Served from the custom domain in ./public/CNAME, so the site sits at the
 // root - no `base` path, unlike a github.io project site.
 export default defineConfig({
 	site: 'https://lyrn.lacodda.com',
 	integrations: [
+		address(),
 		starlight({
-			title: 'lyrn',
-			description: "Start a new web application on the lacodda line's stack with one command.",
+			title,
+			description,
+			// The 404 page is a content page (src/content/docs/404.md): Starlight's
+			// own route looks for that entry and warns on every build without it.
+			disable404Route: true,
 			logo: {
 				src: './src/assets/logo.svg',
-				alt: 'lyrn',
+				alt: title,
 			},
 			favicon: '/favicon.svg',
 			customCss: ['./src/styles/brand.css'],
@@ -37,5 +48,6 @@ export default defineConfig({
 				},
 			],
 		}),
+		llms({ title, description }),
 	],
 });

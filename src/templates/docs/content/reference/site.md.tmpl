@@ -1,0 +1,37 @@
+---
+title: The site
+description: What the documentation build produces besides the pages.
+---
+
+`pnpm build` in `docs/` writes the site to `docs/dist/`, and alongside it the
+same documentation in the form an agent reads:
+
+| File | What it is |
+| --- | --- |
+| `/llms.txt` | An index: what {{ title }} is, and a link to every page |
+| `/llms-full.txt` | Every page in one document |
+| `/<page>.md` | Each page as plain Markdown, beside its HTML |
+
+All three are generated from the pages at build time, so they cannot describe
+a version of the docs that has moved on. A page that renders a component the
+generator has no rule for fails the build and names the component, rather
+than shipping a Markdown twin with a hole in it.
+
+## The address
+
+The site's address is set once, at the top of `astro.config.mjs`. The build
+accepts one of two layouts, never a mix:
+
+- **A github.io project site** - `https://owner.github.io/repo/`, with the
+  repository's name as the base path and no `public/CNAME`.
+- **A custom domain** - `https://docs.example.com/`, served from the root,
+  with `public/CNAME` holding that domain.
+
+Every link inside the pages must start with the base path. The build lists
+each one that does not.
+
+## Publishing
+
+`.github/workflows/docs.yml` builds and deploys the site on every push to
+`main` that touches `docs/`. Turn it on once, in the repository's
+**Settings -> Pages -> Source: GitHub Actions**.

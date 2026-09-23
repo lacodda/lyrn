@@ -1,0 +1,26 @@
+/* The product's accent, and the two shades Starlight wants beside it - mixed
+   from the accent rather than written down, so changing the colour is one
+   value in each theme. */
+:root {
+	--brand-accent: {{ accent }};
+	--sl-color-accent: var(--brand-accent);
+	--sl-color-accent-high: color-mix(in oklab, var(--brand-accent) 45%, white);
+	--sl-color-accent-low: color-mix(in oklab, var(--brand-accent) 30%, black);
+}
+
+:root[data-theme='light'] {
+	--sl-color-accent: color-mix(in oklab, var(--brand-accent) 85%, black);
+	--sl-color-accent-high: color-mix(in oklab, var(--brand-accent) 55%, black);
+	--sl-color-accent-low: color-mix(in oklab, var(--brand-accent) 18%, white);
+}
+
+/* The mark is a square hex tile: let it fill the bar height, beside the
+   wordmark it belongs with. */
+.site-title {
+	gap: 0.4rem;
+}
+
+.site-title img {
+	width: auto;
+	height: 2.5rem;
+}

@@ -1,0 +1,56 @@
+name: Docs
+
+on:
+  push:
+    branches: [main]
+    paths: ['docs/**', '.github/workflows/docs.yml']
+  pull_request:
+    paths: ['docs/**', '.github/workflows/docs.yml']
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: docs-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  # A pull request builds the site too: the address check and the Markdown
+  # twins fail the build, and a failure found after the merge is found late.
+  build:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v7
+      - uses: pnpm/action-setup@v6
+        with:
+          version: 10
+      - uses: actions/setup-node@v7
+        with:
+          node-version: 22
+          cache: pnpm
+          cache-dependency-path: docs/pnpm-lock.yaml
+      - name: Install
+        run: pnpm install --frozen-lockfile
+        working-directory: docs
+      - name: Build
+        run: pnpm build
+        working-directory: docs
+      - uses: actions/upload-pages-artifact@v5
+        if: github.event_name != 'pull_request'
+        with:
+          path: docs/dist
+
+  deploy:
+    if: github.event_name != 'pull_request'
+    needs: build
+    runs-on: ubuntu-latest
+    permissions:
+      pages: write
+      id-token: write
+    environment:
+      name: github-pages
+      url: ${{ steps.deployment.outputs.page_url }}
+    steps:
+      - id: deployment
+        uses: actions/deploy-pages@v5

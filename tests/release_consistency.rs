@@ -308,21 +308,42 @@ fn every_embedded_template_file_survives_packaging() {
         );
     }
 
-    // And the templates really are in the package: walk what the sources
-    // reference and check none of it sits under an excluded path.
-    for entry in fs::read_dir(repo_root().join("src/templates")).expect("no templates directory") {
-        let path = entry.unwrap().path();
-        if !path.is_dir() {
-            continue;
+    // And the templates really are in the package - asked of cargo itself.
+    // This half used to imitate cargo's matching, and the imitation was
+    // wrong the other way: it read the anchored `/docs/` as matching
+    // `src/templates/docs`, which cargo ships, and so refused the docs form.
+    // A second implementation of someone else's rule is a second truth.
+    let listed = std::process::Command::new(env!("CARGO"))
+        .args(["package", "--list", "--allow-dirty"])
+        .current_dir(repo_root())
+        .output()
+        .expect("cargo package --list did not run");
+    assert!(
+        listed.status.success(),
+        "cargo package --list failed: {}",
+        String::from_utf8_lossy(&listed.stderr)
+    );
+    let packaged: std::collections::BTreeSet<String> = String::from_utf8_lossy(&listed.stdout).lines().map(|l| l.trim().replace('\\', "/")).collect();
+
+    fn walk(dir: &Path, out: &mut Vec<PathBuf>) {
+        for entry in fs::read_dir(dir).unwrap() {
+            let path = entry.unwrap().path();
+            if path.is_dir() { walk(&path, out) } else { out.push(path) }
         }
-        let relative = path.strip_prefix(repo_root()).unwrap().display().to_string().replace('\\', "/");
-        for pattern in &excluded {
-            let bare = pattern.trim_start_matches('/').trim_end_matches('/');
-            assert!(
-                !relative.split('/').any(|part| part == bare),
-                "the template directory `{relative}` matches the exclude pattern `{pattern}`"
-            );
-        }
+    }
+    let mut files = Vec::new();
+    walk(&repo_root().join("src/templates"), &mut files);
+    assert!(
+        files.len() > 100,
+        "found only {} template files - the walk is not looking where they are",
+        files.len()
+    );
+    for file in files {
+        let relative = file.strip_prefix(repo_root()).unwrap().display().to_string().replace('\\', "/");
+        assert!(
+            packaged.contains(&relative),
+            "`{relative}` is embedded by the binary but left out of the package"
+        );
     }
 }
 
@@ -399,5 +420,24 @@ fn the_forms_transcript_is_the_one_the_binary_prints() {
             docs.contains(line.trim_end()),
             "docs/reference/forms.md no longer shows what `lyrn forms` prints; this line is missing:\n  {line}"
         );
+    }
+}
+
+/// The checks the `docs` form ships are the ones this site builds with.
+///
+/// Two copies of the same integration drift the day one is fixed. Holding them
+/// byte for byte means every build of lyrn's own site is a live run of what
+/// the form hands out, on the custom-domain layout the generated projects do
+/// not start with.
+#[test]
+fn the_docs_form_ships_the_checks_this_site_builds_with() {
+    for file in ["address.mjs", "llms.mjs"] {
+        let shipped = read(format!("src/templates/docs/integrations/{file}"));
+        let used = read(format!("docs/src/integrations/{file}"));
+        assert!(shipped == used, "docs/src/integrations/{file} differs from the copy the docs form ships");
+    }
+    let astro = read("docs/astro.config.mjs");
+    for integration in ["address()", "llms({ title, description })"] {
+        assert!(astro.contains(integration), "docs/astro.config.mjs does not build with `{integration}`");
     }
 }

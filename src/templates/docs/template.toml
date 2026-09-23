@@ -1,0 +1,16 @@
+name = "docs"
+description = "Documentation site added to an existing repository: Starlight, llms.txt"
+standard = "2026.09"
+
+# The two integrations are JavaScript, and are the same files lyrn's own site
+# builds with; they carry no placeholders and must travel byte for byte.
+verbatim = ["docs/src/integrations/address.mjs", "docs/src/integrations/llms.mjs"]
+
+# The repository is already there, so nothing here starts one: no `git init`,
+# no first commit. The site is its own pnpm project under `docs/`, installed
+# in place.
+[[hooks]]
+name = "Installing the site's dependencies"
+run = ["pnpm", "install"]
+dir = "docs"
+optional = true

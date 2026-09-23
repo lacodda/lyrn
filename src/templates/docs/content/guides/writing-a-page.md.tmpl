@@ -1,0 +1,16 @@
+---
+title: Writing a page
+description: Where pages live, and how the sidebar finds them.
+---
+
+Every page is a Markdown file under `docs/src/content/docs/`. Its path is its
+address: `guides/writing-a-page.md` is served at `/{{ repo_name }}/guides/writing-a-page/`.
+
+A page placed in `guides/` or `reference/` appears in the sidebar by itself.
+A new directory needs one line in the `sidebar` of `astro.config.mjs`.
+
+Links between pages start from the site's base, `/{{ repo_name }}/`. The build
+checks every one of them, so a link written from the root fails the build
+instead of shipping a broken page.
+
+Replace this page with the first guide the product needs.

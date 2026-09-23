@@ -1,0 +1,6 @@
+# The site is a project of its own, even inside a repository that is a pnpm
+# workspace already: this file is where pnpm stops looking upward.
+# pnpm 11 is broken on Windows; the line stays on 10.
+onlyBuiltDependencies:
+  - esbuild
+  - sharp

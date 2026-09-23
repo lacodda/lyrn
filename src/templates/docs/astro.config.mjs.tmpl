@@ -1,0 +1,53 @@
+// @ts-check
+import { defineConfig } from 'astro/config';
+import starlight from '@astrojs/starlight';
+
+import address from './src/integrations/address.mjs';
+import llms from './src/integrations/llms.mjs';
+
+// Where the site is served, said once. A github.io project site lives under
+// the repository's name; a custom domain serves from the root, with
+// public/CNAME naming it. Moving to a domain is this line plus that file - and
+// the address check fails the build on anything left pointing at the old one.
+const home = new URL('https://{{ owner }}.github.io/{{ repo_name }}/');
+
+// Said once as well: the site, llms.txt and the page metadata all read these.
+const title = {{ title_json }};
+const description = {{ description_json }};
+
+export default defineConfig({
+	site: home.origin,
+	base: home.pathname,
+	integrations: [
+		address(),
+		starlight({
+			title,
+			description,
+			// The 404 page is a content page (src/content/docs/404.md): Starlight's
+			// own route looks for that entry and warns on every build without it.
+			disable404Route: true,
+			logo: {
+				src: './src/assets/logo.svg',
+				alt: title,
+			},
+			favicon: '/favicon.svg',
+			customCss: ['./src/styles/brand.css'],
+			social: [{ icon: 'github', label: 'GitHub', href: 'https://github.com/{{ repo }}' }],
+			editLink: {
+				baseUrl: 'https://github.com/{{ repo }}/edit/main/docs/',
+			},
+			sidebar: [
+				{ label: 'Getting Started', slug: 'getting-started' },
+				{
+					label: 'Guides',
+					items: [{ autogenerate: { directory: 'guides' } }],
+				},
+				{
+					label: 'Reference',
+					items: [{ autogenerate: { directory: 'reference' } }],
+				},
+			],
+		}),
+		llms({ title, description }),
+	],
+});

@@ -6,7 +6,7 @@ use std::process::Command as Process;
 use crate::cli::NewArgs;
 use crate::generate;
 use crate::host;
-use crate::model::{Context, Form, TemplateManifest};
+use crate::model::{Context, Form, Placement, TemplateManifest};
 use crate::naming::{self, PLACEHOLDER_ACCENT};
 use crate::templates;
 
@@ -64,10 +64,16 @@ pub fn build_context(args: &NewArgs, manifest: &TemplateManifest, interactive: b
     // branded. The generator knows the answer; it says so.
     let mark_chosen = accent != PLACEHOLDER_ACCENT;
 
+    // A documentation site describes a product that already exists, so its
+    // default says that rather than calling the site "a docs".
+    let default_description = match args.form {
+        Form::Docs => format!("The documentation of {}.", naming::title_from_name(&args.name)),
+        form => format!("A {form} on the lacodda line's stack."),
+    };
     let description = match &args.description {
         Some(value) => value.clone(),
-        None if interactive => prompt_line("What is it, in one line?", &format!("A {} on the lacodda line's stack.", args.form))?,
-        None => format!("A {} on the lacodda line's stack.", args.form),
+        None if interactive => prompt_line("What is it, in one line?", &default_description)?,
+        None => default_description,
     };
 
     let author = match &args.author {
@@ -78,12 +84,19 @@ pub fn build_context(args: &NewArgs, manifest: &TemplateManifest, interactive: b
     // Resolved once: the lookup can spawn `gh`, and it is asked for twice.
     let repo = repo(args);
     let owner = repo.split('/').next().unwrap_or("OWNER").to_string();
+    // A github.io project site is served under the repository's name, which
+    // need not be the project's.
+    let repo_name = repo.split('/').nth(1).unwrap_or(&args.name).to_string();
+    let title = naming::title_from_name(&args.name);
 
     let mut context = Context::new();
     context
         .set("name", &args.name)
-        .set("title", naming::title_from_name(&args.name))
+        .set("title_json", naming::json_string(&title))
+        .set("title", title)
+        .set("description_json", naming::json_string(&description))
         .set("description", description)
+        .set("repo_name", repo_name)
         .set("accent", accent)
         .set("mark", if mark_chosen { "chosen" } else { "placeholder" })
         .set("author", author)
@@ -158,19 +171,38 @@ pub fn run(args: NewArgs) -> Result<(), Box<dyn Error>> {
     let interactive = !args.assume_yes && std::io::stdin().is_terminal();
 
     let context = build_context(&args, &manifest, interactive)?;
-    let root = args.path.clone().unwrap_or_else(|| PathBuf::from(&args.name));
+    // A new project gets a directory named after it; a form that adds to a
+    // repository adds to the one it is run in.
+    let root = args.path.clone().unwrap_or_else(|| match args.form.placement() {
+        Placement::NewDirectory => PathBuf::from(&args.name),
+        Placement::IntoExisting => PathBuf::from("."),
+    });
 
     let plan = generate::plan_with(&templates::sources_for(args.form), &manifest, &context, &args.with)?;
 
+    // Checked before a dry run too: a dry run that promises files the real
+    // run would refuse to write is a promise the tool then breaks.
+    match args.form.placement() {
+        Placement::NewDirectory => generate::check_destination(&root)?,
+        Placement::IntoExisting => generate::check_additions(&plan, &root, templates::foreign_sites_for(args.form))?,
+    }
+
+    let verb = match args.form.placement() {
+        Placement::NewDirectory => "create",
+        Placement::IntoExisting => "add",
+    };
     if args.dry_run {
-        println!("Would create {} in `{}`:\n", plural(plan.files.len()), root.display());
+        println!("Would {verb} {} in `{}`:\n", plural(plan.files.len()), root.display());
         println!("{}", indent(&plan.tree()));
         return Ok(());
     }
 
-    generate::check_destination(&root)?;
     generate::write(&plan, &root)?;
-    println!("Created {} in `{}`.", plural(plan.files.len()), root.display());
+    let done = match args.form.placement() {
+        Placement::NewDirectory => "Created",
+        Placement::IntoExisting => "Added",
+    };
+    println!("{done} {} in `{}`.", plural(plan.files.len()), root.display());
 
     if !args.no_hooks {
         run_hooks(&manifest, &root)?;
@@ -189,7 +221,8 @@ fn run_hooks(manifest: &TemplateManifest, root: &std::path::Path) -> Result<(), 
 
         // A hook's own chatter would land in the middle of the line this
         // function is writing; what matters here is whether it worked.
-        let outcome = Process::new(program).args(rest).current_dir(root).output();
+        let dir = hook.dir.as_deref().map_or_else(|| root.to_path_buf(), |d| root.join(d));
+        let outcome = Process::new(program).args(rest).current_dir(dir).output();
         match outcome {
             Ok(out) if out.status.success() => println!("done"),
             Ok(out) => {
@@ -212,8 +245,23 @@ fn run_hooks(manifest: &TemplateManifest, root: &std::path::Path) -> Result<(), 
 
 fn print_next_steps(args: &NewArgs, root: &std::path::Path) {
     println!("\nNext:");
-    println!("  cd {}", root.display());
+    match args.form.placement() {
+        Placement::NewDirectory => println!("  cd {}", root.display()),
+        // The site is a project inside the repository; its commands run there.
+        // `Path::join` keeps a leading `./`, which reads as noise here.
+        Placement::IntoExisting if root == std::path::Path::new(".") => println!("  cd docs"),
+        Placement::IntoExisting => println!("  cd {}", root.join("docs").display().to_string().replace('\\', "/")),
+    }
     match args.form {
+        Form::Docs => {
+            if args.no_hooks {
+                println!("  pnpm install");
+            }
+            println!("  pnpm dev");
+            // Pages is off in a new repository, and the workflow's deploy job
+            // fails until it is on; saying so here saves the first red run.
+            println!("\nTo publish: Settings -> Pages -> Source: GitHub Actions, then push to main.");
+        }
         Form::Spa => {
             if args.no_hooks {
                 println!("  pnpm install");

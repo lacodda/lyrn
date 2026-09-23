@@ -54,6 +54,20 @@ impl Plan {
 pub enum GenerateError {
     /// The destination exists and is not empty.
     DestinationNotEmpty(PathBuf),
+    /// A form that adds to a repository was pointed at nothing.
+    DestinationMissing(PathBuf),
+    /// Files the plan would write already exist. Every one of them is named,
+    /// so a single run says everything that is in the way.
+    WouldOverwrite {
+        root: PathBuf,
+        paths: Vec<PathBuf>,
+    },
+    /// The repository already carries a documentation site of another kind;
+    /// a second one beside it would be two truths about the same product.
+    ForeignSite {
+        root: PathBuf,
+        marker: &'static str,
+    },
     Placeholder {
         file: PathBuf,
         source: render::UnknownPlaceholder,
@@ -66,6 +80,24 @@ impl std::fmt::Display for GenerateError {
         match self {
             GenerateError::DestinationNotEmpty(p) => {
                 write!(f, "`{}` already exists and is not empty", p.display())
+            }
+            GenerateError::DestinationMissing(p) => {
+                write!(f, "`{}` does not exist - this form adds to an existing repository", p.display())
+            }
+            GenerateError::WouldOverwrite { root, paths } => {
+                write!(
+                    f,
+                    "nothing was written: {} already in `{}`:",
+                    if paths.len() == 1 { "this file is" } else { "these files are" },
+                    root.display()
+                )?;
+                for path in paths {
+                    write!(f, "\n  {}", path.display().to_string().replace('\\', "/"))?;
+                }
+                Ok(())
+            }
+            GenerateError::ForeignSite { root, marker } => {
+                write!(f, "nothing was written: `{}` already has a documentation site (`{marker}`)", root.display())
             }
             GenerateError::Placeholder { file, source } => {
                 write!(f, "in `{}`: {source}", file.display())
@@ -228,15 +260,49 @@ pub fn check_destination(root: &Path) -> Result<(), GenerateError> {
     }
 }
 
+/// A destination a form adds to: it exists, carries no site of another kind,
+/// and holds none of the files the plan is about to write.
+///
+/// Checked as a whole before anything is written, so a refusal leaves the
+/// repository exactly as it was rather than half-documented.
+pub fn check_additions(plan: &Plan, root: &Path, foreign_sites: &[&'static str]) -> Result<(), GenerateError> {
+    if !root.is_dir() {
+        return Err(GenerateError::DestinationMissing(root.to_path_buf()));
+    }
+    if let Some(marker) = foreign_sites.iter().find(|m| root.join(m).exists()) {
+        return Err(GenerateError::ForeignSite {
+            root: root.to_path_buf(),
+            marker,
+        });
+    }
+    let taken: Vec<PathBuf> = plan.files.iter().filter(|f| root.join(&f.path).exists()).map(|f| f.path.clone()).collect();
+    if taken.is_empty() {
+        Ok(())
+    } else {
+        Err(GenerateError::WouldOverwrite {
+            root: root.to_path_buf(),
+            paths: taken,
+        })
+    }
+}
+
 /// Write the plan under `root`.
+///
+/// Every file is created, never replaced: the checks above say whether the
+/// way is clear, and this is what makes an overwrite impossible rather than
+/// merely checked for - a file that appeared since is an error, not a loss.
 pub fn write(plan: &Plan, root: &Path) -> Result<(), GenerateError> {
+    use std::io::Write as _;
+
     fs::create_dir_all(root)?;
     for dir in plan.directories() {
         fs::create_dir_all(root.join(dir))?;
     }
     for file in &plan.files {
         let target = root.join(&file.path);
-        fs::write(&target, &file.contents)?;
+        let mut handle = fs::OpenOptions::new().write(true).create_new(true).open(&target)?;
+        handle.write_all(&file.contents)?;
+        drop(handle);
         set_executable(&target, file.executable)?;
     }
     Ok(())
@@ -576,5 +642,73 @@ keyring = \"{{ nonexistent }}\"
         fs::write(dir.path().join("occupied.txt"), "x").unwrap();
         let err = check_destination(dir.path()).unwrap_err();
         assert!(matches!(err, GenerateError::DestinationNotEmpty(_)));
+    }
+
+    fn additions() -> Plan {
+        Plan {
+            files: vec![
+                PlannedFile {
+                    path: PathBuf::from("docs/package.json"),
+                    contents: b"{}".to_vec(),
+                    executable: false,
+                },
+                PlannedFile {
+                    path: PathBuf::from(".github/workflows/docs.yml"),
+                    contents: b"name: Docs".to_vec(),
+                    executable: false,
+                },
+            ],
+        }
+    }
+
+    #[test]
+    fn additions_need_a_repository_to_add_to() {
+        let dir = tempfile::tempdir().unwrap();
+        let err = check_additions(&additions(), &dir.path().join("not-there"), &[]).unwrap_err();
+        assert!(matches!(err, GenerateError::DestinationMissing(_)));
+    }
+
+    #[test]
+    fn additions_beside_unrelated_files_are_fine() {
+        let dir = tempfile::tempdir().unwrap();
+        fs::write(dir.path().join("README.md"), "x").unwrap();
+        fs::create_dir_all(dir.path().join("docs/adr")).unwrap();
+        fs::write(dir.path().join("docs/adr/0001.md"), "x").unwrap();
+        assert!(check_additions(&additions(), dir.path(), &[]).is_ok());
+    }
+
+    /// Every file in the way is named, not only the first: a refusal that
+    /// reports one conflict at a time turns into a loop of runs.
+    #[test]
+    fn additions_name_every_file_in_the_way() {
+        let dir = tempfile::tempdir().unwrap();
+        fs::create_dir_all(dir.path().join("docs")).unwrap();
+        fs::create_dir_all(dir.path().join(".github/workflows")).unwrap();
+        fs::write(dir.path().join("docs/package.json"), "mine").unwrap();
+        fs::write(dir.path().join(".github/workflows/docs.yml"), "mine").unwrap();
+        let err = check_additions(&additions(), dir.path(), &[]).unwrap_err();
+        let GenerateError::WouldOverwrite { paths, .. } = &err else { panic!("{err}") };
+        assert_eq!(paths.len(), 2);
+        let text = err.to_string();
+        assert!(text.contains("docs/package.json") && text.contains(".github/workflows/docs.yml"), "{text}");
+    }
+
+    #[test]
+    fn a_site_of_another_kind_is_refused() {
+        let dir = tempfile::tempdir().unwrap();
+        fs::write(dir.path().join("mkdocs.yml"), "site_name: x").unwrap();
+        let err = check_additions(&additions(), dir.path(), &["mkdocs.yml"]).unwrap_err();
+        assert!(matches!(err, GenerateError::ForeignSite { marker: "mkdocs.yml", .. }));
+    }
+
+    /// The check can be skipped or raced; the write cannot. A file present at
+    /// the moment of writing stops the write and keeps its contents.
+    #[test]
+    fn writing_never_replaces_a_file() {
+        let dir = tempfile::tempdir().unwrap();
+        fs::create_dir_all(dir.path().join("docs")).unwrap();
+        fs::write(dir.path().join("docs/package.json"), "mine").unwrap();
+        assert!(write(&additions(), dir.path()).is_err());
+        assert_eq!(fs::read_to_string(dir.path().join("docs/package.json")).unwrap(), "mine");
     }
 }

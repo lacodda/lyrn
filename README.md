@@ -67,7 +67,7 @@ $ lyrn forms
 | `--accent <colour>` | A product of the line, or a `#rrggbb` value |
 | `--description <text>` | One line describing what the project is |
 | `--author <name>` | Recorded in LICENSE; defaults to `git config user.name` |
-| `--path <path>` | Where to create it |
+| `--path <path>` | Where to create it; `--form docs` adds to the current directory |
 | `--repo <owner/name>` | The GitHub repository it will live in |
 | `--with <addon,...>` | Optional pieces of the form, comma-separated |
 | `-y`, `--yes` | Accept the defaults instead of asking |
@@ -105,6 +105,7 @@ case its mark's colour is used.
 | `mono` | pnpm monorepo publishing a TypeScript package to npm |
 | `plugin` | Plugin for a host of the line: an executable speaking JSON over stdio |
 | `tauri-plugin` | Tauri 2 plugin: a Rust crate and the npm package that calls it |
+| `docs` | Documentation site added to an existing repository: Starlight, llms.txt |
 
 A form can carry optional pieces. The line's four CLIs agree on clap, anyhow
 and dialoguer and disagree about everything else, so the rest is asked for:
@@ -141,11 +142,17 @@ npm package, from one repository and under one tag. They agree on three
 spellings, and a disagreement is a permission error in somebody else's
 application rather than a build failure here — so CI holds them to each other.
 
-More forms — egui, docs sites — follow in 2.x.
+`--form docs` is the one form that adds to a repository instead of starting
+one: run inside it, it writes a Starlight site under `docs/` and the workflow
+that publishes it, and refuses outright if any of those files already exists.
+Every build also writes `llms.txt`, `llms-full.txt` and a Markdown twin of each
+page, and fails when the site disagrees with itself about its own address.
+
+More forms — egui — follow in 2.x.
 
 ## Status
 
-v2.6.0, in daily use. All eight forms work today, and each one is generated and
+v2.7.0, in daily use. All nine forms work today, and each one is generated and
 put through its own gate on Linux, macOS and Windows on every push. What landed
 in each version:
 [CHANGELOG](https://github.com/lacodda/lyrn/blob/main/CHANGELOG.md).

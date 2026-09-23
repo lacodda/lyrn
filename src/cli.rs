@@ -49,7 +49,8 @@ pub struct NewArgs {
     #[arg(long)]
     pub author: Option<String>,
 
-    /// Where to create it; defaults to a directory named after the project
+    /// Where to create it; defaults to a directory named after the project,
+    /// and for `--form docs` to the repository in the current directory
     #[arg(long, value_name = "PATH")]
     pub path: Option<std::path::PathBuf>,
 

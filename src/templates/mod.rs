@@ -5,6 +5,7 @@
 
 pub mod cli;
 pub mod desktop;
+pub mod docs;
 pub mod mono;
 pub mod plugin;
 pub mod service;
@@ -26,6 +27,7 @@ pub fn manifest_for(form: Form) -> &'static str {
         Form::Mono => mono::MANIFEST,
         Form::Plugin => plugin::MANIFEST,
         Form::TauriPlugin => tauri_plugin::MANIFEST,
+        Form::Docs => docs::MANIFEST,
     }
 }
 
@@ -40,6 +42,16 @@ pub fn sources_for(form: Form) -> Vec<SourceFile> {
         Form::Mono => mono::sources(),
         Form::Plugin => plugin::sources(),
         Form::TauriPlugin => tauri_plugin::sources(),
+        Form::Docs => docs::sources(),
+    }
+}
+
+/// Files whose presence means a form must not add to a repository: it already
+/// has what the form would bring.
+pub fn foreign_sites_for(form: Form) -> &'static [&'static str] {
+    match form {
+        Form::Docs => docs::FOREIGN_SITES,
+        _ => &[],
     }
 }
 
@@ -70,6 +82,12 @@ mod tests {
         "env_prefix",
         "lib_name",
         "owner",
+        "repo_name",
+        // The same values, as JSON strings: a description with an apostrophe
+        // or a colon is valid text and broken JavaScript or YAML when pasted
+        // in bare, and a JSON string is valid in both.
+        "title_json",
+        "description_json",
         // Only the plugin forms fill these; the check below asks each form for
         // its own, so a variable no form of this shape provides is still an
         // error rather than a name on a list.

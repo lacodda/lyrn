@@ -11,6 +11,10 @@ Creates a project in a directory named after it, or wherever `--path` points.
 The destination has to be empty or absent — lyrn never writes into a directory
 that already holds something.
 
+The exception is `--form docs`, which adds a site to the repository it is run
+in. It never replaces a file either: if anything it would write is already
+there, it writes nothing and names each one. See [the docs form](/reference/forms/#docs).
+
 ## The name
 
 Lowercase letters, digits and hyphens, starting with a letter. That is the
@@ -31,7 +35,7 @@ error: the name starts with `D`; it has to start with a lowercase letter
 | `--accent <colour>` | asked, else graphite | A product of the line, or a `#rrggbb` value |
 | `--description <text>` | asked, else generic | One line describing what the project is |
 | `--author <name>` | `git config user.name` | Recorded in LICENSE |
-| `--path <path>` | `./<name>` | Where to create it |
+| `--path <path>` | `./<name>`; `.` for `docs` | Where to create it |
 | `--repo <owner/name>` | looked up | The GitHub repository it will live in |
 | `--with <addon,...>` | none | Optional pieces, per form; see [Forms](/reference/forms/) |
 | `-y`, `--yes` | — | Accept the defaults instead of asking |
@@ -131,6 +135,7 @@ error: the `cli` form is not generated against a host, so `--host kilna` means n
 
 After the files are written, lyrn fetches what the project depends on - `pnpm
 install` or `cargo fetch`, whichever the form uses - and starts the repository
-with one Conventional Commit. Both are skipped by `--no-hooks`, and a missing
+with one Conventional Commit. `--form docs` only installs the site: the
+repository already exists, and its history is yours. Both are skipped by `--no-hooks`, and a missing
 tool is reported rather than fatal: the files are already on disk and the step
 is one command away.
