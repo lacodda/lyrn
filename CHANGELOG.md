@@ -6,6 +6,14 @@
 
 - Add the docs form
 
+### 📖 Documentation
+
+- Changelog for 2.7.0
+
+### 🛟 Miscellaneous Tasks
+
+- Find a checksum tool the runner has
+
 ## 🎉 [2.6.0] - 2026-09-19
 
 ### ✨ Features
