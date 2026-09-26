@@ -47,6 +47,38 @@ pub fn sources_for(form: Form) -> Vec<SourceFile> {
     }
 }
 
+/// The files every repository of the line carries whatever its code does:
+/// what `lyrn adopt` brings to one that lacks them.
+///
+/// Hygiene and the gate, and nothing that depends on how the code is laid
+/// out. The release contour - `release.yml`, `publish.yml`, the npm wrapper,
+/// the installers - is part of the standard too, but its files only work
+/// together and against a particular package layout; adding them one by one
+/// beside an unknown build would add a workflow that fails on its first tag.
+pub const STANDARD: &[&str] = &[
+    "README.md",
+    "LICENSE",
+    "CHANGELOG.md",
+    "cliff.toml",
+    ".editorconfig",
+    ".gitattributes",
+    ".gitignore",
+    ".github/workflows/ci.yml",
+    "docs/adr/0001-record-architecture-decisions.md",
+    "docs/adr/README.md",
+    "lyrn.toml",
+    // Only the Rust forms write one.
+    "rustfmt.toml",
+];
+
+/// The files of a form's standard, as the form writes them.
+pub fn standard_sources(form: Form) -> Vec<SourceFile> {
+    sources_for(form)
+        .into_iter()
+        .filter(|s| s.addon.is_none() && STANDARD.contains(&s.path))
+        .collect()
+}
+
 /// Files whose presence means a form must not add to a repository: it already
 /// has what the form would bring.
 pub fn foreign_sites_for(form: Form) -> &'static [&'static str] {
@@ -176,6 +208,19 @@ mod tests {
                     }
                 }
                 assert!(open.is_none(), "{form}: {} leaves `{}` unclosed", source.path, open.unwrap_or(""));
+            }
+        }
+    }
+
+    /// `adopt` promises the whole standard, so every form it can adopt has to
+    /// write all of it - a form that dropped `cliff.toml` would silently
+    /// adopt repositories without one.
+    #[test]
+    fn every_adoptable_form_writes_the_whole_standard() {
+        for form in Form::ALL.iter().filter(|f| f.adoptable()) {
+            let paths: Vec<&str> = standard_sources(*form).iter().map(|s| s.path).collect();
+            for entry in STANDARD.iter().filter(|e| **e != "rustfmt.toml") {
+                assert!(paths.contains(entry), "{form} does not write `{entry}`, which `lyrn adopt` promises");
             }
         }
     }

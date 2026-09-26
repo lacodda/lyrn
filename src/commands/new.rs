@@ -1,26 +1,49 @@
 use std::error::Error;
 use std::io::IsTerminal;
-use std::path::PathBuf;
+use std::path::{Path, PathBuf};
 use std::process::Command as Process;
 
-use crate::cli::NewArgs;
-use crate::generate;
+use crate::cli::{IdentityArgs, NewArgs, ProjectArgs};
+use crate::generate::{self, GenerateError};
 use crate::host;
-use crate::model::{Context, Form, Placement, TemplateManifest};
+use crate::model::{Addon, Context, Form, Placement, TemplateManifest};
 use crate::naming::{self, PLACEHOLDER_ACCENT};
 use crate::templates;
+
+/// Everything a generation is asked for, whichever command asked.
+pub struct Wanted<'a> {
+    pub name: &'a str,
+    pub form: Form,
+    pub host: Option<&'a str>,
+    pub with: &'a [Addon],
+    pub identity: &'a IdentityArgs,
+}
+
+impl<'a> Wanted<'a> {
+    pub fn from_project(name: &'a str, project: &'a ProjectArgs) -> Self {
+        Self {
+            name,
+            form: project.form,
+            host: project.host.as_deref(),
+            with: &project.with,
+            identity: &project.identity,
+        }
+    }
+}
 
 /// Build the context a generation runs with.
 ///
 /// Everything can be given on the command line; the wizard only fills what is
 /// still missing, and only when there is a terminal to ask into.
-pub fn build_context(args: &NewArgs, manifest: &TemplateManifest, interactive: bool) -> Result<Context, Box<dyn Error>> {
-    naming::validate_name(&args.name)?;
+pub fn build_context(wanted: &Wanted, manifest: &TemplateManifest, interactive: bool) -> Result<Context, Box<dyn Error>> {
+    let args = wanted;
+    let identity = wanted.identity;
+    naming::validate_name(args.name)?;
 
     // An add-on this form does not have would otherwise be accepted and write
     // nothing: the command succeeds, and the thing that was asked for is
     // simply absent. Clap only checks that the name exists at all.
-    for addon in &args.with {
+    for addon in args.with {
         if !args.form.addons().contains(addon) {
             let known = args.form.addons().iter().map(|a| a.as_str()).collect::<Vec<_>>();
             let offer = if known.is_empty() {
@@ -35,7 +58,7 @@ pub fn build_context(args: &NewArgs, manifest: &TemplateManifest, interactive: b
     // `--host` given to a form that has no host would be accepted and ignored:
     // the generated project would be right about everything except the one
     // thing the flag was for.
-    let host = match (&args.host, args.form.takes_a_host()) {
+    let host = match (args.host, args.form.takes_a_host()) {
         (Some(name), true) => Some(host::find(name)?),
         (Some(name), false) => {
             return Err(format!("the `{}` form is not generated against a host, so `--host {name}` means nothing", args.form).into());
@@ -50,7 +73,7 @@ pub fn build_context(args: &NewArgs, manifest: &TemplateManifest, interactive: b
         (None, false) => None,
     };
 
-    let accent = match &args.accent {
+    let accent = match &identity.accent {
         Some(value) => naming::resolve_accent(value)?,
         None if interactive => prompt_accent()?,
         None => PLACEHOLDER_ACCENT.to_string(),
@@ -67,31 +90,31 @@ pub fn build_context(args: &NewArgs, manifest: &TemplateManifest, interactive: b
     // A documentation site describes a product that already exists, so its
     // default says that rather than calling the site "a docs".
     let default_description = match args.form {
-        Form::Docs => format!("The documentation of {}.", naming::title_from_name(&args.name)),
+        Form::Docs => format!("The documentation of {}.", naming::title_from_name(args.name)),
         form => format!("A {form} on the lacodda line's stack."),
     };
-    let description = match &args.description {
+    let description = match &identity.description {
         Some(value) => value.clone(),
         None if interactive => prompt_line("What is it, in one line?", &default_description)?,
         None => default_description,
     };
 
-    let author = match &args.author {
+    let author = match &identity.author {
         Some(value) => value.clone(),
         None => git_config("user.name").unwrap_or_else(|| "The author".to_string()),
     };
 
     // Resolved once: the lookup can spawn `gh`, and it is asked for twice.
-    let repo = repo(args);
+    let repo = repo(args.name, identity.repo.as_deref());
     let owner = repo.split('/').next().unwrap_or("OWNER").to_string();
     // A github.io project site is served under the repository's name, which
     // need not be the project's.
-    let repo_name = repo.split('/').nth(1).unwrap_or(&args.name).to_string();
-    let title = naming::title_from_name(&args.name);
+    let repo_name = repo.split('/').nth(1).unwrap_or(args.name).to_string();
+    let title = naming::title_from_name(args.name);
 
     let mut context = Context::new();
     context
-        .set("name", &args.name)
+        .set("name", args.name)
         .set("title_json", naming::json_string(&title))
         .set("title", title)
         .set("description_json", naming::json_string(&description))
@@ -133,7 +156,7 @@ pub fn build_context(args: &NewArgs, manifest: &TemplateManifest, interactive: b
         const COMMAND: &str = "version";
 
         context
-            .set("type_name", naming::type_from_name(&args.name))
+            .set("type_name", naming::type_from_name(args.name))
             .set("command_key", COMMAND)
             .set("command_fn", COMMAND)
             .set("command_camel", naming::camel_from_key(COMMAND))
@@ -159,7 +182,7 @@ pub fn build_context(args: &NewArgs, manifest: &TemplateManifest, interactive: b
                 host.targets.iter().map(|t| format!("\"{}\"", t.key)).collect::<Vec<_>>().join(", "),
             )
             .set("command_key", "run")
-            .set("command_label", format!("Run {}", naming::title_from_name(&args.name)))
+            .set("command_label", format!("Run {}", naming::title_from_name(args.name)))
             .set("bin_name", format!("{}{}", host.prefix(), args.name));
     }
 
@@ -167,31 +190,42 @@ pub fn build_context(args: &NewArgs, manifest: &TemplateManifest, interactive: b
 }
 
 pub fn run(args: NewArgs) -> Result<(), Box<dyn Error>> {
-    let manifest: TemplateManifest = toml::from_str(templates::manifest_for(args.form))?;
-    let interactive = !args.assume_yes && std::io::stdin().is_terminal();
-
-    let context = build_context(&args, &manifest, interactive)?;
     // A new project gets a directory named after it; a form that adds to a
     // repository adds to the one it is run in.
-    let root = args.path.clone().unwrap_or_else(|| match args.form.placement() {
+    let placement = args.project.form.placement();
+    let root = args.path.clone().unwrap_or_else(|| match placement {
         Placement::NewDirectory => PathBuf::from(&args.name),
         Placement::IntoExisting => PathBuf::from("."),
     });
+    generate_project(&Wanted::from_project(&args.name, &args.project), &args.project, &root, placement)
+}
 
-    let plan = generate::plan_with(&templates::sources_for(args.form), &manifest, &context, &args.with)?;
+/// Plan a project, check the destination, show or write it, and run its
+/// hooks. `placement` is where the files go this time: `init` puts any form
+/// into a directory that already exists.
+pub fn generate_project(wanted: &Wanted, project: &ProjectArgs, root: &Path, placement: Placement) -> Result<(), Box<dyn Error>> {
+    let manifest: TemplateManifest = toml::from_str(templates::manifest_for(wanted.form))?;
+    let interactive = !project.assume_yes && std::io::stdin().is_terminal();
+
+    let context = build_context(wanted, &manifest, interactive)?;
+    let plan = generate::plan_with(&templates::sources_for(wanted.form), &manifest, &context, wanted.with)?;
 
     // Checked before a dry run too: a dry run that promises files the real
     // run would refuse to write is a promise the tool then breaks.
-    match args.form.placement() {
-        Placement::NewDirectory => generate::check_destination(&root)?,
-        Placement::IntoExisting => generate::check_additions(&plan, &root, templates::foreign_sites_for(args.form))?,
+    match placement {
+        Placement::NewDirectory => generate::check_destination(root)?,
+        Placement::IntoExisting => {
+            generate::check_additions(&plan, root, templates::foreign_sites_for(wanted.form)).map_err(|e| with_the_other_way(e, wanted.form))?
+        }
     }
 
-    let verb = match args.form.placement() {
+    // The words follow what the form is, not where it goes: a project started
+    // in place is still created, and a documentation site is still added.
+    let verb = match wanted.form.placement() {
         Placement::NewDirectory => "create",
         Placement::IntoExisting => "add",
     };
-    if args.dry_run {
+    if project.dry_run {
         println!("Would {verb} {} in `{}`:\n", plural(plan.files.len()), root.display());
         println!("{}", indent(&plan.tree()));
         return Ok(());
@@ -210,23 +244,65 @@ pub fn run(args: NewArgs) -> Result<(), Box<dyn Error>> {
         }
     }
 
-    generate::write(&plan, &root)?;
-    let done = match args.form.placement() {
+    // Asked before the files land: `git init` is one of the hooks, and after
+    // it every destination would look like a repository.
+    let in_a_repository = inside_a_repository(root);
+
+    generate::write(&plan, root)?;
+    let done = match wanted.form.placement() {
         Placement::NewDirectory => "Created",
         Placement::IntoExisting => "Added",
     };
     println!("{done} {} in `{}`.", plural(plan.files.len()), root.display());
 
-    if !args.no_hooks {
-        run_hooks(&manifest, &root)?;
+    if !project.no_hooks {
+        run_hooks(&manifest, root, in_a_repository)?;
     }
 
-    print_next_steps(&args, &root);
+    let uncommitted = in_a_repository && manifest.hooks.iter().any(|h| h.starts_repository);
+    print_next_steps(wanted, project, root, uncommitted);
     Ok(())
 }
 
-fn run_hooks(manifest: &TemplateManifest, root: &std::path::Path) -> Result<(), Box<dyn Error>> {
+/// A refusal to overwrite, with the way round it for a project being started
+/// in place: most often the files in the way are the README, LICENSE and
+/// .gitignore a hosting service puts in a new repository.
+fn with_the_other_way(error: GenerateError, form: Form) -> GenerateError {
+    match error {
+        GenerateError::WouldOverwrite { root, paths, .. } if form != Form::Docs => GenerateError::WouldOverwrite {
+            root,
+            paths,
+            hint: Some("move them aside and run again, or `lyrn adopt` to add only the standard files that are missing"),
+        },
+        other => other,
+    }
+}
+
+/// Whether `dir` is inside a git work tree already - its own repository, or
+/// one it is a directory of.
+pub fn inside_a_repository(dir: &Path) -> bool {
+    // A directory that does not exist yet is in whatever its nearest existing
+    // parent is in: `lyrn new` inside a checkout creates a directory of it.
+    let existing = dir.ancestors().find(|a| a.as_os_str().is_empty() || a.is_dir());
+    let at = match existing {
+        Some(a) if !a.as_os_str().is_empty() => a,
+        _ => Path::new("."),
+    };
+    Process::new("git")
+        .args(["rev-parse", "--is-inside-work-tree"])
+        .current_dir(at)
+        .output()
+        .is_ok_and(|out| out.status.success() && String::from_utf8_lossy(&out.stdout).trim() == "true")
+}
+
+fn run_hooks(manifest: &TemplateManifest, root: &Path, in_a_repository: bool) -> Result<(), Box<dyn Error>> {
     for hook in &manifest.hooks {
+        // A repository that already exists belongs to someone: its history,
+        // its staging area and the moment of its next commit are theirs, and
+        // a nested `git init` inside it would split it in two.
+        if hook.starts_repository && in_a_repository {
+            continue;
+        }
         let Some((program, rest)) = hook.run.split_first() else { continue };
         print!("{}... ", hook.name);
         use std::io::Write;
@@ -256,16 +332,22 @@ fn run_hooks(manifest: &TemplateManifest, root: &std::path::Path) -> Result<(), 
     Ok(())
 }
 
-fn print_next_steps(args: &NewArgs, root: &std::path::Path) {
+fn print_next_steps(wanted: &Wanted, project: &ProjectArgs, root: &Path, uncommitted: bool) {
     println!("\nNext:");
-    match args.form.placement() {
-        Placement::NewDirectory => println!("  cd {}", root.display()),
-        // The site is a project inside the repository; its commands run there.
-        // `Path::join` keeps a leading `./`, which reads as noise here.
-        Placement::IntoExisting if root == std::path::Path::new(".") => println!("  cd docs"),
-        Placement::IntoExisting => println!("  cd {}", root.join("docs").display().to_string().replace('\\', "/")),
+    // The site is a project inside the repository; its commands run there.
+    let workdir = if wanted.form == Form::Docs { root.join("docs") } else { root.to_path_buf() };
+    // `Path::join` keeps a leading `./`, which reads as noise here.
+    let workdir = workdir.strip_prefix(".").map(Path::to_path_buf).unwrap_or(workdir);
+    if !workdir.as_os_str().is_empty() {
+        println!("  cd {}", workdir.display().to_string().replace('\\', "/"));
     }
-    match args.form {
+    if uncommitted {
+        // Started inside a repository lyrn did not start, so nothing was
+        // staged or committed - the first commit is the owner's to make.
+        println!("  git add . && git commit -m \"feat: scaffold the project with lyrn\"");
+    }
+    let args = project;
+    match wanted.form {
         Form::Docs => {
             if args.no_hooks {
                 println!("  pnpm install");
@@ -298,7 +380,7 @@ fn print_next_steps(args: &NewArgs, root: &std::path::Path) {
         Form::Workspace => {
             // Named, because a workspace has more than one binary target the
             // moment anyone adds a second crate, and `cargo run` then refuses.
-            println!("  cargo run --package {} -- hello", args.name);
+            println!("  cargo run --package {} -- hello", wanted.name);
         }
         Form::Desktop => {
             if args.no_hooks {
@@ -314,7 +396,7 @@ fn print_next_steps(args: &NewArgs, root: &std::path::Path) {
             // The protocol test is what says the plugin is one, so it is the
             // first thing worth running - before the binary is put anywhere.
             println!("  cargo test");
-            if let Some(host) = &args.host {
+            if let Some(host) = wanted.host {
                 println!("  cargo run -- --manifest    # what {host} will read");
             }
         }
@@ -345,12 +427,12 @@ fn indent(text: &str) -> String {
 /// that looks right and resolves to nobody. `git config github.user` first,
 /// then the authenticated `gh` account, and failing both an obvious
 /// placeholder - a name that is visibly a blank is safer than a plausible one.
-fn repo(args: &NewArgs) -> String {
-    if let Some(explicit) = &args.repo {
-        return explicit.clone();
+fn repo(name: &str, explicit: Option<&str>) -> String {
+    if let Some(explicit) = explicit {
+        return explicit.to_string();
     }
     let owner = git_config("github.user").or_else(gh_login).unwrap_or_else(|| "OWNER".to_string());
-    format!("{owner}/{}", args.name)
+    format!("{owner}/{name}")
 }
 
 /// The GitHub account `gh` is logged in as, if it is installed and logged in.
@@ -437,28 +519,86 @@ fn current_date() -> String {
 #[cfg(test)]
 mod tests {
     use super::*;
+    use crate::model::Hook;
 
-    fn args(name: &str) -> NewArgs {
-        NewArgs {
+    fn git(dir: &Path, args: &[&str]) {
+        let status = Process::new("git").args(args).current_dir(dir).output().unwrap().status;
+        assert!(status.success(), "git {args:?} failed in {}", dir.display());
+    }
+
+    fn git_init_hook() -> TemplateManifest {
+        TemplateManifest {
+            hooks: vec![Hook {
+                name: "Starting the repository".to_string(),
+                run: vec!["git".to_string(), "init".to_string(), "--initial-branch=main".to_string()],
+                optional: false,
+                dir: None,
+                starts_repository: true,
+            }],
+            ..TemplateManifest::default()
+        }
+    }
+
+    #[test]
+    fn a_directory_of_a_checkout_is_inside_a_repository() {
+        let outer = tempfile::tempdir().unwrap();
+        assert!(!inside_a_repository(outer.path()));
+        git(outer.path(), &["init", "--quiet"]);
+        std::fs::create_dir(outer.path().join("sub")).unwrap();
+        assert!(inside_a_repository(&outer.path().join("sub")));
+        // Not created yet: judged by the nearest directory that exists.
+        assert!(inside_a_repository(&outer.path().join("sub").join("new-project")));
+    }
+
+    /// `lyrn new` or `init` inside somebody's checkout must not start a
+    /// second repository inside the first.
+    #[test]
+    fn a_repository_that_exists_is_not_started_again() {
+        let outer = tempfile::tempdir().unwrap();
+        git(outer.path(), &["init", "--quiet"]);
+        let project = outer.path().join("demo-app");
+        std::fs::create_dir(&project).unwrap();
+
+        run_hooks(&git_init_hook(), &project, true).unwrap();
+        assert!(!project.join(".git").exists(), "a nested repository was started");
+
+        run_hooks(&git_init_hook(), &project, false).unwrap();
+        assert!(project.join(".git").exists(), "outside a repository the hook must run");
+    }
+
+    /// What a test asks for: a name and an identity, the rest fixed.
+    struct Args {
+        name: String,
+        identity: IdentityArgs,
+    }
+
+    impl Args {
+        fn wanted(&self) -> Wanted<'_> {
+            Wanted {
+                name: &self.name,
+                form: Form::Spa,
+                host: None,
+                with: &[],
+                identity: &self.identity,
+            }
+        }
+    }
+
+    fn args(name: &str) -> Args {
+        Args {
             name: name.to_string(),
-            form: Form::Spa,
-            host: None,
-            accent: None,
-            description: None,
-            author: Some("Tester".to_string()),
-            path: None,
-            repo: Some("tester/demo-app".to_string()),
-            with: Vec::new(),
-            assume_yes: true,
-            dry_run: false,
-            no_hooks: true,
+            identity: IdentityArgs {
+                author: Some("Tester".to_string()),
+                repo: Some("tester/demo-app".to_string()),
+                ..IdentityArgs::default()
+            },
         }
     }
 
     #[test]
     fn a_non_interactive_run_needs_no_answers() {
         let manifest = TemplateManifest::default();
-        let context = build_context(&args("demo-app"), &manifest, false).unwrap();
+        let context = build_context(&args("demo-app").wanted(), &manifest, false).unwrap();
         assert_eq!(context.get("name"), Some("demo-app"));
         assert_eq!(context.get("title"), Some("Demo App"));
         assert_eq!(context.get("accent"), Some(PLACEHOLDER_ACCENT));
@@ -467,15 +607,15 @@ mod tests {
     #[test]
     fn a_bad_name_is_refused_before_anything_is_written() {
         let manifest = TemplateManifest::default();
-        assert!(build_context(&args("Demo App"), &manifest, false).is_err());
+        assert!(build_context(&args("Demo App").wanted(), &manifest, false).is_err());
     }
 
     #[test]
     fn an_accent_names_a_product_of_the_line() {
         let manifest = TemplateManifest::default();
         let mut a = args("demo-app");
-        a.accent = Some("kilna".to_string());
-        let context = build_context(&a, &manifest, false).unwrap();
+        a.identity.accent = Some("kilna".to_string());
+        let context = build_context(&a.wanted(), &manifest, false).unwrap();
         assert_eq!(context.get("accent"), Some("#D9569E"));
     }
 
@@ -485,7 +625,7 @@ mod tests {
     #[test]
     fn a_project_without_an_accent_is_recorded_as_unmarked() {
         let manifest = TemplateManifest::default();
-        let context = build_context(&args("demo-app"), &manifest, false).unwrap();
+        let context = build_context(&args("demo-app").wanted(), &manifest, false).unwrap();
         assert_eq!(context.get("mark"), Some("placeholder"));
     }
 
@@ -496,14 +636,14 @@ mod tests {
     fn choosing_an_accent_is_choosing_a_mark() {
         let manifest = TemplateManifest::default();
         let mut a = args("demo-app");
-        a.accent = Some("kilna".to_string());
-        assert_eq!(build_context(&a, &manifest, false).unwrap().get("mark"), Some("chosen"));
+        a.identity.accent = Some("kilna".to_string());
+        assert_eq!(build_context(&a.wanted(), &manifest, false).unwrap().get("mark"), Some("chosen"));
 
         // A literal colour counts too - a product may have a mark before it
         // has a place in the line's registry.
         let mut b = args("demo-app");
-        b.accent = Some("#123456".to_string());
-        assert_eq!(build_context(&b, &manifest, false).unwrap().get("mark"), Some("chosen"));
+        b.identity.accent = Some("#123456".to_string());
+        assert_eq!(build_context(&b.wanted(), &manifest, false).unwrap().get("mark"), Some("chosen"));
     }
 
     /// The placeholder's own hex, given explicitly, is still the placeholder.
@@ -513,16 +653,16 @@ mod tests {
     fn spelling_out_the_placeholder_colour_is_not_choosing_a_mark() {
         let manifest = TemplateManifest::default();
         let mut a = args("demo-app");
-        a.accent = Some(PLACEHOLDER_ACCENT.to_string());
-        assert_eq!(build_context(&a, &manifest, false).unwrap().get("mark"), Some("placeholder"));
+        a.identity.accent = Some(PLACEHOLDER_ACCENT.to_string());
+        assert_eq!(build_context(&a.wanted(), &manifest, false).unwrap().get("mark"), Some("placeholder"));
     }
 
     #[test]
     fn an_unknown_accent_is_refused() {
         let manifest = TemplateManifest::default();
         let mut a = args("demo-app");
-        a.accent = Some("chartreuse".to_string());
-        assert!(build_context(&a, &manifest, false).is_err());
+        a.identity.accent = Some("chartreuse".to_string());
+        assert!(build_context(&a.wanted(), &manifest, false).is_err());
     }
 
     #[test]
@@ -531,7 +671,7 @@ mod tests {
             standard: "2026.09".to_string(),
             ..Default::default()
         };
-        let context = build_context(&args("demo-app"), &manifest, false).unwrap();
+        let context = build_context(&args("demo-app").wanted(), &manifest, false).unwrap();
         assert_eq!(context.get("standard"), Some("2026.09"));
     }
 }

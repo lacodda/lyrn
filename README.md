@@ -56,7 +56,9 @@ $ npm install -g lyrn          # or: cargo install lyrn
 ## Usage
 
 ```console
-$ lyrn new <name> [options]
+$ lyrn new <name> [options]      # a project in a directory of its own
+$ lyrn init [path] [options]     # the same, in a directory that already exists
+$ lyrn adopt [path]              # the standard's missing files, into an old repository
 $ lyrn forms
 ```
 
@@ -71,7 +73,7 @@ $ lyrn forms
 | `--repo <owner/name>` | The GitHub repository it will live in |
 | `--with <addon,...>` | Optional pieces of the form, comma-separated |
 | `-y`, `--yes` | Accept the defaults instead of asking |
-| `--dry-run` | Show what would be written, and write nothing |
+| `--dry-run` | Show the tree that would be written, and write nothing |
 | `--no-hooks` | Skip installing dependencies and starting the repository |
 
 Without `--yes` and with a terminal attached, lyrn asks for what it is missing.

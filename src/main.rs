@@ -18,6 +18,8 @@ fn main() -> ExitCode {
 
     let result = match cli.command {
         cli::Command::New(args) => commands::new::run(*args),
+        cli::Command::Init(args) => commands::init::run(*args),
+        cli::Command::Adopt(args) => commands::adopt::run(*args),
         cli::Command::Forms => {
             list_forms();
             Ok(())

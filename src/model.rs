@@ -111,6 +111,13 @@ impl Form {
         matches!(self, Form::Plugin)
     }
 
+    /// Whether an existing repository can be of this form. A documentation
+    /// site is something a repository has, not something it is: it is added
+    /// with `lyrn new --form docs`.
+    pub fn adoptable(self) -> bool {
+        self != Form::Docs
+    }
+
     /// Whether this form starts a repository or adds to one.
     pub fn placement(self) -> Placement {
         match self {
@@ -252,6 +259,11 @@ pub struct Hook {
     /// not the repository around it.
     #[serde(default)]
     pub dir: Option<String>,
+    /// Part of starting the repository: `git init` and the first commit.
+    /// Skipped when the project lands inside a work tree that already exists,
+    /// whose history and next commit belong to its owner.
+    #[serde(default)]
+    pub starts_repository: bool,
 }
 
 /// The answers a generation runs with, and the source of every placeholder.

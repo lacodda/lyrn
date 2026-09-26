@@ -121,6 +121,8 @@ pub enum GenerateError {
     WouldOverwrite {
         root: PathBuf,
         paths: Vec<PathBuf>,
+        /// What to do instead, when the command knows a way round.
+        hint: Option<&'static str>,
     },
     /// The repository already carries a documentation site of another kind;
     /// a second one beside it would be two truths about the same product.
@@ -144,7 +146,7 @@ impl std::fmt::Display for GenerateError {
             GenerateError::DestinationMissing(p) => {
                 write!(f, "`{}` does not exist - this form adds to an existing repository", p.display())
             }
-            GenerateError::WouldOverwrite { root, paths } => {
+            GenerateError::WouldOverwrite { root, paths, hint } => {
                 write!(
                     f,
                     "nothing was written: {} already in `{}`:",
@@ -153,6 +155,9 @@ impl std::fmt::Display for GenerateError {
                 )?;
                 for path in paths {
                     write!(f, "\n  {}", path.display().to_string().replace('\\', "/"))?;
+                }
+                if let Some(hint) = hint {
+                    write!(f, "\n{hint}")?;
                 }
                 Ok(())
             }
@@ -342,6 +347,7 @@ pub fn check_additions(plan: &Plan, root: &Path, foreign_sites: &[&'static str])
         Err(GenerateError::WouldOverwrite {
             root: root.to_path_buf(),
             paths: taken,
+            hint: None,
         })
     }
 }
