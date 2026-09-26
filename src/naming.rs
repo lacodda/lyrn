@@ -2,26 +2,18 @@
 
 use std::fmt;
 
-/// The line's registry of marks: product, two-letter code, accent.
+/// The line's products and their accents, as dowel publishes them.
 ///
 /// dowel derives a product's whole palette from this one colour, so `lyrn new`
-/// only has to write a single line into the generated theme.
-pub const LINE_ACCENTS: &[(&str, &str)] = &[
-    ("atlas", "#8A7DF5"),
-    ("austeris", "#C25BD9"),
-    ("dowel", "#E8862D"),
-    ("efema", "#5470E8"),
-    ("kasl", "#A9C23F"),
-    ("kasl-server", "#D9A82E"),
-    ("kilna", "#D9569E"),
-    ("lyrid", "#4A8FE8"),
-    ("lyrn", "#6D7BF2"),
-    ("midda", "#A46BE8"),
-    ("nitid", "#3FA9D9"),
-    ("nooma", "#3FA873"),
-    ("sefy", "#35A8A0"),
-    ("turnout", "#E85B72"),
-];
+/// only has to write a single line into the generated theme. The table is
+/// taken from the `accent-<product>` items of the dowel-ui registry by
+/// `tools/vendor-dowel.mjs`: it used to be typed in here, and by the time
+/// dowel knew nineteen products this list still knew fourteen - `--accent
+/// hilvan` was refused as an unknown colour. A product with a two-colour mark
+/// is accented in its first colour.
+pub fn line_accents() -> impl Iterator<Item = (&'static str, &'static str)> {
+    include_str!("templates/dowel/accents.tsv").lines().filter_map(|line| line.split_once('\t'))
+}
 
 /// The accent a product without its own mark starts with: neutral graphite,
 /// a placeholder that reads as "the mark has not been drawn yet".
@@ -92,16 +84,21 @@ pub fn validate_name(name: &str) -> Result<(), NameError> {
 
 /// Resolve `--accent`: either a product of the line, or a literal hex colour.
 pub fn resolve_accent(input: &str) -> Result<String, String> {
-    if let Some((_, hex)) = LINE_ACCENTS.iter().find(|(product, _)| *product == input) {
-        return Ok((*hex).to_string());
+    if let Some(hex) = product_accent(input) {
+        return Ok(hex.to_string());
     }
     if is_hex_colour(input) {
         return Ok(input.to_uppercase());
     }
     Err(format!(
         "`{input}` is neither a product of the line nor a `#rrggbb` colour (products: {})",
-        LINE_ACCENTS.iter().map(|(p, _)| *p).collect::<Vec<_>>().join(", ")
+        line_accents().map(|(p, _)| p).collect::<Vec<_>>().join(", ")
     ))
+}
+
+/// The accent of a product of the line, if `name` is one.
+pub fn product_accent(name: &str) -> Option<&'static str> {
+    line_accents().find(|(product, _)| *product == name).map(|(_, hex)| hex)
 }
 
 fn is_hex_colour(s: &str) -> bool {
@@ -234,10 +231,22 @@ mod tests {
 
     #[test]
     fn every_accent_in_the_registry_is_a_six_digit_colour() {
-        for (product, hex) in LINE_ACCENTS {
+        let mut count = 0;
+        for (product, hex) in line_accents() {
             assert!(is_hex_colour(hex), "{product} has a malformed accent: {hex}");
+            count += 1;
         }
+        assert!(count > 0, "the accents table is empty");
         assert!(is_hex_colour(PLACEHOLDER_ACCENT));
+    }
+
+    /// The products that joined the line after the table stopped being typed
+    /// by hand - the reason it stopped.
+    #[test]
+    fn every_product_of_the_line_has_its_accent() {
+        for product in ["hilvan", "rhapsod", "scheda", "furca", "rigger"] {
+            assert!(product_accent(product).is_some(), "`--accent {product}` would be refused");
+        }
     }
 
     #[test]

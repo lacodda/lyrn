@@ -1,4 +1,5 @@
-// Copies the dowel primitives the templates carry out of a published dowel-ui.
+// Copies what lyrn takes from dowel out of a published dowel-ui: the registry
+// primitives the templates carry, and the line's accents.
 //
 //   node tools/vendor-dowel.mjs            # the version already vendored
 //   node tools/vendor-dowel.mjs 0.34.0     # move to another version
@@ -69,6 +70,23 @@ try {
       console.log(`${name}: ${file.path}`)
     }
   }
+  // The line's products and their accents, from the same catalogue: dowel
+  // publishes one `accent-<product>` item per mark in the brand registry, so
+  // `--accent hilvan` knows hilvan the day dowel does - rather than the day
+  // somebody remembers a second table inside lyrn.
+  const accents = []
+  for (const item of registry.items) {
+    const product = item.name.match(/^accent-(.+)$/)?.[1]
+    if (!product) continue
+    const hex = item.files?.[0]?.content.match(/--accent-base:\s*(#[0-9a-fA-F]{6})/)?.[1]
+    if (!hex) throw new Error(`\`${item.name}\` declares no --accent-base`)
+    accents.push(`${product}\t${hex.toUpperCase()}`)
+  }
+  if (accents.length === 0) throw new Error(`dowel-ui ${version} carries no accent-* items`)
+  accents.sort()
+  writeFileSync(join(DOWEL, 'accents.tsv'), `${accents.join('\n')}\n`)
+  console.log(`accents: ${accents.length} products`)
+
   writeFileSync(join(DOWEL, 'VERSION'), `${version}\n`)
   console.log(`vendored ${PRIMITIVES.length} primitives from dowel-ui ${version}`)
 } finally {
