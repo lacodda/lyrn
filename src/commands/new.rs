@@ -197,6 +197,19 @@ pub fn run(args: NewArgs) -> Result<(), Box<dyn Error>> {
         return Ok(());
     }
 
+    // With someone at the terminal, the tree is shown before anything is
+    // written, and nothing is written until they say so: a form or an add-on
+    // that brings more (or less) than was expected is cheapest to notice
+    // here, before it is files on disk and a first commit.
+    if interactive {
+        println!("\nWill {verb} {} in `{}`:\n", plural(plan.files.len()), root.display());
+        println!("{}\n", indent(&plan.tree()));
+        if !confirm(&format!("{} them?", capitalise(verb)))? {
+            println!("Nothing was written.");
+            return Ok(());
+        }
+    }
+
     generate::write(&plan, &root)?;
     let done = match args.form.placement() {
         Placement::NewDirectory => "Created",
@@ -392,6 +405,16 @@ fn prompt_accent() -> Result<String, Box<dyn Error>> {
         .default(PLACEHOLDER_ACCENT.to_string())
         .interact_text()?;
     Ok(naming::resolve_accent(&raw)?)
+}
+
+fn confirm(prompt: &str) -> Result<bool, Box<dyn Error>> {
+    use dialoguer::{Confirm, theme::ColorfulTheme};
+    Ok(Confirm::with_theme(&ColorfulTheme::default()).with_prompt(prompt).default(true).interact()?)
+}
+
+fn capitalise(word: &str) -> String {
+    let mut chars = word.chars();
+    chars.next().map(|first| first.to_uppercase().chain(chars).collect()).unwrap_or_default()
 }
 
 fn prompt_line(prompt: &str, default: &str) -> Result<String, Box<dyn Error>> {

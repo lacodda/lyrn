@@ -1,0 +1,26 @@
+Would create 18 files in `demo-tool`:
+
+  ├── .github/
+  │   └── workflows/
+  │       ├── ci.yml
+  │       └── release.yml
+  ├── docs/
+  │   └── adr/
+  │       ├── 0001-record-architecture-decisions.md
+  │       ├── 0002-the-plugin-is-a-subprocess.md
+  │       └── README.md
+  ├── src/
+  │   ├── main.rs
+  │   └── protocol.rs
+  ├── tests/
+  │   └── protocol.rs
+  ├── .editorconfig
+  ├── .gitattributes
+  ├── .gitignore
+  ├── CHANGELOG.md
+  ├── Cargo.toml
+  ├── LICENSE
+  ├── README.md
+  ├── cliff.toml
+  ├── lyrn.toml
+  └── rustfmt.toml

@@ -1,5 +1,6 @@
 //! Turning a template plus a context into a directory on disk.
 
+use std::collections::BTreeMap;
 use std::fs;
 use std::io;
 use std::path::{Path, PathBuf};
@@ -41,12 +42,71 @@ impl Plan {
         dirs
     }
 
-    /// A tree of what will be created, for `--dry-run` and for the wizard.
+    /// A tree of what will be created, for `--dry-run` and for the preview
+    /// shown before anything is written.
     pub fn tree(&self) -> String {
-        let mut paths: Vec<String> = self.files.iter().map(|f| f.path.display().to_string().replace('\\', "/")).collect();
-        paths.sort();
-        paths.join("\n")
+        draw_tree(self.files.iter().map(|f| (f.path.as_path(), None)))
     }
+}
+
+/// Draw paths as a tree: directories first, then files, each group in byte
+/// order, with an optional note after a file.
+///
+/// A flat list of forty paths hides the one thing a preview is for - where
+/// things land. Twelve files under `src-tauri/` read as a list of twelve
+/// strings; as a tree they read as one directory, and a file that landed in
+/// the wrong one stands out by its indentation.
+pub fn draw_tree<'a>(entries: impl IntoIterator<Item = (&'a Path, Option<&'a str>)>) -> String {
+    #[derive(Default)]
+    struct Dir<'a> {
+        dirs: BTreeMap<String, Dir<'a>>,
+        files: BTreeMap<String, Option<&'a str>>,
+    }
+
+    fn walk(dir: &Dir, prefix: &str, out: &mut String) {
+        let total = dir.dirs.len() + dir.files.len();
+        let entries = dir
+            .dirs
+            .iter()
+            .map(|(name, sub)| (name, Some(sub), None))
+            .chain(dir.files.iter().map(|(name, note)| (name, None, *note)));
+        for (index, (name, sub, note)) in entries.enumerate() {
+            let last = index + 1 == total;
+            out.push_str(prefix);
+            out.push_str(if last { "└── " } else { "├── " });
+            out.push_str(name);
+            match sub {
+                Some(sub) => {
+                    out.push_str("/\n");
+                    walk(sub, &format!("{prefix}{}", if last { "    " } else { "│   " }), out);
+                }
+                None => {
+                    if let Some(note) = note {
+                        out.push_str("  (");
+                        out.push_str(note);
+                        out.push(')');
+                    }
+                    out.push('\n');
+                }
+            }
+        }
+    }
+
+    let mut root = Dir::default();
+    for (path, note) in entries {
+        let parts: Vec<String> = path.components().map(|c| c.as_os_str().to_string_lossy().into_owned()).collect();
+        let Some((file, dirs)) = parts.split_last() else { continue };
+        let mut at = &mut root;
+        for dir in dirs {
+            at = at.dirs.entry(dir.clone()).or_default();
+        }
+        at.files.insert(file.clone(), note);
+    }
+
+    let mut out = String::new();
+    walk(&root, "", &mut out);
+    out.pop();
+    out
 }
 
 /// What went wrong while planning or writing.
@@ -412,9 +472,42 @@ mod tests {
     }
 
     #[test]
-    fn the_tree_is_sorted_and_uses_forward_slashes() {
+    fn the_tree_puts_directories_before_files() {
         let plan = plan(&sources(), &TemplateManifest::default(), &ctx()).unwrap();
-        assert_eq!(plan.tree(), "README.md\nsrc/main.ts");
+        assert_eq!(plan.tree(), "├── src/\n│   └── main.ts\n└── README.md");
+    }
+
+    /// The connector says whether more follows at that level: a `└──` above
+    /// a sibling would draw the directory as closed while it still has
+    /// entries, and the eye reads the sibling as belonging to the parent.
+    #[test]
+    fn the_last_entry_of_each_level_closes_it() {
+        let paths = [Path::new("a/b/one.txt"), Path::new("a/two.txt"), Path::new("c/three.txt"), Path::new("top.txt")];
+        assert_eq!(
+            draw_tree(paths.iter().map(|p| (*p, None))),
+            "\
+├── a/
+│   ├── b/
+│   │   └── one.txt
+│   └── two.txt
+├── c/
+│   └── three.txt
+└── top.txt"
+        );
+    }
+
+    #[test]
+    fn a_note_follows_its_file() {
+        let tree = draw_tree([(Path::new("LICENSE"), Some("kept")), (Path::new("README.md"), None)]);
+        assert_eq!(tree, "├── LICENSE  (kept)\n└── README.md");
+    }
+
+    /// Windows builds paths with backslashes; the tree is drawn from path
+    /// components, so neither separator can end up in a name.
+    #[test]
+    fn the_tree_is_the_same_whatever_the_separator() {
+        let native: PathBuf = ["src", "main.ts"].iter().collect();
+        assert_eq!(draw_tree([(native.as_path(), None)]), "└── src/\n    └── main.ts");
     }
 
     #[test]

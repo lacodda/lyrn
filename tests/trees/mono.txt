@@ -1,0 +1,35 @@
+Would create 25 files in `demo-tool`:
+
+  ├── .github/
+  │   └── workflows/
+  │       ├── ci.yml
+  │       ├── publish.yml
+  │       └── release.yml
+  ├── docs/
+  │   └── adr/
+  │       ├── 0001-record-architecture-decisions.md
+  │       ├── 0002-the-package-is-built-by-tsc.md
+  │       └── README.md
+  ├── packages/
+  │   └── demo-tool/
+  │       ├── src/
+  │       │   ├── greet.test.ts
+  │       │   ├── greet.ts
+  │       │   └── index.ts
+  │       ├── package.json
+  │       └── tsconfig.json
+  ├── tools/
+  │   └── copy-readme.mjs
+  ├── .editorconfig
+  ├── .gitattributes
+  ├── .gitignore
+  ├── CHANGELOG.md
+  ├── LICENSE
+  ├── README.md
+  ├── cliff.toml
+  ├── eslint.config.js
+  ├── lyrn.toml
+  ├── package.json
+  ├── pnpm-workspace.yaml
+  ├── tsconfig.base.json
+  └── vitest.config.ts

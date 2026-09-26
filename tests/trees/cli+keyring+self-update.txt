@@ -1,0 +1,42 @@
+Would create 31 files in `demo-tool`:
+
+  ├── .github/
+  │   └── workflows/
+  │       ├── ci.yml
+  │       ├── publish.yml
+  │       └── release.yml
+  ├── docs/
+  │   └── adr/
+  │       ├── 0001-record-architecture-decisions.md
+  │       └── README.md
+  ├── npm/
+  │   ├── download.js
+  │   ├── install.js
+  │   ├── package.json
+  │   ├── prepack.js
+  │   └── run.js
+  ├── src/
+  │   ├── commands/
+  │   │   ├── hello.rs
+  │   │   ├── mod.rs
+  │   │   ├── secret.rs
+  │   │   └── self_update.rs
+  │   ├── cli.rs
+  │   ├── main.rs
+  │   └── update.rs
+  ├── tests/
+  │   └── cli.rs
+  ├── tools/
+  │   ├── install.ps1
+  │   └── install.sh
+  ├── .editorconfig
+  ├── .gitattributes
+  ├── .gitignore
+  ├── CHANGELOG.md
+  ├── Cargo.toml
+  ├── LICENSE
+  ├── README.md
+  ├── build.rs
+  ├── cliff.toml
+  ├── lyrn.toml
+  └── rustfmt.toml

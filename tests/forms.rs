@@ -11,21 +11,8 @@ use std::path::Path;
 
 use assert_cmd::Command;
 
-/// The add-on sets each form has to survive.
-///
-/// Two add-ons is four combinations, which is cheap enough to check
-/// exhaustively; if a form ever grows enough of them for that to hurt, the
-/// answer is fewer add-ons rather than less checking.
-fn combinations(form: &str) -> Vec<Vec<&'static str>> {
-    match form {
-        "cli" => vec![vec![], vec!["keyring"], vec!["self-update"], vec!["keyring", "self-update"]],
-        "desktop" => vec![vec![], vec!["i18n"]],
-        "service" => vec![vec![], vec!["spa"]],
-        "workspace" => vec![vec![], vec!["keyring"], vec!["self-update"], vec!["keyring", "self-update"]],
-        "mono" => vec![vec![], vec!["stand"]],
-        _ => vec![vec![]],
-    }
-}
+mod common;
+use common::combinations;
 
 fn generate(form: &str, addons: &[&str], root: &Path) {
     let mut cmd = Command::cargo_bin("lyrn").unwrap();

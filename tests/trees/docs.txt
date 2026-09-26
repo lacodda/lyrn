@@ -1,0 +1,33 @@
+Would add 18 files in `.`:
+
+  ├── .github/
+  │   └── workflows/
+  │       └── docs.yml
+  └── docs/
+      ├── public/
+      │   └── favicon.svg
+      ├── src/
+      │   ├── assets/
+      │   │   └── logo.svg
+      │   ├── content/
+      │   │   ├── docs/
+      │   │   │   ├── guides/
+      │   │   │   │   └── writing-a-page.md
+      │   │   │   ├── reference/
+      │   │   │   │   └── site.md
+      │   │   │   ├── 404.md
+      │   │   │   ├── getting-started.md
+      │   │   │   └── index.md
+      │   │   └── i18n/
+      │   │       └── en.json
+      │   ├── integrations/
+      │   │   ├── address.mjs
+      │   │   └── llms.mjs
+      │   ├── styles/
+      │   │   └── brand.css
+      │   └── content.config.ts
+      ├── .gitignore
+      ├── astro.config.mjs
+      ├── package.json
+      ├── pnpm-workspace.yaml
+      └── tsconfig.json

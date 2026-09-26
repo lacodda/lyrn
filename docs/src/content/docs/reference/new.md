@@ -39,8 +39,37 @@ error: the name starts with `D`; it has to start with a lowercase letter
 | `--repo <owner/name>` | looked up | The GitHub repository it will live in |
 | `--with <addon,...>` | none | Optional pieces, per form; see [Forms](/reference/forms/) |
 | `-y`, `--yes` | — | Accept the defaults instead of asking |
-| `--dry-run` | — | Show what would be written, and write nothing |
+| `--dry-run` | — | Show the tree that would be written, and write nothing |
 | `--no-hooks` | — | Skip installing dependencies and starting the repository |
+
+## Before anything is written
+
+The whole project is planned before a single file is written, and the plan is a
+tree. With someone at the terminal, lyrn shows it and asks before writing:
+
+```console
+$ lyrn new demo-app --accent kilna
+
+Will create 27 files in `demo-app`:
+
+  ├── .github/
+  │   └── workflows/
+  │       └── ci.yml
+  ├── src/
+  │   ├── components/
+  │   │   └── ui/
+  │   │       └── button.tsx
+  │   ├── App.tsx
+  ...
+  └── vitest.config.ts
+
+? Create them? (Y/n)
+```
+
+`--dry-run` prints the same tree and stops there; `--yes` writes without
+asking. Because the tree comes from the same plan the write uses, the two
+cannot disagree - and a destination the run would refuse is refused by the dry
+run too.
 
 ## The accent
 
@@ -104,9 +133,9 @@ $ lyrn new my-tool --form cli --with keyring,self-update
 
 An add-on a form does not have is an error rather than a silent no-op.
 
-A form decides what an add-on means for it. `--with i18n` on a `desktop`
-project also writes the locale gate into `pnpm lint`; on a `spa` it writes the
-same runtime without the desktop shell around it.
+A form decides what an add-on means for it: `--with i18n` on a `desktop`
+project writes the translation runtime and puts the locale gate into
+`pnpm lint`, so a key missing from one language fails the gate.
 
 ## The host
 

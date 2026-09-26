@@ -1,0 +1,34 @@
+Would create 25 files in `demo-tool`:
+
+  ├── .github/
+  │   └── workflows/
+  │       ├── ci.yml
+  │       ├── publish.yml
+  │       └── release.yml
+  ├── docs/
+  │   └── adr/
+  │       ├── 0001-record-architecture-decisions.md
+  │       ├── 0002-both-halves-ship-together.md
+  │       └── README.md
+  ├── guest-js/
+  │   ├── index.test.ts
+  │   └── index.ts
+  ├── permissions/
+  │   └── default.toml
+  ├── src/
+  │   ├── commands.rs
+  │   ├── error.rs
+  │   └── lib.rs
+  ├── .editorconfig
+  ├── .gitattributes
+  ├── .gitignore
+  ├── CHANGELOG.md
+  ├── Cargo.toml
+  ├── LICENSE
+  ├── README.md
+  ├── build.rs
+  ├── cliff.toml
+  ├── lyrn.toml
+  ├── package.json
+  ├── rustfmt.toml
+  └── tsconfig.json
