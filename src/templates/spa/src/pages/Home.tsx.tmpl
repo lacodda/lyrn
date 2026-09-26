@@ -7,7 +7,7 @@ export function Home() {
   return (
     <main className="flex min-h-full flex-col items-center justify-center gap-6 p-8">
       <h1 className="text-xl font-semibold text-text">{{ title }}</h1>
-      <p className="max-w-prose text-center text-dim">{{ description }}</p>
+      <p className="max-w-prose text-center text-dim">{{ description_html }}</p>
       <Button variant="primary" onClick={() => setCount((value) => value + 1)}>
         Clicked {count} times
       </Button>

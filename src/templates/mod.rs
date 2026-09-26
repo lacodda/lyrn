@@ -121,6 +121,10 @@ mod tests {
         // in bare, and a JSON string is valid in both.
         "title_json",
         "description_json",
+        "description_rust",
+        "description_html",
+        "description_comment",
+        "core_description_json",
         // Only the plugin forms fill these; the check below asks each form for
         // its own, so a variable no form of this shape provides is still an
         // error rather than a name on a list.

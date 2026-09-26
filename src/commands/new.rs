@@ -98,6 +98,7 @@ pub fn build_context(wanted: &Wanted, manifest: &TemplateManifest, interactive: 
         None if interactive => prompt_line("What is it, in one line?", &default_description)?,
         None => default_description,
     };
+    let description = naming::one_line(&description);
 
     let author = match &identity.author {
         Some(value) => value.clone(),
@@ -117,7 +118,19 @@ pub fn build_context(wanted: &Wanted, manifest: &TemplateManifest, interactive: 
         .set("name", args.name)
         .set("title_json", naming::json_string(&title))
         .set("title", title)
+        // The description is the one free text a template pastes in, and each
+        // place it lands has its own quoting: JSON (which TOML and YAML also
+        // read), a Rust literal, HTML and JSX text, a block comment. The bare
+        // value is for prose - Markdown, a `///` line.
         .set("description_json", naming::json_string(&description))
+        .set("description_rust", naming::rust_string(&description))
+        .set("description_html", naming::html_text(&description))
+        .set("description_comment", naming::comment_text(&description))
+        // The workspace's library crate describes itself by the project's.
+        .set(
+            "core_description_json",
+            naming::json_string(&format!("Core library for {}: {description}", args.name)),
+        )
         .set("description", description)
         .set("repo_name", repo_name)
         .set("accent", accent)

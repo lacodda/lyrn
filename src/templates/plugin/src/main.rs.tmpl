@@ -40,11 +40,11 @@ fn manifest() -> String {
         "protocol_version": PROTOCOL_VERSION,
         "name": "{{ name }}",
         "version": env!("CARGO_PKG_VERSION"),
-        "description": "{{ description }}",
+        "description": {{ description_rust }},
         "commands": [{
             "key": "{{ command_key }}",
             "label": "{{ command_label }}",
-            "description": "{{ description }}",
+            "description": {{ description_rust }},
             "target": "{{ target }}"
         }]
     })

@@ -128,6 +128,64 @@ pub fn json_string(value: &str) -> String {
     out
 }
 
+/// The description as one line: every run of whitespace, newlines included,
+/// becomes a single space.
+///
+/// It is asked for as one line and pasted into places where a second line is
+/// code - after `///`, in a TOML value, in a `<meta>` - so a newline in
+/// `--description` would otherwise end a doc comment and start a syntax error.
+pub fn one_line(value: &str) -> String {
+    value.split_whitespace().collect::<Vec<_>>().join(" ")
+}
+
+/// A value as a Rust string literal, quotes included.
+///
+/// Not the JSON spelling: Rust writes a code point as `\u{1}`, and JSON's
+/// `\u0001` does not compile.
+pub fn rust_string(value: &str) -> String {
+    let mut out = String::with_capacity(value.len() + 2);
+    out.push('"');
+    for c in value.chars() {
+        match c {
+            '"' => out.push_str("\\\""),
+            '\\' => out.push_str("\\\\"),
+            '\n' => out.push_str("\\n"),
+            '\r' => out.push_str("\\r"),
+            '\t' => out.push_str("\\t"),
+            c if c.is_control() => out.push_str(&format!("\\u{{{:x}}}", c as u32)),
+            c => out.push(c),
+        }
+    }
+    out.push('"');
+    out
+}
+
+/// A value as HTML text, safe in an attribute and between tags - and in JSX
+/// text too, which reads the same entities but also takes `{` and `}` as the
+/// start and end of an expression.
+pub fn html_text(value: &str) -> String {
+    let mut out = String::with_capacity(value.len());
+    for c in value.chars() {
+        match c {
+            '&' => out.push_str("&amp;"),
+            '<' => out.push_str("&lt;"),
+            '>' => out.push_str("&gt;"),
+            '"' => out.push_str("&quot;"),
+            '\'' => out.push_str("&#39;"),
+            '{' => out.push_str("&#123;"),
+            '}' => out.push_str("&#125;"),
+            c => out.push(c),
+        }
+    }
+    out
+}
+
+/// A value inside a `/* */` comment: the one sequence that would end it early
+/// is split apart.
+pub fn comment_text(value: &str) -> String {
+    value.replace("*/", "* /")
+}
+
 /// Turn a project name into the title a README and an `<h1>` show.
 pub fn title_from_name(name: &str) -> String {
     name.split('-')

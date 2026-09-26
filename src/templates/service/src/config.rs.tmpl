@@ -12,7 +12,7 @@ use clap::Parser;
 use sqlx::postgres::{PgPool, PgPoolOptions};
 
 #[derive(Parser, Debug)]
-#[command(name = "{{ name }}", version, about = "{{ description }}")]
+#[command(name = "{{ name }}", version, about = {{ description_rust }})]
 pub struct Config {
     /// Where to listen
     #[arg(long, env = "{{ env_prefix }}_BIND", default_value = "0.0.0.0:8080")]

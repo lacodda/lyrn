@@ -10,7 +10,7 @@ import { invoke } from '@tauri-apps/api/core'
 const PLUGIN = '{{ name }}'
 
 /**
- * {{ description }}
+ * {{ description_comment }}
  */
 export async function {{ command_camel }}(): Promise<string> {
   return await invoke<string>(`plugin:${PLUGIN}|{{ command_key }}`)
