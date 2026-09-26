@@ -7,6 +7,18 @@ import { Panel } from '@/components/ui/panel'
 import { ApiError } from '@/lib/api'
 import { useSession } from '@/lib/session'
 
+/**
+ * iOS Safari zooms the page into any field whose text is under 16px and does
+ * not zoom back out, leaving the form at 130% with the password off the side
+ * of the screen. dowel's Input is `text-sm`, right on a desktop, so the size is
+ * lifted here and handed back from `sm` up - on this screen, not in the copy
+ * of the primitive, which stays dowel's.
+ *
+ * `text-lg`, not `text-base`: on dowel's scale `base` is 14px and `lg` is the
+ * 16px step. Measured in a phone-sized viewport, not assumed.
+ */
+const FIELD_ON_A_PHONE = 'text-lg sm:text-sm'
+
 export function SignIn() {
   const { signIn } = useSession()
   const [email, setEmail] = useState('')
@@ -41,6 +53,7 @@ export function SignIn() {
         <form onSubmit={(event) => void submit(event)} className="mt-6 flex flex-col gap-4">
           <Field label="Email" required>
             <Input
+              className={FIELD_ON_A_PHONE}
               type="email"
               autoComplete="username"
               required
@@ -50,6 +63,7 @@ export function SignIn() {
           </Field>
           <Field label="Password" required>
             <Input
+              className={FIELD_ON_A_PHONE}
               type="password"
               autoComplete="current-password"
               required
