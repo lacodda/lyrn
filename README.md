@@ -24,8 +24,8 @@ made, and made the same way for every product on the line.
 ## A day in the life
 
 ```console
-$ lyrn new demo-app --accent kilna
-Created 25 files in `demo-app`.
+$ lyrn new demo-app --accent kilna --yes
+Created 30 files in `demo-app`.
 Installing dependencies... done
 Starting the repository... done
 Staging the first commit... done
@@ -38,10 +38,11 @@ Next:
 
 ```console
 $ cd demo-app && pnpm lint
-> eslint . && tsc --noEmit && pnpm test
+> eslint . && tsc --noEmit && pnpm registry && pnpm test
 
- Test Files  1 passed (1)
-      Tests  2 passed (2)
+registry: 1 copy matches dowel-ui 0.33.0
+ Test Files  2 passed (2)
+      Tests  3 passed (3)
 ```
 
 That gate is the same one CI runs, so a green terminal means a green pull
@@ -116,11 +117,12 @@ and dialoguer and disagree about everything else, so the rest is asked for:
 $ lyrn new my-tool --form cli --with keyring,self-update
 ```
 
-`keyring` puts secrets in the OS keyring rather than a config file;
-`self-update` adds a command that checks the releases page; `i18n` adds
-i18next with a gate that holds every locale to the source language; `spa` gives
-a service a web UI compiled into its binary. None is generated unless asked for
-— a project should not carry code it never calls.
+`lyrn forms` lists them under each form: `keyring` and `self-update` for the
+CLIs, `i18n` for the desktop, `router`, `tanstack-query`, `auth` and `pwa` for
+the spa, a web UI and a `demo` for the service. Each is what the line's
+products already do, and none is generated unless asked for — a project should
+not carry code it never calls. What each one writes:
+[Forms](https://lyrn.lacodda.com/reference/forms/).
 
 `--form workspace` is the `cli` form with its logic in a library crate of its
 own: `crates/<name>-core` publishes to crates.io beside the binary, so another
@@ -154,9 +156,10 @@ More forms — egui — follow in 2.x.
 
 ## Status
 
-v2.7.0, in daily use. All nine forms work today, and each one is generated and
-put through its own gate on Linux, macOS and Windows on every push. What landed
-in each version:
+v2.8.0, in daily use. All nine forms and their add-ons work today, each
+generated and put through its own gate on Linux, macOS and Windows on every
+push, and `lyrn adopt` brings an older repository up to the same standard. What
+landed in each version:
 [CHANGELOG](https://github.com/lacodda/lyrn/blob/main/CHANGELOG.md).
 
 ## Migrating from 1.x

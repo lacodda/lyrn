@@ -1,8 +1,8 @@
 {
   "name": "lyrn",
-  "version": "2.7.0",
+  "version": "2.8.0",
   "lyrn": {
-    "binary": "v2.7.0"
+    "binary": "v2.8.0"
   },
   "description": "Start a new web application on the lacodda line's stack with one command",
   "license": "MIT",

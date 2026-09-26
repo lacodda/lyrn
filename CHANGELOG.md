@@ -1,5 +1,22 @@
 # Changelog
 
+## 🎉 [2.8.0] - 2026-09-26
+
+### ✨ Features
+
+- Add the spa's and the service's add-ons
+- Add init and adopt
+- Show the tree before anything is written
+
+### 🛠️ Bug Fixes
+
+- Escape the description for every place it lands
+- Take the line's accents from dowel
+
+### 🧪 Testing
+
+- Keep the description test on the declared MSRV
+
 ## 🎉 [2.7.0] - 2026-09-23
 
 ### ✨ Features
