@@ -25,6 +25,12 @@ pub struct Config {
     /// How many database connections to keep
     #[arg(long, env = "{{ env_prefix }}_POOL_SIZE", default_value_t = 5)]
     pub pool_size: u32,
+{{#demo}}
+
+    /// Fill an empty database with made-up data; refuses one holding real data
+    #[arg(long, env = "{{ env_prefix }}_DEMO")]
+    pub demo: bool,
+{{/demo}}
 }
 
 impl Config {

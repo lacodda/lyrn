@@ -10,7 +10,15 @@ standard = "2026.09"
 # The dowel copies under `src/components/ui/` are the registry's text, byte for
 # byte, and `tools/check-registry.mjs` holds them to it: nothing in them is
 # lyrn's to substitute.
-verbatim = ["cliff.toml", "src/components/ui/button.tsx"]
+verbatim = [
+  "cliff.toml",
+  "public/favicon.svg",
+  "src/components/ui/button.tsx",
+  "src/components/ui/field.tsx",
+  "src/components/ui/input.tsx",
+  "src/components/ui/panel.tsx",
+  "src/components/ui/alert.tsx",
+]
 
 [[hooks]]
 name = "Installing dependencies"

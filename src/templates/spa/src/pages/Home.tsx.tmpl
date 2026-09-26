@@ -1,0 +1,19 @@
+import { useState } from 'react'
+import { Button } from '@/components/ui/button'
+
+export function Home() {
+  const [count, setCount] = useState(0)
+
+  return (
+    <main className="flex min-h-full flex-col items-center justify-center gap-6 p-8">
+      <h1 className="text-xl font-semibold text-text">{{ title }}</h1>
+      <p className="max-w-prose text-center text-dim">{{ description }}</p>
+      <Button variant="primary" onClick={() => setCount((value) => value + 1)}>
+        Clicked {count} times
+      </Button>
+      <p className="text-sm text-dim">
+        Add a primitive with <code className="font-mono">npx shadcn add {{ registry }}/badge.json</code>
+      </p>
+    </main>
+  )
+}

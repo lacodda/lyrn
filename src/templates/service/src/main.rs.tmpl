@@ -1,5 +1,8 @@
 mod app;
 mod config;
+{{#demo}}
+mod demo;
+{{/demo}}
 mod error;
 mod example;
 mod health;
@@ -35,6 +38,10 @@ async fn run(config: Config) -> anyhow::Result<()> {
     // binary and the schema it expects travel together, so there is no window
     // where one is ahead of the other.
     sqlx::migrate!().run(&pool).await?;
+{{#demo}}
+    // Before the listener opens: a database the flag refuses never serves.
+    demo::prepare(&pool, config.demo).await?;
+{{/demo}}
 
     let listener = tokio::net::TcpListener::bind(config.bind).await?;
     tracing::info!(address = %config.bind, "listening");

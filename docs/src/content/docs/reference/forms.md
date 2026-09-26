@@ -6,20 +6,25 @@ description: The shapes a generated project can take.
 ```console
 $ lyrn forms
 spa            Single-page app: Vite, React, TypeScript, Tailwind, dowel
+  --with router           Screens at addresses: react-router, unknown ones sent home
+  --with tanstack-query   Server state through TanStack Query, on the line's defaults
+  --with auth             A cookie session and a sign-in screen until someone signs in
+  --with pwa              Installable and offline: a manifest, its icons, a service worker
 cli            Command-line tool: Rust, clap, anyhow, dialoguer
-  --with keyring       Secrets in the OS keyring, never in a config file
-  --with self-update   A `self-update` command that reads the releases page
+  --with keyring          Secrets in the OS keyring, never in a config file
+  --with self-update      A `self-update` command that reads the releases page
 desktop        Desktop app: Tauri 2 around the spa stack
-  --with i18n          i18next, with a gate holding every locale to the source
+  --with i18n             i18next, with a gate holding every locale to the source
 service        HTTP service: axum, sqlx, Postgres
-  --with spa           A web UI compiled into the binary and served by it
+  --with spa              A web UI compiled into the binary and served by it
+  --with demo             Made-up data in an empty database; one with real data refuses it
 workspace      Cargo workspace: a library crate plus the CLI that uses it
-  --with keyring       Secrets in the OS keyring, never in a config file
-  --with self-update   A `self-update` command that reads the releases page
+  --with keyring          Secrets in the OS keyring, never in a config file
+  --with self-update      A `self-update` command that reads the releases page
 mono           pnpm monorepo publishing a TypeScript package to npm
-  --with stand         A Vite page in the workspace where the package runs
+  --with stand            A Vite page in the workspace where the package runs
 plugin         Plugin for a host of the line: an executable speaking JSON over stdio
-  --host kilna         a desktop workbench for content makers
+  --host kilna            a desktop workbench for content makers
 tauri-plugin   Tauri 2 plugin: a Rust crate and the npm package that calls it
 docs           Documentation site added to an existing repository: Starlight, llms.txt
 ```
@@ -37,7 +42,63 @@ A single-page application:
 | UI | React 19, TypeScript |
 | Styling | Tailwind 4 and the dowel theme |
 | Tests | Vitest with jsdom, Testing Library |
-| Lint | eslint, typescript-eslint, `dowel/no-raw-color` |
+| Lint | eslint, typescript-eslint, dowel's rules |
+| Primitives | dowel's Button, copied from the registry and held to it |
+
+A product of the line presses dowel's Button rather than a `<button>` - dowel's
+lint refuses the raw element outside `src/components/ui/` - so the project
+starts with the copy, taken from the registry of the dowel-ui it pins.
+`pnpm lint` compares every copy there with the registry of the dowel-ui
+actually installed: an upgrade that forgets to take the copies again, or a
+copy edited in place, fails the gate.
+
+### Add-ons
+
+Each one is what the line's signed-in, routed, data-fetching frontends already
+do, taken from the products that do it:
+
+```console
+$ lyrn new my-app --with router,tanstack-query,auth
+```
+
+**`router`** puts the screens at addresses with React Router, declared in
+`src/App.tsx`; an address nothing answers goes home rather than to a blank
+page, as it does in kasl-server and kilna.
+
+**`tanstack-query`** adds one query client on kilna's defaults: fresh for 30
+seconds, no refetch every time the window regains focus, and a failed query
+fails at once instead of retrying three times behind a spinner.
+
+**`auth`** keeps a cookie session the way all four of the line's signed-in
+frontends do: the cookie is HttpOnly, so the app asks the server who is signed
+in (`GET /api/me`) and shows a sign-in screen until someone is. The screen is
+dowel's Field, Input, Panel and Alert, copied in with the add-on; it tells a
+wrong password from a server out of reach. `/api` is forwarded to
+`localhost:8080` in development, where the `service` form listens, and a test
+helper stands in for the server so the tests run the real provider.
+
+**`pwa`** makes the app installable and able to open without a network, the
+way rhapsod is: a manifest, the 192px and 512px icons an install asks for plus
+the 180px one iOS takes, and a service worker that goes to the network first
+and falls back to the last build it cached - never for `/api`, since stale data
+shown as current is worse than an error. It registers in production builds
+only, under a build id, so every build gets a cache of its own and the last
+one is dropped.
+
+`main.tsx` is where the add-ons meet: the providers they need are one line
+each, outermost first, so any set of them nests without re-indenting the
+rest.
+
+### The favicon
+
+Every spa starts with the line's umbrella mark - lambda on graphite - at level
+S, the level drawn for 27px and under, copied from `dowel-ui/marks`. The same
+gate that holds the primitives holds it: the favicon has to be one of the
+line's marks, byte for byte, and at level S. When the product has a mark of its
+own, its `<code>-S.svg` from the same package replaces the file and the gate
+agrees. The PWA icons, which have no SVG twin, are the plated mark rendered at
+their sizes; `lyrn.toml` records `mark = "placeholder"` until the accent is
+chosen.
 
 ## cli
 
@@ -144,6 +205,24 @@ no such file, and only the app knows what to draw there.
 
 Left out, `--with spa` is what a service with no interface of its own needs -
 a sync relay, a webhook receiver, an API somebody else's frontend calls.
+
+The web UI is the spa form's plain one; the spa form's own add-ons stay with
+it.
+
+### `--with demo`
+
+Made-up data for a demonstration, the way kasl-server's `KASL_DEMO` works.
+`<NAME>_DEMO=true` fills an empty database at startup - fixed rows, so every
+demonstration and every screenshot shows the same screens - and marks it as a
+demo in a table of its own; `/api/health` then answers `"demo": true`, so a
+screen can say so.
+
+The guard is the point: a database that already holds real data refuses to
+start with the flag on, so a stray flag on a real installation can never mix
+invented rows into real ones. The label lives with the data rather than in the
+flag, so a demo database stays recognisable when the flag is gone. Its tests
+run against the real Postgres like the rest, each inside a transaction that is
+rolled back.
 
 ## workspace
 

@@ -1,4 +1,4 @@
-Would create 41 files in `demo-tool`:
+Would create 42 files in `demo-tool`:
 
   ├── .github/
   │   └── workflows/
@@ -7,6 +7,8 @@ Would create 41 files in `demo-tool`:
   │   └── adr/
   │       ├── 0001-record-architecture-decisions.md
   │       └── README.md
+  ├── public/
+  │   └── favicon.svg
   ├── src/
   │   ├── components/
   │   │   └── ui/

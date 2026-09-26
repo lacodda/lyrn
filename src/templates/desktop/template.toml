@@ -7,7 +7,7 @@ standard = "2026.09"
 # expression - both would be mangled by substitution. GitHub Actions writes
 # `${{ }}`, which the renderer skips on its own.
 # The dowel copies are the registry's text, held to it by `check-registry.mjs`.
-verbatim = ["cliff.toml", "tools/check-locales.mjs", "src/components/ui/button.tsx"]
+verbatim = ["cliff.toml", "tools/check-locales.mjs", "public/favicon.svg", "src/components/ui/button.tsx"]
 
 [[hooks]]
 name = "Installing dependencies"

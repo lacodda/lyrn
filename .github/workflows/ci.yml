@@ -53,15 +53,23 @@ jobs:
 
   # A template that does not build is not a template. Generate each form on
   # every platform and run the gate the generated project ships with — the one
-  # its own CI would run.
+  # its own CI would run. The spa's add-ons share main.tsx, App.tsx and
+  # index.html, so none and all of them go through every platform, and each
+  # one alone through Linux; the rest of the sixteen sets are held by the
+  # tree snapshots and the rendering tests.
   template:
-    name: template ${{ matrix.form }} on ${{ matrix.os }}
+    name: template spa (${{ matrix.addons || 'none' }}) on ${{ matrix.os }}
     runs-on: ${{ matrix.os }}
     strategy:
       fail-fast: false
       matrix:
         os: [ubuntu-latest, windows-latest, macos-latest]
-        form: [spa]
+        addons: ['', 'router,tanstack-query,auth,pwa']
+        include:
+          - { os: ubuntu-latest, addons: router }
+          - { os: ubuntu-latest, addons: tanstack-query }
+          - { os: ubuntu-latest, addons: auth }
+          - { os: ubuntu-latest, addons: pwa }
     steps:
       - uses: actions/checkout@v7
       - uses: dtolnay/rust-toolchain@stable
@@ -77,11 +85,11 @@ jobs:
       - name: Generate a project
         shell: bash
         run: |
-          ./target/release/lyrn new demo-app \
-            --form ${{ matrix.form }} \
-            --accent '#6D7BF2' \
-            --yes --no-hooks \
-            --path "$RUNNER_TEMP/demo-app"
+          args=(new demo-app --form spa --accent '#6D7BF2' --yes --no-hooks --path "$RUNNER_TEMP/demo-app")
+          if [ -n "${{ matrix.addons }}" ]; then
+            args+=(--with "${{ matrix.addons }}")
+          fi
+          ./target/release/lyrn "${args[@]}"
       - name: Install its dependencies
         working-directory: ${{ runner.temp }}/demo-app
         run: pnpm install --no-frozen-lockfile
@@ -190,7 +198,7 @@ jobs:
     strategy:
       fail-fast: false
       matrix:
-        addons: ['', 'spa']
+        addons: ['', 'spa', 'demo', 'spa,demo']
     services:
       postgres:
         image: postgres:18-alpine

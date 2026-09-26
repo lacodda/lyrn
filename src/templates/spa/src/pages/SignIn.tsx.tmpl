@@ -1,0 +1,73 @@
+import { useState, type FormEvent } from 'react'
+import { Alert } from '@/components/ui/alert'
+import { Button } from '@/components/ui/button'
+import { Field } from '@/components/ui/field'
+import { Input } from '@/components/ui/input'
+import { Panel } from '@/components/ui/panel'
+import { ApiError } from '@/lib/api'
+import { useSession } from '@/lib/session'
+
+export function SignIn() {
+  const { signIn } = useSession()
+  const [email, setEmail] = useState('')
+  const [password, setPassword] = useState('')
+  const [failure, setFailure] = useState<string | null>(null)
+  const [pending, setPending] = useState(false)
+
+  async function submit(event: FormEvent) {
+    event.preventDefault()
+    setFailure(null)
+    setPending(true)
+    try {
+      await signIn(email, password)
+    } catch (error: unknown) {
+      // The server refuses an unknown address and a wrong password with the
+      // same answer on purpose, so the form does not guess which it was.
+      // Anything else is the server being out of reach, and saying so is
+      // more use than "wrong password" to someone whose password is right.
+      setFailure(
+        error instanceof ApiError && error.isUnauthorized
+          ? 'That email and password do not match.'
+          : 'The server cannot be reached. Try again in a moment.',
+      )
+      setPending(false)
+    }
+  }
+
+  return (
+    <main className="flex min-h-full items-center justify-center p-4">
+      <Panel className="w-full max-w-sm p-6">
+        <h1 className="text-lg font-semibold text-text">Sign in to {{ title }}</h1>
+        <form onSubmit={(event) => void submit(event)} className="mt-6 flex flex-col gap-4">
+          <Field label="Email" required>
+            <Input
+              type="email"
+              autoComplete="username"
+              required
+              value={email}
+              onChange={(event) => setEmail(event.target.value)}
+            />
+          </Field>
+          <Field label="Password" required>
+            <Input
+              type="password"
+              autoComplete="current-password"
+              required
+              value={password}
+              onChange={(event) => setPassword(event.target.value)}
+            />
+          </Field>
+          {/* `role="alert"`, so the failure is announced and not only drawn. */}
+          {failure ? (
+            <Alert tone="bad" role="alert">
+              {failure}
+            </Alert>
+          ) : null}
+          <Button type="submit" variant="primary" disabled={pending}>
+            {pending ? 'Signing in...' : 'Sign in'}
+          </Button>
+        </form>
+      </Panel>
+    </main>
+  )
+}

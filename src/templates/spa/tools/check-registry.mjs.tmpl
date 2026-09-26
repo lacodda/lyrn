@@ -12,6 +12,11 @@
 // not taking the copies again fails here. `pnpm exec dowel diff <name>` shows
 // the lines.
 //
+// `public/favicon.svg` is held the same way: it is a copy of one of the line's
+// marks, at level S - the one drawn for 27px and under. The larger levels
+// turn to a smudge in a browser tab, and a mark drawn here by hand is one the
+// brand registry has never seen.
+//
 //   node tools/check-registry.mjs
 import { existsSync, readdirSync, readFileSync } from 'node:fs'
 import { join } from 'node:path'
@@ -55,18 +60,35 @@ for (const name of existsSync(UI) ? readdirSync(UI).sort() : []) {
   if (normal(readFileSync(join(UI, name), 'utf8')) !== normal(theirs)) drifted.push(name)
 }
 
-if (drifted.length > 0 || strays.length > 0) {
-  for (const name of drifted) {
-    console.error(
-      `${name}: differs from dowel-ui ${version}` +
-        ` - take the registry's copy (pnpm exec dowel diff ${name.replace(/\.tsx?$/, '')})`,
+const problems = []
+for (const name of drifted) {
+  problems.push(
+    `${name}: differs from dowel-ui ${version}` +
+      ` - take the registry's copy (pnpm exec dowel diff ${name.replace(/\.tsx?$/, '')})`,
+  )
+}
+for (const name of strays) {
+  problems.push(
+    `${name}: a lowercase file with no registry twin - a copy dowel no longer ships, or this project's own file named like a copy (use PascalCase)`,
+  )
+}
+
+const FAVICON = join(ROOT, 'public/favicon.svg')
+if (existsSync(FAVICON)) {
+  const marks = join(PACKAGE, 'dist/marks')
+  const ours = normal(readFileSync(FAVICON, 'utf8'))
+  const twin = readdirSync(marks).find((name) => normal(readFileSync(join(marks, name), 'utf8')) === ours)
+  if (twin === undefined) {
+    problems.push(
+      `public/favicon.svg: not one of the line's marks in dowel-ui ${version} - copy <product>-S.svg from node_modules/dowel-ui/dist/marks`,
     )
+  } else if (!twin.endsWith('-S.svg')) {
+    problems.push(`public/favicon.svg: is ${twin}, drawn for larger sizes - a favicon takes level S`)
   }
-  for (const name of strays) {
-    console.error(
-      `${name}: a lowercase file with no registry twin - a copy dowel no longer ships, or this project's own file named like a copy (use PascalCase)`,
-    )
-  }
+}
+
+if (problems.length > 0) {
+  for (const problem of problems) console.error(problem)
   process.exit(1)
 }
 

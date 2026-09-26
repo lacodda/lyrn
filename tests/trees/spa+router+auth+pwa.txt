@@ -1,0 +1,60 @@
+Would create 46 files in `demo-tool`:
+
+  ├── .github/
+  │   └── workflows/
+  │       └── ci.yml
+  ├── docs/
+  │   └── adr/
+  │       ├── 0001-record-architecture-decisions.md
+  │       └── README.md
+  ├── public/
+  │   ├── apple-touch-icon.png
+  │   ├── favicon.svg
+  │   ├── icon-192.png
+  │   ├── icon-512.png
+  │   ├── manifest.webmanifest
+  │   └── sw.js
+  ├── src/
+  │   ├── components/
+  │   │   └── ui/
+  │   │       ├── alert.tsx
+  │   │       ├── button.tsx
+  │   │       ├── field.tsx
+  │   │       ├── input.tsx
+  │   │       └── panel.tsx
+  │   ├── lib/
+  │   │   ├── api.ts
+  │   │   ├── session.tsx
+  │   │   └── utils.ts
+  │   ├── pages/
+  │   │   ├── Home.test.tsx
+  │   │   ├── Home.tsx
+  │   │   ├── SignIn.test.tsx
+  │   │   └── SignIn.tsx
+  │   ├── test/
+  │   │   └── session.tsx
+  │   ├── App.test.tsx
+  │   ├── App.tsx
+  │   ├── main.tsx
+  │   ├── pwa.test.ts
+  │   ├── pwa.ts
+  │   ├── styles.css
+  │   └── vite-env.d.ts
+  ├── tools/
+  │   └── check-registry.mjs
+  ├── .editorconfig
+  ├── .gitattributes
+  ├── .gitignore
+  ├── CHANGELOG.md
+  ├── LICENSE
+  ├── README.md
+  ├── cliff.toml
+  ├── components.json
+  ├── eslint.config.js
+  ├── index.html
+  ├── lyrn.toml
+  ├── package.json
+  ├── pnpm-workspace.yaml
+  ├── tsconfig.json
+  ├── vite.config.ts
+  └── vitest.config.ts

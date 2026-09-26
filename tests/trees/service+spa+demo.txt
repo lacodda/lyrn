@@ -1,0 +1,64 @@
+Would create 46 files in `demo-tool`:
+
+  ├── .github/
+  │   └── workflows/
+  │       └── ci.yml
+  ├── deploy/
+  │   ├── compose.yml
+  │   └── env.example
+  ├── docs/
+  │   └── adr/
+  │       ├── 0001-record-architecture-decisions.md
+  │       └── README.md
+  ├── frontend/
+  │   ├── public/
+  │   │   └── favicon.svg
+  │   ├── src/
+  │   │   ├── components/
+  │   │   │   └── ui/
+  │   │   │       └── button.tsx
+  │   │   ├── lib/
+  │   │   │   └── utils.ts
+  │   │   ├── pages/
+  │   │   │   ├── Home.test.tsx
+  │   │   │   └── Home.tsx
+  │   │   ├── App.test.tsx
+  │   │   ├── App.tsx
+  │   │   ├── main.tsx
+  │   │   ├── styles.css
+  │   │   └── vite-env.d.ts
+  │   ├── tools/
+  │   │   └── check-registry.mjs
+  │   ├── components.json
+  │   ├── eslint.config.js
+  │   ├── index.html
+  │   ├── package.json
+  │   ├── pnpm-workspace.yaml
+  │   ├── tsconfig.json
+  │   ├── vite.config.ts
+  │   └── vitest.config.ts
+  ├── migrations/
+  │   ├── 0001_init.sql
+  │   └── 0002_demo.sql
+  ├── src/
+  │   ├── app.rs
+  │   ├── config.rs
+  │   ├── demo.rs
+  │   ├── error.rs
+  │   ├── example.rs
+  │   ├── health.rs
+  │   ├── main.rs
+  │   └── web.rs
+  ├── tests/
+  │   └── api.rs
+  ├── .editorconfig
+  ├── .gitattributes
+  ├── .gitignore
+  ├── CHANGELOG.md
+  ├── Cargo.toml
+  ├── Dockerfile
+  ├── LICENSE
+  ├── README.md
+  ├── cliff.toml
+  ├── lyrn.toml
+  └── rustfmt.toml

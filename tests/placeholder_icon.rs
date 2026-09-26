@@ -202,3 +202,18 @@ fn the_placeholder_is_drawn_in_the_lines_colours() {
         );
     }
 }
+
+/// The icons the spa form's `--with pwa` installs with, held to the same rule:
+/// an install shows them at 180px and up, far above the S ceiling, so each is
+/// the plated mark - and each is exactly the size its name and the manifest
+/// promise, since a phone that is handed a 192px image under a 180px name
+/// scales it without a word.
+#[test]
+fn the_pwa_icons_are_the_plated_mark_at_their_sizes() {
+    let public: PathBuf = [env!("CARGO_MANIFEST_DIR"), "src", "templates", "spa", "public"].iter().collect();
+    for (name, size) in [("icon-192.png", 192), ("apple-touch-icon.png", 180)] {
+        let path = public.join(name);
+        let png = std::fs::read(&path).unwrap_or_else(|error| panic!("{}: {error}", path.display()));
+        assert!(!is_filled(&png, size), "{name} is the filled S tile at {size}px, not the plated mark");
+    }
+}

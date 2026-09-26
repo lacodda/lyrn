@@ -8,6 +8,10 @@ use sqlx::PgPool;
 pub struct Health {
     pub status: &'static str,
     pub version: &'static str,
+{{#demo}}
+    /// Whether the data is made up, so a screen can say so.
+    pub demo: bool,
+{{/demo}}
 }
 
 /// A health check that touches the database.
@@ -16,8 +20,20 @@ pub struct Health {
 /// that does not answer at all: an orchestrator keeps sending it traffic.
 pub async fn health(State(pool): State<PgPool>) -> (StatusCode, Json<Health>) {
     let version = env!("CARGO_PKG_VERSION");
+{{#demo}}
+    // The label lives in the database, so the answer is the data's, not the
+    // flag's: a demo database stays one after the flag is gone.
+    match sqlx::query_scalar::<_, bool>("SELECT EXISTS (SELECT 1 FROM demo)").fetch_one(&pool).await {
+        Ok(demo) => (StatusCode::OK, Json(Health { status: "ok", version, demo })),
+        Err(_) => {
+            (StatusCode::SERVICE_UNAVAILABLE, Json(Health { status: "database unreachable", version, demo: false }))
+        }
+    }
+{{/demo}}
+{{^demo}}
     match sqlx::query_scalar::<_, i32>("SELECT 1").fetch_one(&pool).await {
         Ok(_) => (StatusCode::OK, Json(Health { status: "ok", version })),
         Err(_) => (StatusCode::SERVICE_UNAVAILABLE, Json(Health { status: "database unreachable", version })),
     }
+{{/demo}}
 }

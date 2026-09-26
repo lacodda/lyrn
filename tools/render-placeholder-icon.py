@@ -68,6 +68,9 @@ ICO_SIZES = [256, 128, 64, 48, 32, 24, 16]
 # Tauri's bundler reads this one for every non-Windows target.
 PNG_SIZE = 512
 
+# What a web app manifest and iOS ask for, beside the 512px image above.
+PWA_ICONS = [("icon-192.png", 192), ("apple-touch-icon.png", 180)]
+
 # The level boundary of the line: at 27px and below the outline collapses into
 # noise, so the filled tile is all that survives.
 S_CEILING = 27
@@ -315,6 +318,15 @@ def main():
         out.write(build_ico([(size, tile(size, level_for(size))) for size in ICO_SIZES]))
 
     print(f"wrote icon.png ({PNG_SIZE}px) and icon.ico ({', '.join(str(s) for s in ICO_SIZES)}) -> {icons}")
+
+    # The spa form's `--with pwa`: the icons an install asks for. All of them
+    # are well above the S ceiling, so all are the plated mark; the 512px one
+    # is the desktop's `icon.png`, carried by the spa form as it is.
+    public = os.path.join(here, "src", "templates", "spa", "public")
+    os.makedirs(public, exist_ok=True)
+    for name, size in PWA_ICONS:
+        tile(size, level_for(size)).save(os.path.join(public, name), "PNG")
+    print(f"wrote {', '.join(f'{n} ({s}px)' for n, s in PWA_ICONS)} -> {public}")
 
 
 if __name__ == "__main__":

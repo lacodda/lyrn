@@ -30,6 +30,10 @@ const DOWEL = join(ROOT, 'src/templates/dowel')
  * the work; the other half is a `SourceFile` in the form that uses it. */
 const PRIMITIVES = ['button', 'field', 'input', 'panel', 'alert']
 
+/** The favicon a project starts with: the line's umbrella mark at level S,
+ * the level for 27px and under, until the product has a mark of its own. */
+const FAVICON = 'lacodda-S.svg'
+
 const version = process.argv[2] ?? readFileSync(join(DOWEL, 'VERSION'), 'utf8').trim()
 if (!/^\d+\.\d+\.\d+$/.test(version)) {
   console.error(`not a version: ${version}`)
@@ -49,7 +53,7 @@ try {
   if (!tarball) throw new Error(`npm pack left no tarball in ${scratch}`)
   // A relative archive name and `-C`: Windows' bsdtar reads `C:\...` as a
   // remote host, and GNU tar does the same with any colon in the path.
-  execFileSync('tar', ['-xzf', tarball, 'package/dist/registry.json'], { cwd: scratch })
+  execFileSync('tar', ['-xzf', tarball, 'package/dist/registry.json', `package/dist/marks/${FAVICON}`], { cwd: scratch })
 
   const registry = JSON.parse(readFileSync(join(scratch, 'package/dist/registry.json'), 'utf8'))
   const byName = new Map(registry.items.map((item) => [item.name, item]))
@@ -86,6 +90,10 @@ try {
   accents.sort()
   writeFileSync(join(DOWEL, 'accents.tsv'), `${accents.join('\n')}\n`)
   console.log(`accents: ${accents.length} products`)
+
+  mkdirSync(join(DOWEL, 'marks'), { recursive: true })
+  writeFileSync(join(DOWEL, 'marks', FAVICON), readFileSync(join(scratch, 'package/dist/marks', FAVICON)))
+  console.log(`marks: ${FAVICON}`)
 
   writeFileSync(join(DOWEL, 'VERSION'), `${version}\n`)
   console.log(`vendored ${PRIMITIVES.length} primitives from dowel-ui ${version}`)

@@ -50,9 +50,29 @@ pub const BUTTON: Primitive = Primitive {
     contents: include_str!("dowel/ui/button.tsx"),
 };
 
+pub const FIELD: Primitive = Primitive {
+    path: "src/components/ui/field.tsx",
+    contents: include_str!("dowel/ui/field.tsx"),
+};
+
+pub const INPUT: Primitive = Primitive {
+    path: "src/components/ui/input.tsx",
+    contents: include_str!("dowel/ui/input.tsx"),
+};
+
+pub const PANEL: Primitive = Primitive {
+    path: "src/components/ui/panel.tsx",
+    contents: include_str!("dowel/ui/panel.tsx"),
+};
+
+pub const ALERT: Primitive = Primitive {
+    path: "src/components/ui/alert.tsx",
+    contents: include_str!("dowel/ui/alert.tsx"),
+};
+
 /// Every copy the binary carries.
 #[cfg(test)]
-pub const ALL: &[Primitive] = &[BUTTON];
+pub const ALL: &[Primitive] = &[BUTTON, FIELD, INPUT, PANEL, ALERT];
 
 #[cfg(test)]
 mod tests {

@@ -33,8 +33,22 @@ on a stand and on a laptop without a config file to keep in step:
 | `DATABASE_URL` | *required* | Postgres connection string |
 | `{{ env_prefix }}_BIND` | `0.0.0.0:8080` | Where to listen |
 | `{{ env_prefix }}_POOL_SIZE` | `5` | Database connections to keep |
+{{#demo}}
+| `{{ env_prefix }}_DEMO` | `false` | Fill an empty database with made-up data |
+{{/demo}}
 | `RUST_LOG` | — | `info`, `debug`, or a per-module filter |
 
+{{#demo}}
+## A demonstration
+
+`{{ env_prefix }}_DEMO=true` fills an empty database with made-up rows at
+startup and marks it as a demo; `/api/health` then says `"demo": true`, so a
+screen can say so too. A database that already holds real data refuses to
+start with the flag on - a stray flag on a real installation can never mix
+invented rows into real ones. The rows are fixed, so every demonstration shows
+the same screens.
+
+{{/demo}}
 ## Deploying
 
 ```console

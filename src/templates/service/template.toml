@@ -6,7 +6,7 @@ standard = "2026.09"
 # GitHub Actions writes `${{ }}`, which the renderer skips on its own, and the
 # compose file uses `${VAR}` - a single brace, which is not a placeholder. The
 # dowel copies are the registry's text, held to it by `check-registry.mjs`.
-verbatim = ["cliff.toml", "frontend/src/components/ui/button.tsx"]
+verbatim = ["cliff.toml", "frontend/public/favicon.svg", "frontend/src/components/ui/button.tsx"]
 
 [[hooks]]
 name = "Fetching dependencies"

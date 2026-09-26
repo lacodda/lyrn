@@ -1,0 +1,6 @@
+-- Whether this database was filled by a demonstration (src/demo.rs). A row,
+-- not a setting: the label stays with the data it describes, so a demo
+-- database is recognised as one even when the flag that made it is gone.
+CREATE TABLE IF NOT EXISTS demo (
+    seeded_at TIMESTAMPTZ NOT NULL
+);

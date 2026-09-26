@@ -25,4 +25,11 @@ export default tseslint.config(
     files: ['tools/**/*.mjs', '*.config.{js,ts}'],
     languageOptions: { globals: globals.node },
   },
+{{#pwa}}
+  // The service worker runs in a worker, where `self` and `caches` are global.
+  {
+    files: ['public/sw.js'],
+    languageOptions: { globals: globals.serviceworker },
+  },
+{{/pwa}}
 )

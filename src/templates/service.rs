@@ -92,6 +92,18 @@ pub fn sources() -> Vec<SourceFile> {
             addon: None,
         },
         SourceFile {
+            path: "migrations/0002_demo.sql",
+            contents: Contents::Text(include_str!("service/migrations/0002_demo.sql.tmpl")),
+            executable: false,
+            addon: Some(Addon::Demo),
+        },
+        SourceFile {
+            path: "src/demo.rs",
+            contents: Contents::Text(include_str!("service/src/demo.rs.tmpl")),
+            executable: false,
+            addon: Some(Addon::Demo),
+        },
+        SourceFile {
             path: "tests/api.rs",
             contents: Contents::Text(include_str!("service/tests/api.rs.tmpl")),
             executable: false,
@@ -225,9 +237,12 @@ const FRONTEND_PATHS: &[(&str, &str)] = &[
     ("src/main.tsx", "frontend/src/main.tsx"),
     ("src/App.tsx", "frontend/src/App.tsx"),
     ("src/App.test.tsx", "frontend/src/App.test.tsx"),
+    ("src/pages/Home.tsx", "frontend/src/pages/Home.tsx"),
+    ("src/pages/Home.test.tsx", "frontend/src/pages/Home.test.tsx"),
     ("src/styles.css", "frontend/src/styles.css"),
     ("src/lib/utils.ts", "frontend/src/lib/utils.ts"),
     ("src/components/ui/button.tsx", "frontend/src/components/ui/button.tsx"),
+    ("public/favicon.svg", "frontend/public/favicon.svg"),
     ("tools/check-registry.mjs", "frontend/tools/check-registry.mjs"),
     ("src/vite-env.d.ts", "frontend/src/vite-env.d.ts"),
 ];

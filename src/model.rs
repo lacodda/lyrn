@@ -88,12 +88,17 @@ impl Form {
     /// The add-ons this form understands.
     pub fn addons(self) -> &'static [Addon] {
         match self {
-            // spa gets `i18n` when its own add-ons land in 2.6; advertising
-            // it now would accept the flag and write nothing.
-            Form::Spa => &[],
+            // The pieces the line's web frontends reach for, each taken from
+            // the products that already have it: react-router as kasl-server
+            // and kilna route, TanStack Query as kilna fetches, a cookie
+            // session as all four signed-in frontends keep one, and the
+            // manifest and worker rhapsod and hilvan install with.
+            Form::Spa => &[Addon::Router, Addon::TanstackQuery, Addon::Auth, Addon::Pwa],
             Form::Cli => &[Addon::Keyring, Addon::SelfUpdate],
             Form::Desktop => &[Addon::I18n],
-            Form::Service => &[Addon::Spa],
+            // `demo` as kasl-server's KASL_DEMO: made-up data for an empty
+            // database, and a refusal for one that holds real data.
+            Form::Service => &[Addon::Spa, Addon::Demo],
             // The workspace inherits the cli form's add-ons: they are the same
             // command-line tool, only with its logic moved into a library.
             Form::Workspace => &[Addon::Keyring, Addon::SelfUpdate],
@@ -148,9 +153,36 @@ pub enum Addon {
     Spa,
     /// A Vite page inside the workspace where the package is seen running.
     Stand,
+    /// Screens at addresses: react-router, with the unknown ones sent home.
+    Router,
+    /// Server state through TanStack Query, with the line's defaults.
+    TanstackQuery,
+    /// A cookie session: who is signed in, asked of the server, and a
+    /// sign-in screen until someone is.
+    Auth,
+    /// Installable, and opening without a network: a manifest, the icons an
+    /// install asks for, and a service worker.
+    Pwa,
+    /// Made-up data for a demonstration, behind a flag that refuses to touch
+    /// a database holding real data.
+    Demo,
 }
 
 impl Addon {
+    /// Every add-on some form has.
+    pub const ALL: &'static [Addon] = &[
+        Addon::Keyring,
+        Addon::SelfUpdate,
+        Addon::I18n,
+        Addon::Spa,
+        Addon::Stand,
+        Addon::Router,
+        Addon::TanstackQuery,
+        Addon::Auth,
+        Addon::Pwa,
+        Addon::Demo,
+    ];
+
     pub fn as_str(self) -> &'static str {
         match self {
             Addon::Keyring => "keyring",
@@ -158,6 +190,11 @@ impl Addon {
             Addon::I18n => "i18n",
             Addon::Spa => "spa",
             Addon::Stand => "stand",
+            Addon::Router => "router",
+            Addon::TanstackQuery => "tanstack-query",
+            Addon::Auth => "auth",
+            Addon::Pwa => "pwa",
+            Addon::Demo => "demo",
         }
     }
 
@@ -168,6 +205,11 @@ impl Addon {
             Addon::I18n => "i18next, with a gate holding every locale to the source",
             Addon::Spa => "A web UI compiled into the binary and served by it",
             Addon::Stand => "A Vite page in the workspace where the package runs",
+            Addon::Router => "Screens at addresses: react-router, unknown ones sent home",
+            Addon::TanstackQuery => "Server state through TanStack Query, on the line's defaults",
+            Addon::Auth => "A cookie session and a sign-in screen until someone signs in",
+            Addon::Pwa => "Installable and offline: a manifest, its icons, a service worker",
+            Addon::Demo => "Made-up data in an empty database; one with real data refuses it",
         }
     }
 }
@@ -188,7 +230,15 @@ impl std::str::FromStr for Addon {
             "i18n" => Ok(Addon::I18n),
             "spa" => Ok(Addon::Spa),
             "stand" => Ok(Addon::Stand),
-            other => Err(format!("unknown add-on `{other}` (known: keyring, self-update, i18n, spa, stand)")),
+            "router" => Ok(Addon::Router),
+            "tanstack-query" => Ok(Addon::TanstackQuery),
+            "auth" => Ok(Addon::Auth),
+            "pwa" => Ok(Addon::Pwa),
+            "demo" => Ok(Addon::Demo),
+            other => Err(format!(
+                "unknown add-on `{other}` (known: {})",
+                Addon::ALL.iter().map(|a| a.as_str()).collect::<Vec<_>>().join(", ")
+            )),
         }
     }
 }

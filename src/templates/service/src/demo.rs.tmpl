@@ -1,0 +1,129 @@
+//! Made-up data for a demonstration, behind `{{ env_prefix }}_DEMO`.
+//!
+//! The rule is kasl-server's. The flag fills an empty database at startup and
+//! marks it as a demo. A database that already holds real data refuses to
+//! start with the flag on, so a stray `{{ env_prefix }}_DEMO=true` on a real
+//! installation can never mix invented rows into real ones. Without the flag a
+//! demo database starts as usual, and says what it is.
+//!
+//! The rows are fixed rather than random: a demonstration, a screenshot and a
+//! test all want the same screens every time. When the schema grows, `status`
+//! should count the tables that hold real data, and `seed` should write
+//! through the same queries the API does, so the demo exercises the real path.
+
+use anyhow::{Result, bail};
+use sqlx::{PgConnection, PgPool};
+
+/// What the database holds, as far as a demonstration is concerned.
+#[derive(Debug, PartialEq, Eq)]
+pub enum Status {
+    /// Nothing yet: a demonstration may fill it.
+    Empty,
+    /// Filled by a demonstration earlier.
+    Demo,
+    /// Real data.
+    Populated,
+}
+
+/// The made-up rows.
+const LABELS: &[&str] = &["First light", "A second opinion", "Third time lucky", "Four corners", "High five"];
+
+pub async fn status(conn: &mut PgConnection) -> Result<Status> {
+    let demo: bool = sqlx::query_scalar("SELECT EXISTS (SELECT 1 FROM demo)").fetch_one(&mut *conn).await?;
+    if demo {
+        return Ok(Status::Demo);
+    }
+    let rows: i64 = sqlx::query_scalar("SELECT count(*) FROM example").fetch_one(&mut *conn).await?;
+    Ok(if rows == 0 { Status::Empty } else { Status::Populated })
+}
+
+async fn seed(conn: &mut PgConnection) -> Result<()> {
+    for label in LABELS {
+        sqlx::query("INSERT INTO example (label) VALUES ($1)").bind(label).execute(&mut *conn).await?;
+    }
+    sqlx::query("INSERT INTO demo (seeded_at) VALUES (now())").execute(&mut *conn).await?;
+    Ok(())
+}
+
+/// Apply the flag to what the database holds. One transaction: a seed that
+/// fails half-way leaves the database empty, not half a demonstration.
+pub async fn prepare(pool: &PgPool, enabled: bool) -> Result<()> {
+    let mut tx = pool.begin().await?;
+    decide(&mut tx, enabled).await?;
+    tx.commit().await?;
+    Ok(())
+}
+
+async fn decide(conn: &mut PgConnection, enabled: bool) -> Result<()> {
+    match (enabled, status(conn).await?) {
+        (true, Status::Empty) => {
+            seed(conn).await?;
+            tracing::info!(rows = LABELS.len(), "demo: filled an empty database with made-up data");
+        }
+        (true, Status::Demo) => tracing::info!("demo: the database is a demonstration already"),
+        (true, Status::Populated) => {
+            bail!("{{ env_prefix }}_DEMO is set, but the database holds real data - refusing to mix made-up rows into it")
+        }
+        (false, Status::Demo) => {
+            tracing::warn!("the database holds made-up data from a demonstration, though {{ env_prefix }}_DEMO is not set")
+        }
+        (false, _) => {}
+    }
+    Ok(())
+}
+
+#[cfg(test)]
+mod tests {
+    //! Against a real Postgres, each test inside a transaction that is rolled
+    //! back, so they neither see nor leave each other's rows. Skipped without
+    //! `DATABASE_URL`, like the API tests.
+
+    use super::*;
+    use sqlx::postgres::PgPoolOptions;
+
+    async fn pool() -> Option<PgPool> {
+        let url = std::env::var("DATABASE_URL").ok()?;
+        let pool = PgPoolOptions::new().max_connections(2).connect(&url).await.ok()?;
+        sqlx::migrate!().run(&pool).await.expect("migrations should apply");
+        Some(pool)
+    }
+
+    #[tokio::test]
+    async fn an_empty_database_is_filled_and_marked() {
+        let Some(pool) = pool().await else { return };
+        let mut tx = pool.begin().await.unwrap();
+        decide(&mut tx, true).await.unwrap();
+        assert_eq!(status(&mut tx).await.unwrap(), Status::Demo);
+        let rows: i64 = sqlx::query_scalar("SELECT count(*) FROM example").fetch_one(&mut *tx).await.unwrap();
+        assert_eq!(rows, LABELS.len() as i64);
+    }
+
+    /// The guard the whole add-on rests on.
+    #[tokio::test]
+    async fn real_data_refuses_the_demonstration() {
+        let Some(pool) = pool().await else { return };
+        let mut tx = pool.begin().await.unwrap();
+        sqlx::query("INSERT INTO example (label) VALUES ('real')").execute(&mut *tx).await.unwrap();
+        assert!(decide(&mut tx, true).await.is_err(), "the demonstration was mixed into real data");
+        let rows: i64 = sqlx::query_scalar("SELECT count(*) FROM example").fetch_one(&mut *tx).await.unwrap();
+        assert_eq!(rows, 1, "rows were added before the refusal");
+    }
+
+    #[tokio::test]
+    async fn a_second_start_does_not_fill_it_twice() {
+        let Some(pool) = pool().await else { return };
+        let mut tx = pool.begin().await.unwrap();
+        decide(&mut tx, true).await.unwrap();
+        decide(&mut tx, true).await.unwrap();
+        let rows: i64 = sqlx::query_scalar("SELECT count(*) FROM example").fetch_one(&mut *tx).await.unwrap();
+        assert_eq!(rows, LABELS.len() as i64);
+    }
+
+    #[tokio::test]
+    async fn without_the_flag_nothing_is_added() {
+        let Some(pool) = pool().await else { return };
+        let mut tx = pool.begin().await.unwrap();
+        decide(&mut tx, false).await.unwrap();
+        assert_eq!(status(&mut tx).await.unwrap(), Status::Empty);
+    }
+}

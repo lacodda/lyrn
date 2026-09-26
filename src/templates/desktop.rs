@@ -23,11 +23,21 @@ const OVERRIDDEN: &[&str] = &[
     "README.md",
     ".github/workflows/ci.yml",
     ".gitignore",
+    // The spa's starting screen and its test: the desktop form has its own
+    // screen, in its own App.
+    "src/pages/Home.tsx",
+    "src/pages/Home.test.tsx",
 ];
 
 /// Every file the `desktop` form writes.
 pub fn sources() -> Vec<SourceFile> {
-    let mut files: Vec<SourceFile> = spa::sources().into_iter().filter(|f| !OVERRIDDEN.contains(&f.path)).collect();
+    // The spa form's add-ons are its own choices, and none of them is the
+    // desktop's: their files stay behind, and their sections in shared files
+    // are always cut.
+    let mut files: Vec<SourceFile> = spa::sources()
+        .into_iter()
+        .filter(|f| f.addon.is_none() && !OVERRIDDEN.contains(&f.path))
+        .collect();
 
     files.extend([
         SourceFile {
