@@ -24,6 +24,7 @@ but anything calling into Rust needs the real window.
 | Path | What lives there |
 | --- | --- |
 | `src/` | The interface |
+| `src/components/ui/` | dowel's primitives, copied from the registry and held to it by `pnpm lint` |
 | `src-tauri/src/lib.rs` | Where the application starts; `main.rs` is a thin shell |
 | `src-tauri/src/commands.rs` | What the webview is allowed to call |
 | `src-tauri/capabilities/` | The permissions the window is granted |
@@ -31,11 +32,12 @@ but anything calling into Rust needs the real window.
 
 ## The icons
 
-`src-tauri/icons/` is empty until the mark exists. Generate the set with
-`pnpm tauri icon path/to/icon.png` (1024×1024 or larger). In the `.ico` the
-**largest image must come first**: Windows reads the first entry for the taskbar
-and the title bar, and a 16px one there leaves the app looking blurred
-everywhere it matters.
+`src-tauri/icons/` holds the line's umbrella mark - lambda on graphite - until
+the product has a mark of its own; `lyrn.toml` records `mark = "placeholder"`
+meanwhile. Generate the real set with `pnpm tauri icon path/to/icon.png`
+(1024×1024 or larger). In the `.ico` the **largest image must come first**:
+Windows reads the first entry for the taskbar and the title bar, and a 16px one
+there leaves the app looking blurred everywhere it matters.
 
 ## License
 

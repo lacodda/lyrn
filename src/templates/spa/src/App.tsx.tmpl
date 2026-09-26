@@ -1,4 +1,5 @@
 import { useState } from 'react'
+import { Button } from '@/components/ui/button'
 
 export function App() {
   const [count, setCount] = useState(0)
@@ -7,15 +8,11 @@ export function App() {
     <main className="flex min-h-full flex-col items-center justify-center gap-6 p-8">
       <h1 className="text-xl font-semibold text-text">{{ title }}</h1>
       <p className="max-w-prose text-center text-dim">{{ description }}</p>
-      <button
-        type="button"
-        onClick={() => setCount((value) => value + 1)}
-        className="rounded-md bg-accent px-4 py-2 font-semibold text-on-accent hover:bg-accent-2"
-      >
+      <Button variant="primary" onClick={() => setCount((value) => value + 1)}>
         Clicked {count} times
-      </button>
+      </Button>
       <p className="text-sm text-dim">
-        Add a primitive with <code className="font-mono">npx shadcn add {{ registry }}/button.json</code>
+        Add a primitive with <code className="font-mono">npx shadcn add {{ registry }}/badge.json</code>
       </p>
     </main>
   )

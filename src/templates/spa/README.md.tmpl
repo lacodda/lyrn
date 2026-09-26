@@ -17,14 +17,17 @@ $ pnpm build            # a production bundle in dist/
 
 ## Adding a component
 
-Primitives are copied in from the dowel registry and then belong to this
-repository — edit them freely:
+Primitives are copied in from the dowel registry into `src/components/ui/`:
 
 ```console
-$ npx shadcn add {{ registry }}/button.json
+$ npx shadcn add {{ registry }}/badge.json
 ```
 
-The full set is listed at <https://lacodda.github.io/dowel>.
+A lowercase file there is dowel's copy and stays dowel's: `pnpm lint` compares
+each one with the registry of the dowel-ui this project installed, so an
+upgrade that forgets to take the copies again fails the gate. A component of
+this project's own is named in PascalCase. The full set is listed at
+<https://lacodda.github.io/dowel>.
 
 ## The look
 
@@ -48,8 +51,10 @@ it underneath. `pnpm lint` enforces this.
 | Path | What lives there |
 | --- | --- |
 | `src/` | The application |
+| `src/components/ui/` | dowel's primitives, copied from the registry |
 | `src/lib/utils.ts` | `cn()`, the class-name joiner the primitives use |
 | `src/styles.css` | Tailwind, the dowel theme, this product's accent |
+| `tools/check-registry.mjs` | Holds the copies to the installed registry |
 | `docs/adr/` | Architecture decisions, newest last |
 | `.github/workflows/ci.yml` | The gate: lint, types, tests, build |
 

@@ -186,7 +186,13 @@ pub fn sources() -> Vec<SourceFile> {
     // The web UI, when asked for: the spa form's own files, moved under
     // `frontend/` and marked as belonging to the add-on. Reusing them rather
     // than copying keeps one description of what the line's frontend is.
-    files.extend(spa::sources().into_iter().filter(|f| !NOT_FROM_SPA.contains(&f.path)).map(|f| {
+    //
+    // Only the files every spa writes: the spa form's add-ons are its own
+    // choices, and relabelling one of their files as the service's `spa`
+    // would switch it on for every service that has a UI. Their sections in
+    // the shared files are cut the same way, since no service can enable them.
+    let from_spa = spa::sources().into_iter().filter(|f| f.addon.is_none() && !NOT_FROM_SPA.contains(&f.path));
+    files.extend(from_spa.map(|f| {
         SourceFile {
             path: FRONTEND_PATHS
                 .iter()
@@ -221,5 +227,7 @@ const FRONTEND_PATHS: &[(&str, &str)] = &[
     ("src/App.test.tsx", "frontend/src/App.test.tsx"),
     ("src/styles.css", "frontend/src/styles.css"),
     ("src/lib/utils.ts", "frontend/src/lib/utils.ts"),
+    ("src/components/ui/button.tsx", "frontend/src/components/ui/button.tsx"),
+    ("tools/check-registry.mjs", "frontend/tools/check-registry.mjs"),
     ("src/vite-env.d.ts", "frontend/src/vite-env.d.ts"),
 ];

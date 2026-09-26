@@ -6,7 +6,8 @@ standard = "2026.09"
 # `check-locales.mjs` matches i18next's `{{name}}` interpolation with a regular
 # expression - both would be mangled by substitution. GitHub Actions writes
 # `${{ }}`, which the renderer skips on its own.
-verbatim = ["cliff.toml", "tools/check-locales.mjs"]
+# The dowel copies are the registry's text, held to it by `check-registry.mjs`.
+verbatim = ["cliff.toml", "tools/check-locales.mjs", "src/components/ui/button.tsx"]
 
 [[hooks]]
 name = "Installing dependencies"

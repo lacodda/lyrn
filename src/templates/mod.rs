@@ -6,6 +6,7 @@
 pub mod cli;
 pub mod desktop;
 pub mod docs;
+pub mod dowel;
 pub mod mono;
 pub mod plugin;
 pub mod service;
@@ -153,9 +154,13 @@ mod tests {
                             number + 1,
                             open.unwrap()
                         );
+                        // Any form's add-on, not only this one's: the desktop and
+                        // service forms carry files of the spa form, whose
+                        // sections they can never enable and so always cut. A
+                        // name no form knows is still a misspelling.
                         assert!(
-                            form.addons().iter().any(|a| a.as_str() == name),
-                            "{form}: {} names the section `{name}`, which is not one of its add-ons",
+                            Form::ALL.iter().flat_map(|f| f.addons()).any(|a| a.as_str() == name),
+                            "{form}: {} names the section `{name}`, which is not an add-on of any form",
                             source.path
                         );
                         open = Some(name);

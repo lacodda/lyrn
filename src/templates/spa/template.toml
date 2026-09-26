@@ -6,7 +6,11 @@ standard = "2026.09"
 # a Tera template using bare `{{ }}` for its own variables, so it has to travel
 # untouched. GitHub Actions expressions are `${{ }}` and the renderer leaves
 # those alone by itself, so workflows do not belong here.
-verbatim = ["cliff.toml"]
+#
+# The dowel copies under `src/components/ui/` are the registry's text, byte for
+# byte, and `tools/check-registry.mjs` holds them to it: nothing in them is
+# lyrn's to substitute.
+verbatim = ["cliff.toml", "src/components/ui/button.tsx"]
 
 [[hooks]]
 name = "Installing dependencies"

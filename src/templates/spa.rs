@@ -6,6 +6,7 @@
 //! does not support 7, and pnpm stays on 10 because 11 is broken on Windows.
 
 use crate::generate::{Contents, SourceFile};
+use crate::templates::dowel;
 
 /// The manifest text shipped with this form.
 pub const MANIFEST: &str = include_str!("spa/template.toml");
@@ -76,6 +77,16 @@ pub fn sources() -> Vec<SourceFile> {
         SourceFile {
             path: "src/styles.css",
             contents: Contents::Text(include_str!("spa/src/styles.css.tmpl")),
+            executable: false,
+            addon: None,
+        },
+        // The one primitive the starting screen presses. A raw `<button>` is
+        // refused by dowel's lint outside `components/ui/`, and a copy is how
+        // every product of the line gets its Button.
+        dowel::BUTTON.source(None),
+        SourceFile {
+            path: "tools/check-registry.mjs",
+            contents: Contents::Text(include_str!("spa/tools/check-registry.mjs.tmpl")),
             executable: false,
             addon: None,
         },

@@ -1,5 +1,6 @@
 import { useState } from 'react'
 import { invoke } from '@tauri-apps/api/core'
+import { Button } from '@/components/ui/button'
 {{#i18n}}
 import { useTranslation } from 'react-i18next'
 {{/i18n}}
@@ -20,12 +21,11 @@ export function App() {
       <h1 className="text-xl font-semibold text-text">{{ title }}</h1>
       <p className="max-w-prose text-center text-dim">{{ description }}</p>
 {{/i18n}}
-      <button
-        type="button"
+      <Button
+        variant="primary"
         onClick={() => {
           void invoke<string>('greet', { name: 'world' }).then(setGreeting)
         }}
-        className="rounded-md bg-accent px-4 py-2 font-semibold text-on-accent hover:bg-accent-2"
       >
 {{#i18n}}
         {t('app.greet')}
@@ -33,7 +33,7 @@ export function App() {
 {{^i18n}}
         Say hello
 {{/i18n}}
-      </button>
+      </Button>
       {greeting ? <p className="text-sm text-dim">{greeting}</p> : null}
     </main>
   )
