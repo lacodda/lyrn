@@ -8,8 +8,13 @@
 - Add init and adopt
 - Show the tree before anything is written
 
+### 📖 Documentation
+
+- Changelog for 2.8.0
+
 ### 🛠️ Bug Fixes
 
+- Keep the sign-in screen from zooming on iOS
 - Escape the description for every place it lands
 - Take the line's accents from dowel
 
