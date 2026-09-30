@@ -400,10 +400,12 @@ fn parse_defines(defines: &[String]) -> Result<Vec<(String, String)>, Box<dyn Er
 fn with_the_other_way(error: GenerateError, form: Option<Form>) -> GenerateError {
     match error {
         GenerateError::WouldOverwrite { root, paths, .. } if form != Some(Form::Docs) => {
-            let hint = if form.is_some() {
-                "move them aside and run again, or `lyrn adopt` to add only the standard files that are missing"
-            } else {
-                "move them aside and run again"
+            let one = paths.len() == 1;
+            let hint = match (form.is_some(), one) {
+                (true, true) => "move it aside and run again, or `lyrn adopt` to add only the standard files that are missing",
+                (true, false) => "move them aside and run again, or `lyrn adopt` to add only the standard files that are missing",
+                (false, true) => "move it aside and run again",
+                (false, false) => "move them aside and run again",
             };
             GenerateError::WouldOverwrite { root, paths, hint: Some(hint) }
         }

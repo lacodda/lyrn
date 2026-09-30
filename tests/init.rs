@@ -48,9 +48,24 @@ fn a_file_in_the_way_stops_the_whole_run() {
     let text = String::from_utf8_lossy(&out);
     assert!(text.contains("README.md") && text.contains("LICENSE"), "{text}");
     assert!(text.contains("lyrn adopt"), "{text}");
+    assert!(text.contains("these files are") && text.contains("move them aside"), "{text}");
 
     assert_eq!(fs::read_to_string(dir.join("README.md")).unwrap(), "# mine");
     assert!(!dir.join("Cargo.toml").exists(), "a refused run wrote files anyway");
+}
+
+/// The refusal speaks of one file as one file, all the way through.
+#[test]
+fn one_file_in_the_way_is_spoken_of_as_one() {
+    let parent = tempfile::tempdir().unwrap();
+    let dir = parent.path().join("demo-tool");
+    fs::create_dir(&dir).unwrap();
+    fs::write(dir.join("README.md"), "# mine").unwrap();
+
+    let out = init(&dir).args(["--form", "cli"]).assert().failure().get_output().stderr.clone();
+    let text = String::from_utf8_lossy(&out);
+    assert!(text.contains("this file is") && text.contains("move it aside"), "{text}");
+    assert!(!text.contains("move them"), "{text}");
 }
 
 #[test]
