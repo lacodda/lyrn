@@ -1,0 +1,6 @@
+# One line ending for every checkout. The templates are compiled into the
+# binary with include_str!, so a checkout that turns LF into CRLF - the
+# Windows runner's default - ships CRLF inside every project it generates.
+* text=auto eol=lf
+*.png binary
+*.ico binary

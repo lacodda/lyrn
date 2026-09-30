@@ -112,6 +112,21 @@ mod tests {
         }
     }
 
+    /// The templates are compiled in from the checkout, so a checkout that
+    /// turned LF into CRLF would ship CRLF - in the verbatim files most of all,
+    /// which nothing rewrites on the way out. `.gitattributes` prevents it;
+    /// this says whether it did.
+    #[test]
+    fn no_template_text_carries_a_carriage_return() {
+        for form in Form::ALL {
+            for source in sources_for(*form) {
+                if let crate::generate::Contents::Text(text) = source.contents {
+                    assert!(!text.contains('\r'), "{form}: `{}` has CRLF line endings", source.path);
+                }
+            }
+        }
+    }
+
     #[test]
     fn every_form_has_a_manifest_that_parses() {
         for form in Form::ALL {
