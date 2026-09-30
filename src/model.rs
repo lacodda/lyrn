@@ -272,7 +272,13 @@ impl std::str::FromStr for Form {
 }
 
 /// A template's manifest: `template.toml` at the root of the template.
+///
+/// Unknown fields are refused rather than skipped. A template written for a
+/// newer lyrn may use a field this one does not know, and skipping it would
+/// generate something the template never meant - silently. Refusing says
+/// which field, and `lyrn` says which version understands it.
 #[derive(Debug, Clone, Default, Serialize, Deserialize)]
+#[serde(deny_unknown_fields)]
 pub struct TemplateManifest {
     /// Human-readable name, shown while generating.
     #[serde(default)]
@@ -283,19 +289,50 @@ pub struct TemplateManifest {
     /// The version of the line's standard the template writes.
     #[serde(default)]
     pub standard: String,
+    /// The form a template from outside is a version of. Built-in forms know
+    /// their own and leave it out; a template from outside has to say, since
+    /// `lyrn doctor`, `adopt` and `upgrade` all reason in forms.
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub form: Option<Form>,
+    /// The oldest lyrn that understands this template, as `2.9.0`.
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub lyrn: Option<String>,
     /// Files copied verbatim: no placeholder is substituted inside them.
     ///
     /// Anything binary, or anything whose own syntax collides with the
     /// placeholder syntax, belongs here.
     #[serde(default)]
     pub verbatim: Vec<String>,
+    /// Files that need the executable bit. A checkout on Windows loses it, so
+    /// a template from outside names them rather than relying on the disk.
+    #[serde(default, skip_serializing_if = "Vec::is_empty")]
+    pub executable: Vec<String>,
     /// Commands to run in the new project once the files are written.
     #[serde(default)]
     pub hooks: Vec<Hook>,
+    /// The optional pieces a template from outside offers, and the files
+    /// that come only with each. Built-in forms declare theirs in code.
+    #[serde(default, skip_serializing_if = "Vec::is_empty")]
+    pub addons: Vec<AddonManifest>,
+}
+
+/// One add-on as a template from outside declares it.
+#[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
+#[serde(deny_unknown_fields)]
+pub struct AddonManifest {
+    /// What `--with` calls it, and what `{{#name}}` sections are keyed by.
+    pub name: String,
+    /// One line for `lyrn forms` and for a refusal that lists what exists.
+    #[serde(default)]
+    pub summary: String,
+    /// The files written only with this add-on, as paths in the template.
+    #[serde(default)]
+    pub files: Vec<String>,
 }
 
 /// A command the template asks for after the files land.
 #[derive(Debug, Clone, Serialize, Deserialize)]
+#[serde(deny_unknown_fields)]
 pub struct Hook {
     /// Shown to the user while it runs.
     pub name: String,

@@ -9,8 +9,8 @@ $ lyrn init [path] [options]
 
 Starts a project in a directory that is already there - the current one, or
 `path`. It is `lyrn new` with the other placement: the same forms, add-ons and
-options, the same tree shown before anything is written. The usual case is a
-repository created on GitHub and cloned empty:
+options - `--template` included - and the same tree shown before anything is
+written. The usual case is a repository created on GitHub and cloned empty:
 
 ```console
 $ gh repo create my-tool --public --clone

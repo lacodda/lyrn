@@ -31,6 +31,8 @@ error: the name starts with `D`; it has to start with a lowercase letter
 | Option | Default | What it does |
 | --- | --- | --- |
 | `--form <form>` | `spa` | The shape of the project; see [Forms](/reference/forms/) |
+| `--template <source>` | — | Generate from a template instead: a path, a name under `~/.lyrn/templates`, or `owner/repo@tag`; see [Templates](/reference/template/) |
+| `--define <key=value>` | — | Answer a cargo-generate template's placeholder; repeatable |
 | `--host <host>` | — | The application a plugin extends; `--form plugin` only |
 | `--accent <colour>` | asked, else graphite | A product of the line, or a `#rrggbb` value |
 | `--description <text>` | asked, else generic | One line describing what the project is |
@@ -159,6 +161,22 @@ error: `kasl` does not accept plugins yet; when it does it will be listed here (
 $ lyrn new demo --form cli --host kilna
 error: the `cli` form is not generated against a host, so `--host kilna` means nothing
 ```
+
+## From a template
+
+`--template` generates from a template that is not built in - a directory, one
+of yours under `~/.lyrn/templates`, or a tag of a GitHub repository whose CI
+passed on it:
+
+```console
+$ lyrn new demo-app --template lacodda/template-spa@v1.0.0
+Using the template lacodda/template-spa@v1.0.0 (commit 3f9c1e0b7d2a), which passed its CI.
+```
+
+Everything else works as with a form: the add-ons are the template's, the tree
+is shown before anything is written, and `lyrn.toml` records where the files
+came from. A directory under `~/.lyrn/templates` named after a form takes its
+place even without `--template`. See [Templates](/reference/template/).
 
 ## Hooks
 

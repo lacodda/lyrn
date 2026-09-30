@@ -134,6 +134,13 @@ pub enum GenerateError {
         file: PathBuf,
         source: render::UnknownPlaceholder,
     },
+    /// A path that rendered to somewhere outside the project: absolute, or
+    /// climbing out through `..`. A template - or an answer it pasted into a
+    /// file name - must not be able to write beside the project.
+    OutsideTheProject {
+        file: String,
+        rendered: String,
+    },
     Io(io::Error),
 }
 
@@ -166,6 +173,9 @@ impl std::fmt::Display for GenerateError {
             }
             GenerateError::Placeholder { file, source } => {
                 write!(f, "in `{}`: {source}", file.display())
+            }
+            GenerateError::OutsideTheProject { file, rendered } => {
+                write!(f, "`{file}` would be written to `{rendered}`, which is outside the project")
             }
             GenerateError::Io(e) => write!(f, "{e}"),
         }
@@ -204,6 +214,52 @@ pub struct SourceFile {
     pub addon: Option<Addon>,
 }
 
+/// What a template file is made of, owned: the generator's input whichever
+/// template it came from - built in, a directory, a checkout of a tag.
+#[derive(Debug, Clone, PartialEq, Eq)]
+pub enum Body {
+    Text(String),
+    Binary(Vec<u8>),
+}
+
+/// A template file as the generator reads it.
+///
+/// Built-in forms are a table of `SourceFile`s borrowed from the binary; a
+/// template from outside is read from disk. Both become this, so there is one
+/// way from a template to a plan.
+#[derive(Debug, Clone, PartialEq, Eq)]
+pub struct TemplateFile {
+    /// Path relative to the template root, placeholders still in place.
+    pub path: String,
+    pub body: Body,
+    pub executable: bool,
+    /// The add-on this file belongs to; `None` means it is always written.
+    pub addon: Option<String>,
+}
+
+impl From<SourceFile> for TemplateFile {
+    fn from(source: SourceFile) -> Self {
+        Self {
+            path: source.path.to_string(),
+            body: match source.contents {
+                Contents::Text(text) => Body::Text(text.to_string()),
+                Contents::Binary(bytes) => Body::Binary(bytes.to_vec()),
+            },
+            executable: source.executable,
+            addon: source.addon.map(|a| a.as_str().to_string()),
+        }
+    }
+}
+
+/// The path a rendered template path names, if it stays inside the project:
+/// relative, and made only of ordinary names.
+pub fn inside_the_project(rendered: &str) -> Option<PathBuf> {
+    use std::path::Component;
+    let path = PathBuf::from(rendered);
+    let ordinary = path.components().all(|c| matches!(c, Component::Normal(_)));
+    (ordinary && path.components().next().is_some()).then_some(path)
+}
+
 /// Strip the sections whose condition does not hold, and unwrap the ones whose
 /// does: `{{#name}} ... {{/name}}` keeps its body when the add-on is enabled,
 /// `{{^name}} ... {{/name}}` when it is not.
@@ -213,34 +269,56 @@ pub struct SourceFile {
 /// exists because a file often needs a line either way in slightly different
 /// shape - a `lint` script with and without the locale step - and duplicating
 /// the whole file to say that would be worse.
-fn apply_sections(text: &str, enabled: &[Addon]) -> String {
+pub fn apply_sections(text: &str, enabled: &[String]) -> String {
+    decide_sections(text, enabled, |_| true)
+}
+
+/// Decide only the sections `decides` picks, and leave the rest - markers and
+/// all - as they are.
+///
+/// Writing a form out as a template is the case: the desktop form carries the
+/// spa's files, with sections of the spa's add-ons it can never enable. The
+/// export decides those, as the desktop form always does - off - and keeps
+/// the desktop's own sections for the template to decide later.
+pub fn decide_sections(text: &str, enabled: &[String], decides: impl Fn(&str) -> bool) -> String {
     let mut out = String::with_capacity(text.len());
     // Sections do not nest: an add-on is either on or off, and a section
     // inside a section of another add-on would be a way to express "both",
     // which the manifest says with two flags instead. The name is kept so a
     // stray closing marker cannot end a section it did not open.
     let mut skipping: Option<&str> = None;
+    // The section being decided, so its closing marker goes with it; one left
+    // for later keeps both of its markers.
+    let mut deciding: Option<&str> = None;
 
     for line in text.lines() {
         let trimmed = line.trim();
+        let marker = |prefix: &str| trimmed.strip_prefix(prefix).and_then(|r| r.strip_suffix("}}"));
 
-        if let Some(name) = trimmed.strip_prefix("{{#").and_then(|r| r.strip_suffix("}}")) {
-            if !enabled.iter().any(|a| a.as_str() == name) {
-                skipping = Some(name);
+        if let Some(name) = marker("{{#") {
+            if decides(name) {
+                deciding = Some(name);
+                if !enabled.iter().any(|a| a == name) {
+                    skipping = Some(name);
+                }
+                continue;
             }
-            continue;
-        }
-        if let Some(name) = trimmed.strip_prefix("{{^").and_then(|r| r.strip_suffix("}}")) {
-            if enabled.iter().any(|a| a.as_str() == name) {
-                skipping = Some(name);
+        } else if let Some(name) = marker("{{^") {
+            if decides(name) {
+                deciding = Some(name);
+                if enabled.iter().any(|a| a == name) {
+                    skipping = Some(name);
+                }
+                continue;
             }
-            continue;
-        }
-        if let Some(name) = trimmed.strip_prefix("{{/").and_then(|r| r.strip_suffix("}}")) {
-            if skipping == Some(name) {
-                skipping = None;
+        } else if let Some(name) = marker("{{/") {
+            if deciding == Some(name) {
+                deciding = None;
+                if skipping == Some(name) {
+                    skipping = None;
+                }
+                continue;
             }
-            continue;
         }
         if skipping.is_some() {
             continue;
@@ -258,12 +336,12 @@ fn apply_sections(text: &str, enabled: &[Addon]) -> String {
 
 /// Render every source file into a plan, with no add-ons enabled.
 #[cfg(test)]
-pub fn plan(sources: &[SourceFile], manifest: &TemplateManifest, context: &Context) -> Result<Plan, GenerateError> {
+pub fn plan(sources: &[TemplateFile], manifest: &TemplateManifest, context: &Context) -> Result<Plan, GenerateError> {
     plan_with(sources, manifest, context, &[])
 }
 
 /// Render every source file into a plan, with the given add-ons enabled.
-pub fn plan_with(sources: &[SourceFile], manifest: &TemplateManifest, context: &Context, addons: &[Addon]) -> Result<Plan, GenerateError> {
+pub fn plan_with(sources: &[TemplateFile], manifest: &TemplateManifest, context: &Context, addons: &[String]) -> Result<Plan, GenerateError> {
     let mut files = Vec::with_capacity(sources.len());
 
     for source in sources {
@@ -271,28 +349,32 @@ pub fn plan_with(sources: &[SourceFile], manifest: &TemplateManifest, context: &
         // written; nothing downstream has to know it exists.
         // `is_some_and` rather than a let-chain: those are stable from 1.88
         // and this crate promises 1.85.
-        if source.addon.is_some_and(|required| !addons.contains(&required)) {
+        if source.addon.as_ref().is_some_and(|required| !addons.contains(required)) {
             continue;
         }
 
         // A path can carry placeholders too, so `src/{{ name }}.ts` works.
-        let rendered_path = render::render(source.path, context).map_err(|source_err| GenerateError::Placeholder {
-            file: PathBuf::from(source.path),
+        let rendered_path = render::render(&source.path, context).map_err(|source_err| GenerateError::Placeholder {
+            file: PathBuf::from(&source.path),
             source: source_err,
         })?;
+        let path = inside_the_project(&rendered_path).ok_or_else(|| GenerateError::OutsideTheProject {
+            file: source.path.clone(),
+            rendered: rendered_path.clone(),
+        })?;
 
-        let verbatim = manifest.verbatim.iter().any(|pattern| pattern == source.path);
-        let contents = match source.contents {
-            Contents::Binary(bytes) => bytes.to_vec(),
-            Contents::Text(text) if verbatim => text.as_bytes().to_vec(),
-            Contents::Text(text) => {
+        let verbatim = manifest.verbatim.contains(&source.path);
+        let contents = match &source.body {
+            Body::Binary(bytes) => bytes.clone(),
+            Body::Text(text) if verbatim => text.as_bytes().to_vec(),
+            Body::Text(text) => {
                 // Sections first: a section that is switched off must not have
                 // its placeholders resolved, and may legitimately mention
                 // variables that only make sense with that add-on enabled.
                 let sectioned = apply_sections(text, addons);
                 render::render(&sectioned, context)
                     .map_err(|source_err| GenerateError::Placeholder {
-                        file: PathBuf::from(source.path),
+                        file: PathBuf::from(&source.path),
                         source: source_err,
                     })?
                     .into_bytes()
@@ -300,7 +382,7 @@ pub fn plan_with(sources: &[SourceFile], manifest: &TemplateManifest, context: &
         };
 
         files.push(PlannedFile {
-            path: PathBuf::from(rendered_path),
+            path,
             contents,
             executable: source.executable,
         });
@@ -401,17 +483,17 @@ mod tests {
         c
     }
 
-    fn sources() -> Vec<SourceFile> {
+    fn sources() -> Vec<TemplateFile> {
         vec![
-            SourceFile {
-                path: "README.md",
-                contents: Contents::Text("# {{ name }}"),
+            TemplateFile {
+                path: "README.md".into(),
+                body: Body::Text("# {{ name }}".into()),
                 executable: false,
                 addon: None,
             },
-            SourceFile {
-                path: "src/main.ts",
-                contents: Contents::Text("export const n = '{{ name }}'"),
+            TemplateFile {
+                path: "src/main.ts".into(),
+                body: Body::Text("export const n = '{{ name }}'".into()),
                 executable: false,
                 addon: None,
             },
@@ -427,9 +509,9 @@ mod tests {
 
     #[test]
     fn renders_placeholders_in_paths() {
-        let sources = [SourceFile {
-            path: "src/{{ name }}.ts",
-            contents: Contents::Text("x"),
+        let sources = [TemplateFile {
+            path: "src/{{ name }}.ts".into(),
+            body: Body::Text("x".into()),
             executable: false,
             addon: None,
         }];
@@ -439,9 +521,9 @@ mod tests {
 
     #[test]
     fn a_verbatim_file_keeps_its_braces() {
-        let sources = [SourceFile {
-            path: "keep.md",
-            contents: Contents::Text("{{ name }}"),
+        let sources = [TemplateFile {
+            path: "keep.md".into(),
+            body: Body::Text("{{ name }}".into()),
             executable: false,
             addon: None,
         }];
@@ -455,9 +537,9 @@ mod tests {
 
     #[test]
     fn an_unknown_placeholder_names_the_file_it_is_in() {
-        let sources = [SourceFile {
-            path: "bad.md",
-            contents: Contents::Text("{{ nope }}"),
+        let sources = [TemplateFile {
+            path: "bad.md".into(),
+            body: Body::Text("{{ nope }}".into()),
             executable: false,
             addon: None,
         }];
@@ -528,11 +610,11 @@ mod tests {
 
     #[test]
     fn a_file_of_an_unrequested_addon_is_not_written() {
-        let sources = [SourceFile {
-            path: "secret.rs",
-            contents: Contents::Text("x"),
+        let sources = [TemplateFile {
+            path: "secret.rs".into(),
+            body: Body::Text("x".into()),
             executable: false,
-            addon: Some(Addon::Keyring),
+            addon: Some("keyring".into()),
         }];
         let plan = plan_with(&sources, &TemplateManifest::default(), &ctx(), &[]).unwrap();
         assert!(plan.files.is_empty());
@@ -540,25 +622,25 @@ mod tests {
 
     #[test]
     fn a_file_of_a_requested_addon_is_written() {
-        let sources = [SourceFile {
-            path: "secret.rs",
-            contents: Contents::Text("x"),
+        let sources = [TemplateFile {
+            path: "secret.rs".into(),
+            body: Body::Text("x".into()),
             executable: false,
-            addon: Some(Addon::Keyring),
+            addon: Some("keyring".into()),
         }];
-        let plan = plan_with(&sources, &TemplateManifest::default(), &ctx(), &[Addon::Keyring]).unwrap();
+        let plan = plan_with(&sources, &TemplateManifest::default(), &ctx(), &["keyring".to_string()]).unwrap();
         assert_eq!(plan.files.len(), 1);
     }
 
     #[test]
     fn an_addon_asked_for_does_not_bring_in_another() {
-        let sources = [SourceFile {
-            path: "update.rs",
-            contents: Contents::Text("x"),
+        let sources = [TemplateFile {
+            path: "update.rs".into(),
+            body: Body::Text("x".into()),
             executable: false,
-            addon: Some(Addon::SelfUpdate),
+            addon: Some("self-update".into()),
         }];
-        let plan = plan_with(&sources, &TemplateManifest::default(), &ctx(), &[Addon::Keyring]).unwrap();
+        let plan = plan_with(&sources, &TemplateManifest::default(), &ctx(), &["keyring".to_string()]).unwrap();
         assert!(plan.files.is_empty(), "keyring dragged in the self-update file");
     }
 
@@ -589,7 +671,7 @@ tail
         // The markers go with their lines: an enabled section leaves no trace
         // of ever having been conditional.
         assert_eq!(
-            apply_sections(text, &[Addon::Keyring]),
+            apply_sections(text, &["keyring".to_string()]),
             "keep
 secret
 tail
@@ -607,7 +689,7 @@ b
 {{/self-update}}
 ";
         assert_eq!(
-            apply_sections(text, &[Addon::SelfUpdate]),
+            apply_sections(text, &["self-update".to_string()]),
             "b
 "
         );
@@ -622,7 +704,7 @@ b
     {{/keyring}}
 ";
         assert_eq!(
-            apply_sections(text, &[Addon::Keyring]),
+            apply_sections(text, &["keyring".to_string()]),
             "    a
 "
         );
@@ -654,7 +736,7 @@ plain
 b
 ";
         assert_eq!(
-            apply_sections(text, &[Addon::I18n]),
+            apply_sections(text, &["i18n".to_string()]),
             "a
 b
 "
@@ -673,7 +755,7 @@ without
 {{/i18n}}
 ";
         assert_eq!(
-            apply_sections(text, &[Addon::I18n]),
+            apply_sections(text, &["i18n".to_string()]),
             "with
 "
         );
@@ -685,13 +767,35 @@ without
     }
 
     #[test]
+    fn sections_left_undecided_keep_their_markers() {
+        let text = "{{#pwa}}
+spa only
+{{/pwa}}
+{{^pwa}}
+without
+{{/pwa}}
+{{#i18n}}
+desktop's own
+{{/i18n}}
+";
+        assert_eq!(
+            decide_sections(text, &[], |name| name == "pwa"),
+            "without
+{{#i18n}}
+desktop's own
+{{/i18n}}
+"
+        );
+    }
+
+    #[test]
     fn a_file_without_sections_is_untouched() {
         assert_eq!(
             apply_sections(
                 "a
 b
 ",
-                &[Addon::Keyring]
+                &["keyring".to_string()]
             ),
             "a
 b
@@ -703,14 +807,15 @@ b
     fn a_cut_section_leaves_its_placeholders_unresolved() {
         // A switched-off section may mention variables that only exist with
         // that add-on; resolving them would fail the whole generation.
-        let sources = [SourceFile {
-            path: "Cargo.toml",
-            contents: Contents::Text(
+        let sources = [TemplateFile {
+            path: "Cargo.toml".into(),
+            body: Body::Text(
                 "[deps]
 {{#keyring}}
 keyring = \"{{ nonexistent }}\"
 {{/keyring}}
-",
+"
+                .into(),
             ),
             executable: false,
             addon: None,
@@ -721,6 +826,28 @@ keyring = \"{{ nonexistent }}\"
             b"[deps]
 "
         );
+    }
+
+    #[test]
+    fn a_path_that_climbs_out_is_refused() {
+        let sources = [TemplateFile {
+            path: "{{ name }}".into(),
+            body: Body::Text("x".into()),
+            executable: false,
+            addon: None,
+        }];
+        for hostile in ["../outside", "a/../../outside", "/etc/outside", ""] {
+            let mut c = Context::new();
+            c.set("name", hostile);
+            let err = plan(&sources, &TemplateManifest::default(), &c).unwrap_err();
+            assert!(matches!(err, GenerateError::OutsideTheProject { .. }), "`{hostile}` was accepted: {err}");
+        }
+    }
+
+    #[test]
+    fn a_path_of_ordinary_names_stays_inside() {
+        assert_eq!(inside_the_project("src/app/main.rs"), Some(PathBuf::from("src/app/main.rs")));
+        assert_eq!(inside_the_project(".github/workflows/ci.yml"), Some(PathBuf::from(".github/workflows/ci.yml")));
     }
 
     #[test]

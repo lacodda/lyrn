@@ -31,3 +31,14 @@ pub fn combinations(form: &str) -> Vec<Vec<&'static str>> {
         _ => vec![vec![]],
     }
 }
+
+/// The lyrn binary, with a home of its own.
+///
+/// `~/.lyrn/templates/spa` on the machine running the tests would stand in for
+/// the built-in spa form, and every test of it would then measure somebody's
+/// local template. `LYRN_HOME` points at a directory that stays empty.
+pub fn lyrn() -> assert_cmd::Command {
+    let mut cmd = assert_cmd::Command::cargo_bin("lyrn").unwrap();
+    cmd.env("LYRN_HOME", concat!(env!("CARGO_TARGET_TMPDIR"), "/empty-lyrn-home"));
+    cmd
+}

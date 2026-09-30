@@ -2,7 +2,7 @@ use std::path::PathBuf;
 
 use clap::{Parser, Subcommand};
 
-use crate::model::{Addon, Form};
+use crate::model::Form;
 
 /// Start a new web application on the lacodda line's stack: Vite, React,
 /// TypeScript, Tailwind and the dowel design system, with the line's standard
@@ -25,8 +25,34 @@ pub enum Command {
     Init(Box<InitArgs>),
     /// Bring an existing repository up to the line's standard
     Adopt(Box<AdoptArgs>),
-    /// List the forms a project can take
+    /// List the forms a project can take, and your own templates
     Forms,
+    /// Check a template, or write a built-in form out as one
+    #[command(subcommand)]
+    Template(TemplateCommand),
+}
+
+#[derive(Subcommand)]
+pub enum TemplateCommand {
+    /// Check that a template can be used: its manifest, its variables, its
+    /// sections, its hooks
+    Check {
+        /// The template's directory; defaults to the current one
+        path: Option<PathBuf>,
+    },
+    /// Write a built-in form out as a template repository of its own
+    Export {
+        /// The form to write out
+        form: Form,
+
+        /// Where to write it; defaults to `template-<form>`
+        #[arg(long, value_name = "PATH")]
+        path: Option<PathBuf>,
+
+        /// The GitHub repository the template will live in, as `owner/name`
+        #[arg(long, value_name = "OWNER/NAME")]
+        repo: Option<String>,
+    },
 }
 
 #[derive(clap::Args)]
@@ -90,9 +116,14 @@ pub struct AdoptArgs {
 /// differ only in where the files go.
 #[derive(clap::Args)]
 pub struct ProjectArgs {
-    /// The shape of the project
-    #[arg(long, value_name = "FORM", default_value = "spa")]
-    pub form: Form,
+    /// The shape of the project [default: spa]
+    #[arg(long, value_name = "FORM")]
+    pub form: Option<Form>,
+
+    /// Generate from a template instead of a built-in form: a path
+    /// (`./mine`), a name under ~/.lyrn/templates, or `owner/repo@tag`
+    #[arg(long, value_name = "SOURCE", conflicts_with = "form")]
+    pub template: Option<String>,
 
     /// The application a plugin extends (see `lyrn forms`); `--form plugin` only
     #[arg(long, value_name = "HOST")]
@@ -103,7 +134,11 @@ pub struct ProjectArgs {
 
     /// Optional pieces to generate with, comma-separated (see `lyrn forms`)
     #[arg(long = "with", value_name = "ADDON", value_delimiter = ',')]
-    pub with: Vec<Addon>,
+    pub with: Vec<String>,
+
+    /// Answer a cargo-generate template's placeholder, as `key=value`
+    #[arg(long, value_name = "KEY=VALUE")]
+    pub define: Vec<String>,
 
     /// Accept the defaults instead of asking
     #[arg(short = 'y', long = "yes")]

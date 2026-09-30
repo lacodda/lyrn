@@ -17,4 +17,9 @@ protocol_version = {{ protocol_version }}
 
 [template]
 version = "{{ lyrn_version }}"
+# Where the files came from - `lyrn` for a built-in form, `owner/repo@tag` for
+# a template from GitHub - and at which revision: lyrn's version, or the commit
+# whose CI passed.
+source = "{{ template_source }}"
+revision = "{{ template_revision }}"
 standard = "{{ standard }}"

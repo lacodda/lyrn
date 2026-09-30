@@ -11,7 +11,7 @@
 use std::fs;
 use std::path::{Path, PathBuf};
 
-use assert_cmd::Command;
+mod common;
 
 fn repo_root() -> PathBuf {
     PathBuf::from(env!("CARGO_MANIFEST_DIR"))
@@ -95,7 +95,7 @@ fn every_command_the_readme_shows_exists_in_the_cli() {
     // A README that documents a command the binary does not have is worse than
     // one that documents nothing: it is confidently wrong.
     let readme = read("README.md");
-    let help = String::from_utf8(Command::cargo_bin("lyrn").unwrap().arg("--help").output().unwrap().stdout).unwrap();
+    let help = String::from_utf8(common::lyrn().arg("--help").output().unwrap().stdout).unwrap();
 
     for line in readme.lines() {
         let line = line.trim();
@@ -113,7 +113,7 @@ fn every_command_the_readme_shows_exists_in_the_cli() {
 fn every_command_the_docs_reference_exists_in_the_cli() {
     // The rule of the line: a command without a page does not exist. This is
     // the other direction - a page without a command.
-    let help = String::from_utf8(Command::cargo_bin("lyrn").unwrap().arg("--help").output().unwrap().stdout).unwrap();
+    let help = String::from_utf8(common::lyrn().arg("--help").output().unwrap().stdout).unwrap();
     let reference = repo_root().join("docs/src/content/docs/reference");
 
     for entry in fs::read_dir(&reference).expect("the reference directory is missing") {
@@ -131,7 +131,7 @@ fn every_command_the_docs_reference_exists_in_the_cli() {
 
 #[test]
 fn every_command_has_a_reference_page() {
-    let help = String::from_utf8(Command::cargo_bin("lyrn").unwrap().arg("--help").output().unwrap().stdout).unwrap();
+    let help = String::from_utf8(common::lyrn().arg("--help").output().unwrap().stdout).unwrap();
     let reference = repo_root().join("docs/src/content/docs/reference");
 
     // The subcommand list sits between the `Commands:` header and the next
@@ -370,7 +370,7 @@ fn the_installers_agree_on_the_repository() {
 /// while the binary carried eight - and nothing was red.
 #[test]
 fn both_shopfronts_list_exactly_the_forms_the_binary_carries() {
-    let listing = String::from_utf8(Command::cargo_bin("lyrn").unwrap().arg("forms").output().unwrap().stdout).unwrap();
+    let listing = String::from_utf8(common::lyrn().arg("forms").output().unwrap().stdout).unwrap();
 
     // The forms are the lines that do not begin with an option's indent.
     let forms: Vec<String> = listing
@@ -412,7 +412,7 @@ fn both_shopfronts_list_exactly_the_forms_the_binary_carries() {
 /// exists, and it is the first thing a reader trusts.
 #[test]
 fn the_forms_transcript_is_the_one_the_binary_prints() {
-    let listing = String::from_utf8(Command::cargo_bin("lyrn").unwrap().arg("forms").output().unwrap().stdout).unwrap();
+    let listing = String::from_utf8(common::lyrn().arg("forms").output().unwrap().stdout).unwrap();
     let docs = read("docs/src/content/docs/reference/forms.md");
 
     for line in listing.lines().filter(|l| !l.trim().is_empty()) {

@@ -9,13 +9,11 @@
 use std::fs;
 use std::path::Path;
 
-use assert_cmd::Command;
-
 mod common;
 use common::combinations;
 
 fn generate(form: &str, addons: &[&str], root: &Path) {
-    let mut cmd = Command::cargo_bin("lyrn").unwrap();
+    let mut cmd = common::lyrn();
     cmd.arg("new")
         .arg("demo-tool")
         .arg("--form")
@@ -198,8 +196,7 @@ fn an_unknown_addon_name_is_refused() {
     let dir = tempfile::tempdir().unwrap();
     // A typo in `--with` should stop the run, not silently produce a project
     // missing the thing that was asked for.
-    Command::cargo_bin("lyrn")
-        .unwrap()
+    common::lyrn()
         .args(["new", "demo-tool", "--yes", "--no-hooks", "--with", "nonesuch", "--path"])
         .arg(dir.path().join("demo-tool"))
         .assert()
@@ -213,8 +210,7 @@ fn an_addon_belonging_to_another_form_is_refused() {
     let dir = tempfile::tempdir().unwrap();
     let root = dir.path().join("demo-tool");
 
-    Command::cargo_bin("lyrn")
-        .unwrap()
+    common::lyrn()
         .args(["new", "demo-tool", "--form", "spa", "--yes", "--no-hooks", "--with", "keyring", "--path"])
         .arg(&root)
         .assert()

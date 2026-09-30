@@ -9,8 +9,6 @@
 use std::fs;
 use std::path::{Path, PathBuf};
 
-use assert_cmd::Command;
-
 mod common;
 use common::FORMS;
 
@@ -23,7 +21,7 @@ const HOSTILE: &str = "He said \"hi\" & <b>{x}</b> \\ it's: done */\nfor real";
 const ONE_LINE: &str = "He said \"hi\" & <b>{x}</b> \\ it's: done */ for real";
 
 fn generate(form: &str, root: &Path) {
-    let mut cmd = Command::cargo_bin("lyrn").unwrap();
+    let mut cmd = common::lyrn();
     cmd.args(["new", "demo-tool", "--form", form, "--yes", "--no-hooks", "--repo", "owner/demo-tool"])
         .args(["--description", HOSTILE]);
     if form == "plugin" {

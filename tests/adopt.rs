@@ -5,8 +5,10 @@ use std::path::Path;
 
 use assert_cmd::Command;
 
+mod common;
+
 fn adopt(dir: &Path) -> Command {
-    let mut cmd = Command::cargo_bin("lyrn").unwrap();
+    let mut cmd = common::lyrn();
     cmd.args(["adopt", "--yes", "--author", "Tester", "--repo", "owner/old-tool"]).arg(dir);
     cmd
 }

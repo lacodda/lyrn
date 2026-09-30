@@ -4,10 +4,12 @@ use std::path::{Path, PathBuf};
 use std::process::Command as Process;
 
 use crate::cli::{IdentityArgs, NewArgs, ProjectArgs};
-use crate::generate::{self, GenerateError};
+use crate::generate::{self, GenerateError, Plan};
 use crate::host;
-use crate::model::{Addon, Context, Form, Placement, TemplateManifest};
+use crate::model::{Context, Form, Hook, Placement};
 use crate::naming::{self, PLACEHOLDER_ACCENT};
+use crate::template::cargo_generate::{Answers, Facts};
+use crate::template::{self, Kind, Native, Origin, Template};
 use crate::templates;
 
 /// Everything a generation is asked for, whichever command asked.
@@ -15,43 +17,35 @@ pub struct Wanted<'a> {
     pub name: &'a str,
     pub form: Form,
     pub host: Option<&'a str>,
-    pub with: &'a [Addon],
+    pub with: &'a [String],
     pub identity: &'a IdentityArgs,
-}
-
-impl<'a> Wanted<'a> {
-    pub fn from_project(name: &'a str, project: &'a ProjectArgs) -> Self {
-        Self {
-            name,
-            form: project.form,
-            host: project.host.as_deref(),
-            with: &project.with,
-            identity: &project.identity,
-        }
-    }
 }
 
 /// Build the context a generation runs with.
 ///
 /// Everything can be given on the command line; the wizard only fills what is
 /// still missing, and only when there is a terminal to ask into.
-pub fn build_context(wanted: &Wanted, manifest: &TemplateManifest, interactive: bool) -> Result<Context, Box<dyn Error>> {
+pub fn build_context(wanted: &Wanted, native: &Native, origin: &Origin, interactive: bool) -> Result<Context, Box<dyn Error>> {
     let args = wanted;
     let identity = wanted.identity;
     naming::validate_name(args.name)?;
 
-    // An add-on this form does not have would otherwise be accepted and write
-    // nothing: the command succeeds, and the thing that was asked for is
-    // simply absent. Clap only checks that the name exists at all.
+    // An add-on this template does not have would otherwise be accepted and
+    // write nothing: the command succeeds, and the thing that was asked for
+    // is simply absent.
     for addon in args.with {
-        if !args.form.addons().contains(addon) {
-            let known = args.form.addons().iter().map(|a| a.as_str()).collect::<Vec<_>>();
+        if !native.addons.iter().any(|a| a.name == *addon) {
+            let known = native.addons.iter().map(|a| a.name.as_str()).collect::<Vec<_>>();
             let offer = if known.is_empty() {
                 "it has none".to_string()
             } else {
                 format!("it has: {}", known.join(", "))
             };
-            return Err(format!("the `{}` form has no `{addon}` add-on - {offer}", args.form).into());
+            let whose = match origin {
+                Origin::BuiltIn => format!("the `{}` form", args.form),
+                _ => "the template".to_string(),
+            };
+            return Err(format!("{whose} has no `{addon}` add-on - {offer}").into());
         }
     }
 
@@ -141,7 +135,12 @@ pub fn build_context(wanted: &Wanted, manifest: &TemplateManifest, interactive: 
         .set("date", current_date())
         .set("registry", "https://lacodda.github.io/dowel/r")
         .set("lyrn_version", env!("CARGO_PKG_VERSION"))
-        .set("standard", manifest.standard.clone())
+        .set("standard", native.manifest.standard.clone())
+        // Where the files came from and at which revision: `lyrn.toml` keeps
+        // both, so the template a project was made from can be named again -
+        // and `lyrn upgrade` can tell what changed since.
+        .set("template_source", origin.source())
+        .set("template_revision", origin.revision())
         // The repository the generated project will live in. Guessed from the
         // git identity so the installers and the update check point somewhere
         // real; `--repo` overrides it.
@@ -202,42 +201,120 @@ pub fn build_context(wanted: &Wanted, manifest: &TemplateManifest, interactive: 
     Ok(context)
 }
 
+/// The template a project is generated from: the one `--template` names, or
+/// the form's - yours under ~/.lyrn/templates if you have one.
+pub fn template_for(project: &ProjectArgs) -> Result<Template, Box<dyn Error>> {
+    match &project.template {
+        Some(spec) => template::resolve(spec),
+        None => template::for_form(project.form.unwrap_or(Form::Spa)),
+    }
+}
+
+/// Where a template's files go when nothing says otherwise.
+pub fn placement_of(template: &Template) -> Placement {
+    match &template.kind {
+        Kind::Lyrn(native) => native.form.placement(),
+        Kind::CargoGenerate(_) => Placement::NewDirectory,
+    }
+}
+
 pub fn run(args: NewArgs) -> Result<(), Box<dyn Error>> {
+    let template = template_for(&args.project)?;
     // A new project gets a directory named after it; a form that adds to a
     // repository adds to the one it is run in.
-    let placement = args.project.form.placement();
+    let placement = placement_of(&template);
     let root = args.path.clone().unwrap_or_else(|| match placement {
         Placement::NewDirectory => PathBuf::from(&args.name),
         Placement::IntoExisting => PathBuf::from("."),
     });
-    generate_project(&Wanted::from_project(&args.name, &args.project), &args.project, &root, placement)
+    generate_project(&args.name, &template, &args.project, &root, placement)
+}
+
+/// What a generation is about to do, whichever kind of template planned it.
+struct Planned {
+    plan: Plan,
+    hooks: Vec<Hook>,
+    /// The form, for a lyrn template; a cargo-generate one has none.
+    form: Option<Form>,
 }
 
 /// Plan a project, check the destination, show or write it, and run its
 /// hooks. `placement` is where the files go this time: `init` puts any form
 /// into a directory that already exists.
-pub fn generate_project(wanted: &Wanted, project: &ProjectArgs, root: &Path, placement: Placement) -> Result<(), Box<dyn Error>> {
-    let manifest: TemplateManifest = toml::from_str(templates::manifest_for(wanted.form))?;
+pub fn generate_project(name: &str, template: &Template, project: &ProjectArgs, root: &Path, placement: Placement) -> Result<(), Box<dyn Error>> {
     let interactive = !project.assume_yes && std::io::stdin().is_terminal();
+    let form = match &template.kind {
+        Kind::Lyrn(native) => Some(native.form),
+        Kind::CargoGenerate(_) => None,
+    };
+    if let Some(notice) = template.origin.notice(form) {
+        println!("{notice}");
+    }
 
-    let context = build_context(wanted, &manifest, interactive)?;
-    let plan = generate::plan_with(&templates::sources_for(wanted.form), &manifest, &context, wanted.with)?;
+    let planned = match &template.kind {
+        Kind::Lyrn(native) => {
+            if !project.define.is_empty() {
+                return Err("`--define` answers a cargo-generate template's placeholders; this is a lyrn template, which asks with its own flags".into());
+            }
+            let wanted = Wanted {
+                name,
+                form: native.form,
+                host: project.host.as_deref(),
+                with: &project.with,
+                identity: &project.identity,
+            };
+            let context = build_context(&wanted, native, &template.origin, interactive)?;
+            Planned {
+                plan: generate::plan_with(&native.files, &native.manifest, &context, &project.with)?,
+                hooks: native.manifest.hooks.clone(),
+                form: Some(native.form),
+            }
+        }
+        Kind::CargoGenerate(cargo) => {
+            refuse_what_cargo_generate_ignores(project)?;
+            naming::validate_name(name)?;
+            let username = project.identity.author.clone().or_else(|| git_config("user.name")).unwrap_or_default();
+            let authors = match (project.identity.author.is_some(), git_config("user.email")) {
+                (false, Some(email)) if !username.is_empty() => format!("{username} <{email}>"),
+                _ => username.clone(),
+            };
+            let facts = Facts {
+                authors,
+                username,
+                is_init: placement == Placement::IntoExisting,
+                within_cargo_project: root.ancestors().skip(1).any(|a| a.join("Cargo.toml").is_file()),
+            };
+            let defines = parse_defines(&project.define)?;
+            Planned {
+                plan: cargo.plan(
+                    name,
+                    &facts,
+                    &Answers {
+                        defines: &defines,
+                        interactive,
+                    },
+                )?,
+                hooks: cargo.hooks(),
+                form: None,
+            }
+        }
+    };
+    let plan = &planned.plan;
 
     // Checked before a dry run too: a dry run that promises files the real
     // run would refuse to write is a promise the tool then breaks.
     match placement {
         Placement::NewDirectory => generate::check_destination(root)?,
         Placement::IntoExisting => {
-            generate::check_additions(&plan, root, templates::foreign_sites_for(wanted.form)).map_err(|e| with_the_other_way(e, wanted.form))?
+            let foreign = planned.form.map(templates::foreign_sites_for).unwrap_or(&[]);
+            generate::check_additions(plan, root, foreign).map_err(|e| with_the_other_way(e, planned.form))?
         }
     }
 
     // The words follow what the form is, not where it goes: a project started
     // in place is still created, and a documentation site is still added.
-    let verb = match wanted.form.placement() {
-        Placement::NewDirectory => "create",
-        Placement::IntoExisting => "add",
-    };
+    let adds = planned.form.is_some_and(|f| f.placement() == Placement::IntoExisting);
+    let verb = if adds { "add" } else { "create" };
     if project.dry_run {
         println!("Would {verb} {} in `{}`:\n", plural(plan.files.len()), root.display());
         println!("{}", indent(&plan.tree()));
@@ -251,6 +328,12 @@ pub fn generate_project(wanted: &Wanted, project: &ProjectArgs, root: &Path, pla
     if interactive {
         println!("\nWill {verb} {} in `{}`:\n", plural(plan.files.len()), root.display());
         println!("{}\n", indent(&plan.tree()));
+        // A template from outside says what it will run as well as what it
+        // will write: its commands are the part a tree does not show.
+        if template.origin != Origin::BuiltIn && !project.no_hooks && !planned.hooks.is_empty() {
+            let commands: Vec<String> = planned.hooks.iter().map(|h| h.run.join(" ")).collect();
+            println!("Then it runs: {}\n", commands.join(" · "));
+        }
         if !confirm(&format!("{} them?", capitalise(verb)))? {
             println!("Nothing was written.");
             return Ok(());
@@ -261,32 +344,69 @@ pub fn generate_project(wanted: &Wanted, project: &ProjectArgs, root: &Path, pla
     // it every destination would look like a repository.
     let in_a_repository = inside_a_repository(root);
 
-    generate::write(&plan, root)?;
-    let done = match wanted.form.placement() {
-        Placement::NewDirectory => "Created",
-        Placement::IntoExisting => "Added",
-    };
+    generate::write(plan, root)?;
+    let done = if adds { "Added" } else { "Created" };
     println!("{done} {} in `{}`.", plural(plan.files.len()), root.display());
 
     if !project.no_hooks {
-        run_hooks(&manifest, root, in_a_repository)?;
+        run_hooks(&planned.hooks, root, in_a_repository)?;
     }
 
-    let uncommitted = in_a_repository && manifest.hooks.iter().any(|h| h.starts_repository);
-    print_next_steps(wanted, project, root, uncommitted);
+    let uncommitted = in_a_repository && planned.hooks.iter().any(|h| h.starts_repository);
+    match planned.form {
+        Some(form) => print_next_steps(name, form, project, root, uncommitted),
+        None => print_cargo_next_steps(plan, root, uncommitted),
+    }
     Ok(())
+}
+
+/// The flags that describe a project of the line mean nothing to a
+/// cargo-generate template, and would be accepted and ignored.
+fn refuse_what_cargo_generate_ignores(project: &ProjectArgs) -> Result<(), Box<dyn Error>> {
+    let identity = &project.identity;
+    let given = [
+        ("--accent", identity.accent.is_some()),
+        ("--description", identity.description.is_some()),
+        ("--repo", identity.repo.is_some()),
+        ("--host", project.host.is_some()),
+        ("--with", !project.with.is_empty()),
+    ];
+    let named: Vec<&str> = given.iter().filter(|(_, is)| *is).map(|(flag, _)| *flag).collect();
+    if named.is_empty() {
+        return Ok(());
+    }
+    Err(format!(
+        "{} {} nothing to a cargo-generate template, which asks with its own placeholders - answer them with `--define key=value`",
+        named.join(", "),
+        if named.len() == 1 { "means" } else { "mean" }
+    )
+    .into())
+}
+
+/// `--define key=value`, each split once at the first `=`.
+fn parse_defines(defines: &[String]) -> Result<Vec<(String, String)>, Box<dyn Error>> {
+    defines
+        .iter()
+        .map(|d| match d.split_once('=') {
+            Some((key, value)) if !key.trim().is_empty() => Ok((key.trim().to_string(), value.to_string())),
+            _ => Err(format!("`--define {d}` is not `key=value`").into()),
+        })
+        .collect()
 }
 
 /// A refusal to overwrite, with the way round it for a project being started
 /// in place: most often the files in the way are the README, LICENSE and
 /// .gitignore a hosting service puts in a new repository.
-fn with_the_other_way(error: GenerateError, form: Form) -> GenerateError {
+fn with_the_other_way(error: GenerateError, form: Option<Form>) -> GenerateError {
     match error {
-        GenerateError::WouldOverwrite { root, paths, .. } if form != Form::Docs => GenerateError::WouldOverwrite {
-            root,
-            paths,
-            hint: Some("move them aside and run again, or `lyrn adopt` to add only the standard files that are missing"),
-        },
+        GenerateError::WouldOverwrite { root, paths, .. } if form != Some(Form::Docs) => {
+            let hint = if form.is_some() {
+                "move them aside and run again, or `lyrn adopt` to add only the standard files that are missing"
+            } else {
+                "move them aside and run again"
+            };
+            GenerateError::WouldOverwrite { root, paths, hint: Some(hint) }
+        }
         other => other,
     }
 }
@@ -308,8 +428,8 @@ pub fn inside_a_repository(dir: &Path) -> bool {
         .is_ok_and(|out| out.status.success() && String::from_utf8_lossy(&out.stdout).trim() == "true")
 }
 
-fn run_hooks(manifest: &TemplateManifest, root: &Path, in_a_repository: bool) -> Result<(), Box<dyn Error>> {
-    for hook in &manifest.hooks {
+fn run_hooks(hooks: &[Hook], root: &Path, in_a_repository: bool) -> Result<(), Box<dyn Error>> {
+    for hook in hooks {
         // A repository that already exists belongs to someone: its history,
         // its staging area and the moment of its next commit are theirs, and
         // a nested `git init` inside it would split it in two.
@@ -345,10 +465,10 @@ fn run_hooks(manifest: &TemplateManifest, root: &Path, in_a_repository: bool) ->
     Ok(())
 }
 
-fn print_next_steps(wanted: &Wanted, project: &ProjectArgs, root: &Path, uncommitted: bool) {
+fn print_next_steps(name: &str, form: Form, project: &ProjectArgs, root: &Path, uncommitted: bool) {
     println!("\nNext:");
     // The site is a project inside the repository; its commands run there.
-    let workdir = if wanted.form == Form::Docs { root.join("docs") } else { root.to_path_buf() };
+    let workdir = if form == Form::Docs { root.join("docs") } else { root.to_path_buf() };
     // `Path::join` keeps a leading `./`, which reads as noise here.
     let workdir = workdir.strip_prefix(".").map(Path::to_path_buf).unwrap_or(workdir);
     if !workdir.as_os_str().is_empty() {
@@ -360,7 +480,7 @@ fn print_next_steps(wanted: &Wanted, project: &ProjectArgs, root: &Path, uncommi
         println!("  git add . && git commit -m \"feat: scaffold the project with lyrn\"");
     }
     let args = project;
-    match wanted.form {
+    match form {
         Form::Docs => {
             if args.no_hooks {
                 println!("  pnpm install");
@@ -386,14 +506,14 @@ fn print_next_steps(wanted: &Wanted, project: &ProjectArgs, root: &Path, uncommi
             // The package is what ships, so building it is the first thing
             // worth seeing; the stand has nothing to render until it exists.
             println!("  pnpm build");
-            if args.with.contains(&crate::model::Addon::Stand) {
+            if args.with.iter().any(|a| a == "stand") {
                 println!("  pnpm stand");
             }
         }
         Form::Workspace => {
             // Named, because a workspace has more than one binary target the
             // moment anyone adds a second crate, and `cargo run` then refuses.
-            println!("  cargo run --package {} -- hello", wanted.name);
+            println!("  cargo run --package {name} -- hello");
         }
         Form::Desktop => {
             if args.no_hooks {
@@ -409,7 +529,7 @@ fn print_next_steps(wanted: &Wanted, project: &ProjectArgs, root: &Path, uncommi
             // The protocol test is what says the plugin is one, so it is the
             // first thing worth running - before the binary is put anywhere.
             println!("  cargo test");
-            if let Some(host) = wanted.host {
+            if let Some(host) = &args.host {
                 println!("  cargo run -- --manifest    # what {host} will read");
             }
         }
@@ -422,6 +542,22 @@ fn print_next_steps(wanted: &Wanted, project: &ProjectArgs, root: &Path, uncommi
             println!("  cargo test");
             println!("  pnpm test");
         }
+    }
+}
+
+/// What to do next with a project from a cargo-generate template: go there,
+/// and build it if it is a Cargo project - which is all lyrn knows about it.
+fn print_cargo_next_steps(plan: &Plan, root: &Path, uncommitted: bool) {
+    println!("\nNext:");
+    let workdir = root.strip_prefix(".").map(Path::to_path_buf).unwrap_or_else(|_| root.to_path_buf());
+    if !workdir.as_os_str().is_empty() {
+        println!("  cd {}", workdir.display().to_string().replace('\\', "/"));
+    }
+    if uncommitted {
+        println!("  git add . && git commit -m \"feat: scaffold the project with lyrn\"");
+    }
+    if plan.files.iter().any(|f| f.path == Path::new("Cargo.toml")) {
+        println!("  cargo build");
     }
 }
 
@@ -440,7 +576,7 @@ fn indent(text: &str) -> String {
 /// that looks right and resolves to nobody. `git config github.user` first,
 /// then the authenticated `gh` account, and failing both an obvious
 /// placeholder - a name that is visibly a blank is safer than a plausible one.
-fn repo(name: &str, explicit: Option<&str>) -> String {
+pub fn repo(name: &str, explicit: Option<&str>) -> String {
     if let Some(explicit) = explicit {
         return explicit.to_string();
     }
@@ -484,7 +620,7 @@ fn msrv() -> String {
     measured.unwrap_or_else(|| "1.85".to_string())
 }
 
-fn git_config(key: &str) -> Option<String> {
+pub fn git_config(key: &str) -> Option<String> {
     let output = Process::new("git").args(["config", "--get", key]).output().ok()?;
     if !output.status.success() {
         return None;
@@ -532,24 +668,21 @@ fn current_date() -> String {
 #[cfg(test)]
 mod tests {
     use super::*;
-    use crate::model::Hook;
+    use crate::model::TemplateManifest;
 
     fn git(dir: &Path, args: &[&str]) {
         let status = Process::new("git").args(args).current_dir(dir).output().unwrap().status;
         assert!(status.success(), "git {args:?} failed in {}", dir.display());
     }
 
-    fn git_init_hook() -> TemplateManifest {
-        TemplateManifest {
-            hooks: vec![Hook {
-                name: "Starting the repository".to_string(),
-                run: vec!["git".to_string(), "init".to_string(), "--initial-branch=main".to_string()],
-                optional: false,
-                dir: None,
-                starts_repository: true,
-            }],
-            ..TemplateManifest::default()
-        }
+    fn git_init_hook() -> Vec<Hook> {
+        vec![Hook {
+            name: "Starting the repository".to_string(),
+            run: vec!["git".to_string(), "init".to_string(), "--initial-branch=main".to_string()],
+            optional: false,
+            dir: None,
+            starts_repository: true,
+        }]
     }
 
     #[test]
@@ -597,6 +730,19 @@ mod tests {
         }
     }
 
+    /// The built-in spa form, with its manifest swapped for `manifest`.
+    fn spa_with(manifest: TemplateManifest) -> Native {
+        let Kind::Lyrn(mut native) = template::builtin(Form::Spa).kind else {
+            unreachable!()
+        };
+        native.manifest = manifest;
+        native
+    }
+
+    fn context(args: &Args, manifest: TemplateManifest) -> Result<Context, Box<dyn Error>> {
+        build_context(&args.wanted(), &spa_with(manifest), &Origin::BuiltIn, false)
+    }
+
     fn args(name: &str) -> Args {
         Args {
             name: name.to_string(),
@@ -611,7 +757,7 @@ mod tests {
     #[test]
     fn a_non_interactive_run_needs_no_answers() {
         let manifest = TemplateManifest::default();
-        let context = build_context(&args("demo-app").wanted(), &manifest, false).unwrap();
+        let context = context(&args("demo-app"), manifest.clone()).unwrap();
         assert_eq!(context.get("name"), Some("demo-app"));
         assert_eq!(context.get("title"), Some("Demo App"));
         assert_eq!(context.get("accent"), Some(PLACEHOLDER_ACCENT));
@@ -620,7 +766,7 @@ mod tests {
     #[test]
     fn a_bad_name_is_refused_before_anything_is_written() {
         let manifest = TemplateManifest::default();
-        assert!(build_context(&args("Demo App").wanted(), &manifest, false).is_err());
+        assert!(context(&args("Demo App"), manifest.clone()).is_err());
     }
 
     #[test]
@@ -628,7 +774,7 @@ mod tests {
         let manifest = TemplateManifest::default();
         let mut a = args("demo-app");
         a.identity.accent = Some("kilna".to_string());
-        let context = build_context(&a.wanted(), &manifest, false).unwrap();
+        let context = context(&a, manifest.clone()).unwrap();
         assert_eq!(context.get("accent"), Some("#D9569E"));
     }
 
@@ -638,7 +784,7 @@ mod tests {
     #[test]
     fn a_project_without_an_accent_is_recorded_as_unmarked() {
         let manifest = TemplateManifest::default();
-        let context = build_context(&args("demo-app").wanted(), &manifest, false).unwrap();
+        let context = context(&args("demo-app"), manifest.clone()).unwrap();
         assert_eq!(context.get("mark"), Some("placeholder"));
     }
 
@@ -650,13 +796,13 @@ mod tests {
         let manifest = TemplateManifest::default();
         let mut a = args("demo-app");
         a.identity.accent = Some("kilna".to_string());
-        assert_eq!(build_context(&a.wanted(), &manifest, false).unwrap().get("mark"), Some("chosen"));
+        assert_eq!(context(&a, manifest.clone()).unwrap().get("mark"), Some("chosen"));
 
         // A literal colour counts too - a product may have a mark before it
         // has a place in the line's registry.
         let mut b = args("demo-app");
         b.identity.accent = Some("#123456".to_string());
-        assert_eq!(build_context(&b.wanted(), &manifest, false).unwrap().get("mark"), Some("chosen"));
+        assert_eq!(context(&b, manifest.clone()).unwrap().get("mark"), Some("chosen"));
     }
 
     /// The placeholder's own hex, given explicitly, is still the placeholder.
@@ -667,7 +813,7 @@ mod tests {
         let manifest = TemplateManifest::default();
         let mut a = args("demo-app");
         a.identity.accent = Some(PLACEHOLDER_ACCENT.to_string());
-        assert_eq!(build_context(&a.wanted(), &manifest, false).unwrap().get("mark"), Some("placeholder"));
+        assert_eq!(context(&a, manifest.clone()).unwrap().get("mark"), Some("placeholder"));
     }
 
     #[test]
@@ -675,7 +821,7 @@ mod tests {
         let manifest = TemplateManifest::default();
         let mut a = args("demo-app");
         a.identity.accent = Some("chartreuse".to_string());
-        assert!(build_context(&a.wanted(), &manifest, false).is_err());
+        assert!(context(&a, manifest.clone()).is_err());
     }
 
     #[test]
@@ -684,7 +830,7 @@ mod tests {
             standard: "2026.09".to_string(),
             ..Default::default()
         };
-        let context = build_context(&args("demo-app").wanted(), &manifest, false).unwrap();
+        let context = context(&args("demo-app"), manifest.clone()).unwrap();
         assert_eq!(context.get("standard"), Some("2026.09"));
     }
 }

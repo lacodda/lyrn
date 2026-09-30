@@ -8,6 +8,8 @@ use std::path::{Path, PathBuf};
 
 use assert_cmd::Command;
 
+mod common;
+
 /// A repository as lyrn's other forms leave it: a README, some code, and the
 /// `docs/adr/` directory every form writes - the case the form exists for.
 fn repository() -> tempfile::TempDir {
@@ -41,7 +43,7 @@ fn snapshot(root: &Path) -> BTreeMap<PathBuf, Vec<u8>> {
 }
 
 fn lyrn(root: &Path) -> Command {
-    let mut cmd = Command::cargo_bin("lyrn").unwrap();
+    let mut cmd = common::lyrn();
     cmd.args(["new", "my-tool", "--form", "docs", "--yes", "--no-hooks", "--repo", "someone/my-tool"])
         .arg("--path")
         .arg(root);
@@ -76,8 +78,7 @@ fn it_adds_beside_what_is_there_and_changes_none_of_it() {
 #[test]
 fn the_default_destination_is_the_directory_it_is_run_in() {
     let repo = repository();
-    Command::cargo_bin("lyrn")
-        .unwrap()
+    common::lyrn()
         .args(["new", "my-tool", "--form", "docs", "--yes", "--no-hooks", "--repo", "someone/my-tool"])
         .current_dir(repo.path())
         .assert()
@@ -142,8 +143,7 @@ fn a_dry_run_refuses_what_the_run_would_refuse() {
 #[test]
 fn the_site_starts_on_github_pages_under_the_repository_name() {
     let repo = repository();
-    Command::cargo_bin("lyrn")
-        .unwrap()
+    common::lyrn()
         .args(["new", "my-tool", "--form", "docs", "--yes", "--no-hooks", "--repo", "someone/tool-docs"])
         .arg("--path")
         .arg(repo.path())

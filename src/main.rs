@@ -5,6 +5,7 @@ mod host;
 mod model;
 mod naming;
 mod render;
+mod template;
 mod templates;
 
 use std::process::ExitCode;
@@ -24,6 +25,7 @@ fn main() -> ExitCode {
             list_forms();
             Ok(())
         }
+        cli::Command::Template(command) => commands::template::run(command),
     };
 
     match result {
@@ -57,5 +59,51 @@ fn list_forms() {
                 println!("  --host {:<addon_column$} {}", host.name, host.about);
             }
         }
+    }
+    list_local_templates();
+}
+
+/// Your templates under ~/.lyrn/templates, each read the way `lyrn new`
+/// would read it - one that cannot be used says why here, not on the day it
+/// is needed.
+fn list_local_templates() {
+    let Some(dir) = template::local_templates_dir().filter(|d| d.is_dir()) else {
+        return;
+    };
+    let Ok(entries) = std::fs::read_dir(&dir) else { return };
+    let mut names: Vec<String> = entries
+        .filter_map(Result::ok)
+        .filter(|e| e.path().is_dir())
+        .map(|e| e.file_name().to_string_lossy().into_owned())
+        .collect();
+    if names.is_empty() {
+        return;
+    }
+    names.sort();
+    let column = names.iter().map(String::len).max().unwrap_or(0) + 2;
+
+    println!("\nYour templates, in {}:", dir.display());
+    for name in names {
+        let path = dir.join(&name);
+        let origin = template::Origin::Local {
+            name: name.clone(),
+            dir: path.clone(),
+        };
+        let about = match template::load_dir(&path, origin) {
+            Ok(found) => match found.kind {
+                template::Kind::Lyrn(native) => {
+                    let instead = if name == native.form.as_str() { ", in place of the built-in one" } else { "" };
+                    let summary = if native.manifest.description.is_empty() {
+                        String::new()
+                    } else {
+                        format!(": {}", native.manifest.description)
+                    };
+                    format!("the {} form{instead}{summary}", native.form)
+                }
+                template::Kind::CargoGenerate(_) => "a cargo-generate template".to_string(),
+            },
+            Err(e) => format!("cannot be used - {}", e.to_string().lines().next().unwrap_or_default()),
+        };
+        println!("  {name:<column$} {about}");
     }
 }

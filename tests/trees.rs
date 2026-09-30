@@ -13,8 +13,6 @@
 use std::fs;
 use std::path::{Path, PathBuf};
 
-use assert_cmd::Command;
-
 mod common;
 use common::{FORMS, combinations};
 
@@ -34,7 +32,7 @@ fn snapshot_name(form: &str, addons: &[&str]) -> String {
 /// What `lyrn new --dry-run` prints for this form and these add-ons.
 fn dry_run(form: &str, addons: &[&str]) -> String {
     let dir = tempfile::tempdir().unwrap();
-    let mut cmd = Command::cargo_bin("lyrn").unwrap();
+    let mut cmd = common::lyrn();
     cmd.arg("new")
         .arg("demo-tool")
         .args(["--form", form, "--yes", "--dry-run", "--repo", "owner/demo-tool"]);

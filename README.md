@@ -60,12 +60,14 @@ $ npm install -g lyrn          # or: cargo install lyrn
 $ lyrn new <name> [options]      # a project in a directory of its own
 $ lyrn init [path] [options]     # the same, in a directory that already exists
 $ lyrn adopt [path]              # the standard's missing files, into an old repository
-$ lyrn forms
+$ lyrn forms                     # the forms, their add-ons, and your own templates
+$ lyrn template check [path]     # hold a template to what lyrn accepts
 ```
 
 | Option | What it does |
 | --- | --- |
 | `--form <form>` | The shape of the project (default: `spa`) |
+| `--template <source>` | A template instead: a path, a name in `~/.lyrn/templates`, or `owner/repo@tag` |
 | `--host <host>` | The application a plugin extends; `--form plugin` only |
 | `--accent <colour>` | A product of the line, or a `#rrggbb` value |
 | `--description <text>` | One line describing what the project is |
@@ -124,33 +126,25 @@ products already do, and none is generated unless asked for — a project should
 not carry code it never calls. What each one writes:
 [Forms](https://lyrn.lacodda.com/reference/forms/).
 
-`--form workspace` is the `cli` form with its logic in a library crate of its
-own: `crates/<name>-core` publishes to crates.io beside the binary, so another
-program can call the logic without taking the command line with it.
+The rest - a workspace publishing its core as a crate, a pnpm monorepo, a
+plugin for a host of the line, both halves of a Tauri plugin, a documentation
+site added to an existing repository - each carries a gate that catches what
+its shape gets wrong: [Forms](https://lyrn.lacodda.com/reference/forms/).
 
-`--form mono` is a pnpm workspace publishing a TypeScript package from
-`packages/<name>`: the shape dowel, kjui and lyrnui all take. It is built with
-`tsc` rather than a bundler, and CI installs the packed tarball elsewhere and
-imports it with a plain `node` — the only check that catches a package which
-builds and cannot be imported. `--with stand` adds a page where it runs.
+## Templates from outside
 
-`--form plugin` writes a plugin for an application of the line: an ordinary
-executable that answers `--manifest` with what it offers and `run` with an
-invocation on stdin. `--host` names the application, and there is no default —
-the host decides the protocol the plugin declares, so a guess would produce a
-plugin nothing runs. The generated project carries a test that runs the binary
-exactly as the host does.
+`--template` generates from a template that is not built in: a directory of
+yours, one under `~/.lyrn/templates` - which, named after a form, takes that
+form's place - or a GitHub repository at a tag. A tag is used only once the
+template's own CI has passed on that very commit, and `lyrn.toml` records which
+commit it was. cargo-generate templates are read too.
 
-`--form tauri-plugin` writes both halves of a Tauri 2 plugin, the crate and the
-npm package, from one repository and under one tag. They agree on three
-spellings, and a disagreement is a permission error in somebody else's
-application rather than a build failure here — so CI holds them to each other.
+```console
+$ lyrn new my-app --template lacodda/template-spa@v1.0.0
+```
 
-`--form docs` is the one form that adds to a repository instead of starting
-one: run inside it, it writes a Starlight site under `docs/` and the workflow
-that publishes it, and refuses outright if any of those files already exists.
-Every build also writes `llms.txt`, `llms-full.txt` and a Markdown twin of each
-page, and fails when the site disagrees with itself about its own address.
+`lyrn template export spa` writes a built-in form out as a template repository
+to start from: [Templates](https://lyrn.lacodda.com/reference/template/).
 
 More forms — egui — follow in 2.x.
 

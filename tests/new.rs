@@ -9,8 +9,10 @@ use std::path::Path;
 use assert_cmd::Command;
 use predicates::prelude::*;
 
+mod common;
+
 fn lyrn() -> Command {
-    Command::cargo_bin("lyrn").unwrap()
+    common::lyrn()
 }
 
 /// Generate a project into a fresh temporary directory and hand back its root.

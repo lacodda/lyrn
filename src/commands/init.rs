@@ -11,7 +11,7 @@ use std::error::Error;
 use std::path::{Path, PathBuf};
 
 use crate::cli::InitArgs;
-use crate::commands::new::{Wanted, generate_project};
+use crate::commands::new::{generate_project, template_for};
 use crate::model::Placement;
 use crate::naming;
 
@@ -29,7 +29,8 @@ pub fn run(args: InitArgs) -> Result<(), Box<dyn Error>> {
         Some(name) => name.clone(),
         None => name_of(&root)?,
     };
-    generate_project(&Wanted::from_project(&name, &args.project), &args.project, &root, Placement::IntoExisting)
+    let template = template_for(&args.project)?;
+    generate_project(&name, &template, &args.project, &root, Placement::IntoExisting)
 }
 
 /// The project name a directory implies: its own name, if that is a valid

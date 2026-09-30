@@ -23,8 +23,9 @@ use crate::commands::init::name_of;
 use crate::commands::new::{Wanted, build_context};
 use crate::generate::{self, Plan};
 use crate::host;
-use crate::model::{Form, TemplateManifest};
+use crate::model::Form;
 use crate::naming;
+use crate::template::{self, Kind};
 use crate::templates;
 
 pub fn run(args: AdoptArgs) -> Result<(), Box<dyn Error>> {
@@ -76,10 +77,18 @@ pub fn run(args: AdoptArgs) -> Result<(), Box<dyn Error>> {
         identity: &identity,
     };
 
-    let manifest: TemplateManifest = toml::from_str(templates::manifest_for(form))?;
+    // Your template of the form, if you have one, is the standard you adopt
+    // to: the same rule `lyrn new` follows.
+    let template = template::for_form(form)?;
+    if let Some(notice) = template.origin.notice(Some(form)) {
+        println!("{notice}");
+    }
+    let Kind::Lyrn(native) = &template.kind else {
+        unreachable!("a form's template is a lyrn template; `for_form` refuses anything else")
+    };
     let interactive = !args.assume_yes && std::io::stdin().is_terminal();
-    let context = build_context(&wanted, &manifest, interactive)?;
-    let standard = generate::plan_with(&templates::standard_sources(form), &manifest, &context, &[])?;
+    let context = build_context(&wanted, native, &template.origin, interactive)?;
+    let standard = generate::plan_with(&templates::standard_files(&native.files), &native.manifest, &context, &[])?;
 
     let mut missing = Plan::default();
     let mut notes: Vec<(PathBuf, Option<String>)> = Vec::new();

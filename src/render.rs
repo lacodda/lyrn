@@ -66,9 +66,8 @@ pub fn render(input: &str, context: &Context) -> Result<String, UnknownPlacehold
 
 /// Every placeholder key a template file mentions, in order of appearance.
 ///
-/// This exists for the gate that checks no template asks for a variable the
-/// generator cannot provide, which is a compile-time-only concern.
-#[cfg(test)]
+/// This is what `lyrn template check` holds a template to: no file may ask
+/// for a variable the generator cannot provide.
 pub fn placeholders(input: &str) -> Vec<String> {
     let mut found = Vec::new();
     let mut rest = input;
