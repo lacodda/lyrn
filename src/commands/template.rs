@@ -434,9 +434,6 @@ jobs:
             "      - uses: dtolnay/rust-toolchain@stable
         with:
           components: rustfmt, clippy
-      - uses: Swatinem/rust-cache@v2
-        with:
-          workspaces: ${{ runner.temp }}/demo-app
 ",
         );
     }
@@ -481,6 +478,21 @@ jobs:
         run: |
           args=(new demo-app --template \"$GITHUB_WORKSPACE\"{extra} --yes --no-hooks --repo owner/demo-app --path \"$RUNNER_TEMP/demo-app\"){with}
           lyrn \"${{args[@]}}\"
+"
+        );
+    }
+    if gate.rust {
+        // After the project exists, never before: the cache restores
+        // `target/` into the project's directory, and a destination that is
+        // already there is one lyrn refuses. The first run has no cache and
+        // passes; every run after it would fail.
+        let crate_dir = gate.steps.iter().find(|(_, c)| c.starts_with("cargo")).map_or("", |(d, _)| d);
+        let workspace = if crate_dir.is_empty() { String::new() } else { format!("/{crate_dir}") };
+        let _ = write!(
+            y,
+            "      - uses: Swatinem/rust-cache@v2
+        with:
+          workspaces: ${{{{ runner.temp }}}}/demo-app{workspace}
 "
         );
     }
@@ -562,6 +574,21 @@ mod tests {
 
     /// A workflow expression survives the Rust formatting it is built with:
     /// `${{ matrix.addons }}` and not `${ matrix.addons }`.
+    /// The Rust cache restores `target/` into the project's directory, so it
+    /// has to come after the project is generated - the other way round, the
+    /// second run of the CI finds the destination taken.
+    #[test]
+    fn the_rust_cache_comes_after_the_project() {
+        for form in Form::ALL.iter().filter(|f| gate(**f).rust) {
+            let yaml = workflow(*form, &[]);
+            let generated = yaml.find("Generate a").unwrap_or_else(|| panic!("{form}: nothing is generated"));
+            let cached = yaml.find("rust-cache").unwrap_or_else(|| panic!("{form}: nothing is cached"));
+            assert!(generated < cached, "{form}: the cache is restored before the project exists");
+        }
+        assert!(workflow(Form::Desktop, &[]).contains("workspaces: ${{ runner.temp }}/demo-app/src-tauri"));
+        assert!(workflow(Form::Cli, &[]).contains("workspaces: ${{ runner.temp }}/demo-app\n"));
+    }
+
     #[test]
     fn the_workflow_keeps_its_expressions_whole() {
         let yaml = workflow(Form::Cli, &[]);
