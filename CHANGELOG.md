@@ -1,5 +1,15 @@
 # Changelog
 
+## 🎉 [2.9.0] - 2026-09-30
+
+### ✨ Features
+
+- Generate from templates outside the binary
+
+### 🛠️ Bug Fixes
+
+- Speak of one file in the way as one
+
 ## 🎉 [2.8.0] - 2026-09-26
 
 ### ✨ Features
