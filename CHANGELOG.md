@@ -1,5 +1,12 @@
 # Changelog
 
+## 🎉 [2.9.1] - 2026-09-30
+
+### 🛠️ Bug Fixes
+
+- Ship templates with LF line endings from every checkout
+- Restore the template CI's Rust cache after the project exists
+
 ## 🎉 [2.9.0] - 2026-09-30
 
 ### ✨ Features
