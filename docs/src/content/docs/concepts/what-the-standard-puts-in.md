@@ -35,7 +35,9 @@ half of Dependabot worth keeping is the audit workflow: it fails on a published
 advisory against a dependency, and on a dependency under a license outside the
 list the line accepts (permissive licenses, and MPL-2.0, whose copyleft stops
 at the file). It also runs on Monday mornings, so an advisory published while
-nothing was pushed still turns it red.
+nothing was pushed still turns it red. A documentation site added later brings
+an audit of its own packages, `docs-audit.yml`, since the repository's audit
+does not look inside `docs/`.
 
 Private vulnerability reporting has to be switched on for the repository
 (Settings, Advanced Security) for the link in `SECURITY.md` to work; both it and

@@ -1,7 +1,8 @@
-Would add 20 files in `.`:
+Would add 21 files in `.`:
 
   ├── .github/
   │   └── workflows/
+  │       ├── docs-audit.yml
   │       └── docs.yml
   └── docs/
       ├── public/

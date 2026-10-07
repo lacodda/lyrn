@@ -572,6 +572,11 @@ jobs:
       - name: Install the site
         working-directory: ${{ runner.temp }}/demo-tool/docs
         run: pnpm install --no-frozen-lockfile
+      # What docs-audit.yml will run on the day the site is added: green, with
+      # the advisories the template accepts and nothing else.
+      - name: Audit the site
+        working-directory: ${{ runner.temp }}/demo-tool/docs
+        run: pnpm audit
       # The exporter draws every icon from the masters by the level rule. What
       # it promises, checked from outside: the cli's .ico where build.rs reads
       # it, largest image first, every entry a whole PNG; the site's header and

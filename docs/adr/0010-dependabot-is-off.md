@@ -24,6 +24,12 @@ published advisories, licenses outside the accepted list, crates from anywhere
 but crates.io. The day it was added it found RUSTSEC-2026-0009 in `time`, which
 `liquid` pulls in; the fixed release needs Rust 1.88, and the MSRV moved to it.
 
+The documentation site under `docs/` is a pnpm project of its own, and the
+same workflow audits every package it builds with; an advisory accepted on
+purpose is listed in `docs/pnpm-workspace.yaml` with the reason next to it.
+The first version of the workflow covered the crates only, and GitHub's
+alerts found what it did not - eight high-severity advisories in the site.
+
 It is the same decision every repository lyrn generates starts with, as its
 ADR 0002.
 

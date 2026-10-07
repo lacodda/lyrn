@@ -27,3 +27,26 @@ jobs:
     steps:
       - uses: actions/checkout@v7
       - uses: EmbarkStudios/cargo-deny-action@v2
+
+  # The documentation site: every package it builds with, since what the build
+  # writes is what ships. Advisories accepted on purpose are listed, with the
+  # reason, in docs/pnpm-workspace.yaml.
+  site:
+    name: Documentation site
+    runs-on: ubuntu-latest
+    defaults:
+      run:
+        working-directory: docs
+    steps:
+      - uses: actions/checkout@v7
+      - uses: pnpm/action-setup@v6
+        with:
+          version: 10
+      - uses: actions/setup-node@v7
+        with:
+          node-version: 22
+          cache: pnpm
+          cache-dependency-path: docs/pnpm-lock.yaml
+      - run: pnpm install --frozen-lockfile
+      - name: Advisories
+        run: pnpm audit

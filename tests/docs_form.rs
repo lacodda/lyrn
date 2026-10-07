@@ -69,8 +69,8 @@ fn it_adds_beside_what_is_there_and_changes_none_of_it() {
     assert!(added.iter().any(|p| p == "docs/astro.config.mjs"), "no site was written: {added:?}");
     for path in &added {
         assert!(
-            path.starts_with("docs/") || path == ".github/workflows/docs.yml",
-            "`{path}` is outside docs/ - the form writes the site and its workflow, nothing else"
+            path.starts_with("docs/") || path == ".github/workflows/docs.yml" || path == ".github/workflows/docs-audit.yml",
+            "`{path}` is outside docs/ - the form writes the site and its two workflows, nothing else"
         );
     }
 }
