@@ -1,6 +1,6 @@
 name = "spa"
 description = "Single-page app: Vite, React, TypeScript, Tailwind, dowel"
-standard = "2026.09"
+standard = "2026.10"
 
 # Files whose own syntax collides with the placeholder braces. `cliff.toml` is
 # a Tera template using bare `{{ }}` for its own variables, so it has to travel

@@ -48,28 +48,11 @@ fn main() -> Result<(), {{ lib_name }}_core::Error> {
 
 The reference is on [docs.rs](https://docs.rs/{{ name }}-core).
 
-## Developing
+## Contributing
 
-```console
-$ cargo fmt --check && cargo clippy --workspace --all-targets -- -D warnings && cargo test --workspace
-```
-
-That is the same gate CI runs, so a green terminal means a green pull request.
-
-## Layout
-
-| Path | What lives there |
-| --- | --- |
-| `crates/{{ name }}-core/` | The library: everything the tool knows how to do |
-| `crates/{{ name }}/` | The binary: argument parsing and printing, nothing else |
-| `crates/{{ name }}/tests/` | Tests that run the built binary, as a user would |
-| `docs/adr/` | Architecture decisions, newest last |
-| `tools/` | The installers the README points at |
-
-Both crates share one version, set in `[workspace.package]`: they are released
-together, and a version that only applies to half a repository is a version
-nobody can reason about.
+The gate, the layout and how commits are written are in
+[CONTRIBUTING.md](https://github.com/{{ repo }}/blob/main/CONTRIBUTING.md).
 
 ## License
 
-MIT - see [LICENSE](LICENSE).
+MIT - see [LICENSE](https://github.com/{{ repo }}/blob/main/LICENSE).

@@ -112,7 +112,7 @@ form = "spa"            # the form this is a version of - required
 lyrn = "2.9.0"          # the oldest lyrn that understands it
 name = "spa"
 description = "Single-page app: Vite, React, TypeScript, Tailwind, dowel"
-standard = "2026.09"
+standard = "2026.10"
 
 verbatim = ["cliff.toml"]   # copied as they are, no placeholders
 executable = ["install.sh"] # need the executable bit

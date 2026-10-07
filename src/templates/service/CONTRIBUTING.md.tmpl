@@ -1,0 +1,37 @@
+# Contributing to {{ title }}
+
+## The gate
+
+```console
+$ cargo fmt --check && cargo clippy --all-targets -- -D warnings && cargo test
+```
+
+The same commands CI runs. The tests skip themselves when `DATABASE_URL` is
+unset, which is right on a laptop without a database - CI always provides one,
+so the suite is never green and blind.
+{{#spa}}
+
+The web UI in `frontend/` has a gate of its own - `pnpm install && pnpm lint`
+in that directory - and `pnpm build` there is what the binary embeds.
+{{/spa}}
+
+## Migrations
+
+`migrations/` holds plain SQL, applied at startup: a binary and the schema it
+expects travel together, so there is no window where one is ahead of the other.
+Add a file with a later prefix; never edit one that has run somewhere.
+
+## Layout
+
+| Path | What lives there |
+| --- | --- |
+| `src/app.rs` | Every route the service answers, in one place |
+| `src/config.rs` | What it needs to know, and where it reads it from |
+| `src/error.rs` | One error type, mapped to status codes once |
+| `migrations/` | The schema, as plain SQL |
+| `deploy/` | Compose file for a stand |
+{{#spa}}
+| `frontend/` | The web UI, on the spa form's stack, compiled into the binary |
+{{/spa}}
+| `assets/` | The mark's three master SVGs |
+| `docs/adr/` | Architecture decisions, newest last |

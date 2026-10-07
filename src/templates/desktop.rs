@@ -84,7 +84,7 @@ pub fn sources() -> Vec<SourceFile> {
         },
         SourceFile {
             path: ".gitignore",
-            contents: Contents::Text(include_str!("desktop/gitignore.tmpl")),
+            contents: Contents::Text(concat!(include_str!("desktop/gitignore.tmpl"), include_str!("community/gitignore.tmpl"))),
             executable: false,
             addon: None,
         },

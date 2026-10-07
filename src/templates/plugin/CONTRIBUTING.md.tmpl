@@ -1,0 +1,23 @@
+# Contributing to {{ title }}
+
+## The gate
+
+```console
+$ cargo fmt --check && cargo clippy --all-targets -- -D warnings && cargo test
+```
+
+The same commands CI runs, so a green terminal means a green pull request.
+
+`tests/protocol.rs` runs the built binary the way {{ host }} runs it and holds
+the answers to what the host accepts - a plugin that passes its unit tests and
+fails there is one {{ host }} would list and refuse.
+
+## Layout
+
+| Path | What lives there |
+| --- | --- |
+| `src/main.rs` | The manifest and the plugin's own work |
+| `src/protocol.rs` | The wire: an invocation in, an outcome out |
+| `tests/protocol.rs` | The plugin run as the host runs it |
+| `assets/` | The mark's three master SVGs |
+| `docs/adr/` | Architecture decisions, newest last |

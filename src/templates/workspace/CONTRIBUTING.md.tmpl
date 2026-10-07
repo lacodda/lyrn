@@ -1,0 +1,43 @@
+# Contributing to {{ title }}
+
+## The gate
+
+```console
+$ cargo fmt --check && cargo clippy --workspace --all-targets -- -D warnings && cargo test --workspace
+```
+
+The same commands CI runs, so a green terminal means a green pull request.
+
+The tests in `crates/{{ name }}/tests/` run the built binary the way a user
+does. One of them, `installers.rs`, reads the two installers rather than
+running them: it holds them to what the line learned the hard way - a Windows
+shell running the Unix script is sent to the PowerShell one, and both name a
+crate that exists.
+
+`rust-version` is a promise to anyone running `cargo install`. A CI job builds
+on exactly that version, so the number cannot quietly rot.
+
+## Layout
+
+| Path | What lives there |
+| --- | --- |
+| `crates/{{ name }}-core/` | The library: everything the tool knows how to do |
+| `crates/{{ name }}/` | The binary: argument parsing and printing, nothing else |
+| `crates/{{ name }}/tests/` | Tests that run the built binary, as a user would |
+| `crates/{{ name }}/assets/icon.ico` | The icon the Windows binary embeds |
+| `assets/` | The mark's three master SVGs |
+| `tools/` | The installers the README points at |
+| `npm/` | The npm package: a launcher that fetches the release binary |
+| `docs/adr/` | Architecture decisions, newest last |
+
+Both crates share one version, set in `[workspace.package]`: they are released
+together, and a version that only applies to half a repository is a version
+nobody can reason about.
+
+The `.ico` lives inside the binary's crate because `cargo install` builds from
+the published crate, and a crate carries only what is under its own directory:
+an icon reached through `../../assets` builds here and is missing from
+crates.io. The mark itself is the line's umbrella mark - lambda on graphite -
+until the product has one of its own; `lyrn.toml` says `mark = "placeholder"`
+meanwhile. The `.ico` is drawn from the masters by `docs/export-assets.mjs`,
+which comes with the documentation site (`lyrn new {{ name }} --form docs`).

@@ -1,0 +1,14 @@
+# Contributing to {{ title }}
+
+## The gate
+
+```console
+$ pnpm install                  # once
+$ pnpm lint                     # eslint + types + tests
+$ cd src-tauri && cargo fmt --check && cargo clippy --all-targets -- -D warnings && cargo test
+```
+
+The same commands CI runs, so a green terminal means a green pull request.
+`pnpm dev` runs the interface in a browser, which is faster for pure UI work -
+but anything calling into Rust needs the real window, `pnpm tauri dev`.
+

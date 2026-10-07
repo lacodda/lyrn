@@ -1,11 +1,22 @@
-Would create 38 files in `demo-tool`:
+Would create 53 files in `demo-tool`:
 
   ├── .github/
-  │   └── workflows/
-  │       └── ci.yml
+  │   ├── ISSUE_TEMPLATE/
+  │   │   ├── bug_report.yml
+  │   │   ├── config.yml
+  │   │   └── feature_request.yml
+  │   ├── workflows/
+  │   │   ├── audit.yml
+  │   │   └── ci.yml
+  │   └── pull_request_template.md
+  ├── assets/
+  │   ├── logo-m.svg
+  │   ├── logo-s.svg
+  │   └── logo.svg
   ├── docs/
   │   └── adr/
   │       ├── 0001-record-architecture-decisions.md
+  │       ├── 0002-dependabot-is-off.md
   │       └── README.md
   ├── public/
   │   └── favicon.svg
@@ -35,17 +46,23 @@ Would create 38 files in `demo-tool`:
   │   ├── rustfmt.toml
   │   └── tauri.conf.json
   ├── tools/
+  │   ├── check-licenses.mjs
   │   └── check-registry.mjs
   ├── .editorconfig
   ├── .gitattributes
   ├── .gitignore
   ├── CHANGELOG.md
+  ├── CODE_OF_CONDUCT.md
+  ├── CONTRIBUTING.md
   ├── LICENSE
   ├── README.md
+  ├── SECURITY.md
   ├── cliff.toml
   ├── components.json
+  ├── deny.toml
   ├── eslint.config.js
   ├── index.html
+  ├── llms.txt
   ├── lyrn.toml
   ├── package.json
   ├── pnpm-workspace.yaml

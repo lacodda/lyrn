@@ -1,6 +1,6 @@
 name = "cli"
 description = "Command-line tool: Rust, clap, anyhow, dialoguer"
-standard = "2026.09"
+standard = "2026.10"
 
 # `cliff.toml` is a Tera template using bare `{{ }}` for its own variables, so
 # it has to travel untouched. GitHub Actions expressions are `${{ }}` and the

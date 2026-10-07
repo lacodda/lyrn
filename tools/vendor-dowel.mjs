@@ -30,9 +30,11 @@ const DOWEL = join(ROOT, 'src/templates/dowel')
  * the work; the other half is a `SourceFile` in the form that uses it. */
 const PRIMITIVES = ['button', 'field', 'input', 'panel', 'alert']
 
-/** The favicon a project starts with: the line's umbrella mark at level S,
- * the level for 27px and under, until the product has a mark of its own. */
-const FAVICON = 'lacodda-S.svg'
+/** The mark a project starts with: the line's umbrella mark, at all three
+ * levels, until the product has one of its own. S is the favicon - the level
+ * for 27px and under - and the three together are the masters in `assets/`
+ * that `docs/export-assets.mjs` draws every icon from. */
+const MARKS = ['lacodda-L.svg', 'lacodda-M.svg', 'lacodda-S.svg']
 
 const version = process.argv[2] ?? readFileSync(join(DOWEL, 'VERSION'), 'utf8').trim()
 if (!/^\d+\.\d+\.\d+$/.test(version)) {
@@ -53,7 +55,9 @@ try {
   if (!tarball) throw new Error(`npm pack left no tarball in ${scratch}`)
   // A relative archive name and `-C`: Windows' bsdtar reads `C:\...` as a
   // remote host, and GNU tar does the same with any colon in the path.
-  execFileSync('tar', ['-xzf', tarball, 'package/dist/registry.json', `package/dist/marks/${FAVICON}`], { cwd: scratch })
+  execFileSync('tar', ['-xzf', tarball, 'package/dist/registry.json', ...MARKS.map((mark) => `package/dist/marks/${mark}`)], {
+    cwd: scratch,
+  })
 
   const registry = JSON.parse(readFileSync(join(scratch, 'package/dist/registry.json'), 'utf8'))
   const byName = new Map(registry.items.map((item) => [item.name, item]))
@@ -92,8 +96,10 @@ try {
   console.log(`accents: ${accents.length} products`)
 
   mkdirSync(join(DOWEL, 'marks'), { recursive: true })
-  writeFileSync(join(DOWEL, 'marks', FAVICON), readFileSync(join(scratch, 'package/dist/marks', FAVICON)))
-  console.log(`marks: ${FAVICON}`)
+  for (const mark of MARKS) {
+    writeFileSync(join(DOWEL, 'marks', mark), readFileSync(join(scratch, 'package/dist/marks', mark)))
+  }
+  console.log(`marks: ${MARKS.join(', ')}`)
 
   writeFileSync(join(DOWEL, 'VERSION'), `${version}\n`)
   console.log(`vendored ${PRIMITIVES.length} primitives from dowel-ui ${version}`)

@@ -1,6 +1,6 @@
 name = "desktop"
 description = "Desktop app: Tauri 2 around the spa stack"
-standard = "2026.09"
+standard = "2026.10"
 
 # `cliff.toml` is a Tera template using bare `{{ }}` for its own variables, and
 # `check-locales.mjs` matches i18next's `{{name}}` interpolation with a regular

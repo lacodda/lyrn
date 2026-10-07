@@ -18,14 +18,19 @@ standard every repository carries whatever its code does:
 | `CHANGELOG.md`, `cliff.toml` | A changelog generated from Conventional Commits |
 | `.editorconfig`, `.gitattributes`, `.gitignore` | How files are written and kept |
 | `.github/workflows/ci.yml` | The gate the form runs: lint, types, tests, build |
-| `docs/adr/0001-record-architecture-decisions.md`, `docs/adr/README.md` | The decision log, started |
-| `rustfmt.toml` | The line's formatting, for the Rust forms |
+| `.github/workflows/audit.yml` | Published advisories and licenses, on every push and every Monday |
+| `.github/ISSUE_TEMPLATE/`, `.github/pull_request_template.md` | Reports and changes arrive with what is needed to act on them |
+| `SECURITY.md`, `CODE_OF_CONDUCT.md` | Where a vulnerability is reported, and how people treat each other |
+| `docs/adr/0001-record-architecture-decisions.md`, `0002-dependabot-is-off.md`, `README.md` | The decision log, started |
+| `rustfmt.toml`, `deny.toml` | The line's formatting, and what the audit holds crates to - for the Rust forms |
 | `lyrn.toml` | What the project is, for `doctor` and `upgrade` to read |
 
 The release contour - release and publish workflows, the npm wrapper, the
 installers - is part of the standard too, but its files only work together and
 against one package layout, so they are not added one by one beside a build
-lyrn did not make.
+lyrn did not make. `CONTRIBUTING.md` and `llms.txt` describe the repository's
+own layout and gate, which a form's version would get wrong, so they are not
+added either.
 
 ## What it reads
 
@@ -50,28 +55,40 @@ Anything given on the command line wins.
 
 A file of the standard counts as present under its own name or under one it is
 commonly kept under: `LICENSE.md` or `COPYING` for the licence, `CHANGES.md`
-for the changelog, `ci.yaml` for the gate. An ADR numbered 0001 about something
-else keeps its number, since two first decisions would make "ADR 1" mean two
-things. The tree shown before writing says which files are kept and why:
+for the changelog, `ci.yaml` for the gate. The decision log is adopted whole or
+not at all: a repository that keeps decisions of its own in `docs/adr/` gets
+none of the standard's, since a second 0001 would make "ADR 1" mean two things
+and an index written for the standard's decisions would list its own wrongly.
+The tree shown before writing says which files are kept and why:
 
 ```console
 $ lyrn adopt --dry-run
-Would add 8 files to `.` as a `cli` project; 3 of its standard are already there:
+Would add 18 files to `.` as a `cli` project; 3 of its standard are already there:
 
   ├── .github/
-  │   └── workflows/
-  │       └── ci.yml
+  │   ├── ISSUE_TEMPLATE/
+  │   │   ├── bug_report.yml
+  │   │   ├── config.yml
+  │   │   └── feature_request.yml
+  │   ├── workflows/
+  │   │   ├── audit.yml
+  │   │   └── ci.yml
+  │   └── pull_request_template.md
   ├── docs/
   │   └── adr/
   │       ├── 0001-record-architecture-decisions.md
+  │       ├── 0002-dependabot-is-off.md
   │       └── README.md
   ├── .editorconfig
   ├── .gitattributes
   ├── .gitignore  (already there)
   ├── CHANGELOG.md
+  ├── CODE_OF_CONDUCT.md
   ├── LICENSE  (`LICENSE.md` is there)
   ├── README.md  (already there)
+  ├── SECURITY.md
   ├── cliff.toml
+  ├── deny.toml
   ├── lyrn.toml
   └── rustfmt.toml
 ```

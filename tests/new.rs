@@ -67,18 +67,23 @@ fn no_generated_file_still_holds_a_placeholder() {
     let (_dir, root) = generate("demo-app", &[]);
 
     // A template that renders half a value produces a project that looks fine
-    // and is wrong. The two files that legitimately carry `{{ }}` are the ones
-    // the manifest marks verbatim, because Tera and GitHub Actions own that
-    // syntax for their own purposes.
-    let verbatim = [Path::new("cliff.toml"), Path::new(".github/workflows/ci.yml")];
+    // and is wrong. `cliff.toml` legitimately carries `{{ }}`: the manifest
+    // marks it verbatim, because Tera owns that syntax. A workflow carries
+    // `${{ }}`, which is GitHub Actions' own and which the renderer leaves
+    // alone - so that, and only that, is set aside before looking.
+    let verbatim = [Path::new("cliff.toml")];
 
     for entry in walk(&root) {
         let relative = entry.strip_prefix(&root).unwrap();
         if verbatim.contains(&relative) {
             continue;
         }
-        let contents = fs::read_to_string(&entry).unwrap();
-        assert!(!contents.contains("{{"), "{} still contains an unrendered placeholder", relative.display());
+        let Ok(contents) = fs::read_to_string(&entry) else { continue };
+        assert!(
+            !contents.replace("${{", "").contains("{{"),
+            "{} still contains an unrendered placeholder",
+            relative.display()
+        );
     }
 }
 
@@ -123,7 +128,7 @@ fn records_what_it_was_generated_from() {
     assert!(stamp.contains("name = \"demo-app\""));
     assert!(stamp.contains("form = \"spa\""));
     assert!(stamp.contains(&format!("version = \"{}\"", env!("CARGO_PKG_VERSION"))));
-    assert!(stamp.contains("standard = \"2026.09\""));
+    assert!(stamp.contains("standard = \"2026.10\""));
 }
 
 #[test]

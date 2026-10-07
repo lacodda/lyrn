@@ -475,6 +475,63 @@ jobs:
           grep -qF "const PLUGIN = 'demo-shelf'" guest-js/index.ts
           echo "the halves agree on: $key"
 
+  # Every generated repository carries an audit workflow, and it has to be
+  # green on the day the project is made: a template whose own audit fails is
+  # one more red build nobody asked for. Linux only - the checks read
+  # lockfiles and licenses, which do not change with the platform.
+  template-audit:
+    name: template audit (${{ matrix.form }})
+    runs-on: ubuntu-latest
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - { form: spa, with: 'router,tanstack-query,auth,pwa', crates: false, packages: '.' }
+          - { form: cli, with: 'keyring,self-update', crates: true, packages: '' }
+          - { form: desktop, with: i18n, crates: true, packages: '.' }
+          - { form: service, with: 'spa,demo', crates: true, packages: frontend }
+          - { form: workspace, with: 'keyring,self-update', crates: true, packages: '' }
+          - { form: mono, with: stand, crates: false, packages: '.' }
+          - { form: plugin, with: '', crates: true, packages: '' }
+          - { form: tauri-plugin, with: '', crates: true, packages: '.' }
+    steps:
+      - uses: actions/checkout@v7
+      - uses: dtolnay/rust-toolchain@stable
+      - uses: Swatinem/rust-cache@v2
+      - uses: pnpm/action-setup@v6
+        with:
+          version: 10
+      - uses: actions/setup-node@v7
+        with:
+          node-version: 22
+      - uses: taiki-e/install-action@v2
+        with:
+          tool: cargo-deny
+      - name: Build lyrn
+        run: cargo build --release
+      - name: Generate a project
+        shell: bash
+        run: |
+          args=(new demo-app --form ${{ matrix.form }} --yes --no-hooks --repo owner/demo-app --path "$RUNNER_TEMP/demo-app")
+          if [ "${{ matrix.form }}" = plugin ]; then args+=(--host kilna); fi
+          if [ -n "${{ matrix.with }}" ]; then args+=(--with "${{ matrix.with }}"); fi
+          ./target/release/lyrn "${args[@]}"
+      - name: Crates - advisories, licenses, sources
+        if: matrix.crates
+        working-directory: ${{ runner.temp }}/demo-app
+        shell: bash
+        run: |
+          manifest=Cargo.toml
+          if [ "${{ matrix.form }}" = desktop ]; then manifest=src-tauri/Cargo.toml; fi
+          cargo deny --manifest-path "$manifest" check
+      - name: Packages - advisories, licenses
+        if: matrix.packages != ''
+        working-directory: ${{ runner.temp }}/demo-app/${{ matrix.packages }}
+        run: |
+          pnpm install --no-frozen-lockfile
+          pnpm audit --prod
+          node tools/check-licenses.mjs
+
   # The docs form adds to a repository, so it is generated into one: a cli
   # project, which already carries docs/adr/. The run then holds the three
   # promises the form makes - nothing that was there changes, the site builds
@@ -515,6 +572,33 @@ jobs:
       - name: Install the site
         working-directory: ${{ runner.temp }}/demo-tool/docs
         run: pnpm install --no-frozen-lockfile
+      # The exporter draws every icon from the masters by the level rule. What
+      # it promises, checked from outside: the cli's .ico where build.rs reads
+      # it, largest image first, every entry a whole PNG; the site's header and
+      # favicon byte for byte the L and S masters.
+      - name: Draw the icons from the masters
+        shell: bash
+        working-directory: ${{ runner.temp }}/demo-tool
+        run: |
+          set -eu
+          (cd docs && pnpm export-assets)
+          node -e '
+            const b = require("fs").readFileSync("assets/icon.ico")
+            const sizes = []
+            for (let i = 0; i < b.readUInt16LE(4); i++) {
+              const e = 6 + 16 * i
+              sizes.push(b.readUInt8(e) || 256)
+              const at = b.readUInt32LE(e + 12)
+              if (b.toString("latin1", at + 1, at + 4) !== "PNG") throw new Error("entry " + i + " is not a PNG")
+            }
+            if (sizes.join() !== "256,128,64,48,32,24,16") throw new Error("icon.ico entries: " + sizes.join())
+            console.log("icon.ico:", sizes.join(" "))
+          '
+          cmp docs/src/assets/logo.svg assets/logo.svg
+          cmp docs/public/favicon.svg assets/logo-s.svg
+          for raster in favicon-32.png apple-touch-icon.png logo-512.png; do
+            test -s "assets/$raster" || { echo "not drawn: assets/$raster"; exit 1; }
+          done
       - name: Build it, without a warning
         shell: bash
         working-directory: ${{ runner.temp }}/demo-tool/docs

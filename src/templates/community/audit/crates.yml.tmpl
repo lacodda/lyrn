@@ -1,0 +1,8 @@
+  # RustSec advisories, licenses, banned crates and unknown sources - all four
+  # read from deny.toml.
+  crates:
+    name: Crates
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v7
+      - uses: EmbarkStudios/cargo-deny-action@v2

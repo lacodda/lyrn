@@ -1,6 +1,6 @@
 name = "docs"
 description = "Documentation site added to an existing repository: Starlight, llms.txt"
-standard = "2026.09"
+standard = "2026.10"
 
 # The two integrations are JavaScript, and are the same files lyrn's own site
 # builds with; they carry no placeholders and must travel byte for byte.

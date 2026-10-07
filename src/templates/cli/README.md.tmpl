@@ -28,24 +28,11 @@ $ {{ name }} hello
 Hello, world!
 ```
 
-## Developing
+## Contributing
 
-```console
-$ cargo fmt --check && cargo clippy --all-targets -- -D warnings && cargo test
-```
-
-That is the same gate CI runs, so a green terminal means a green pull request.
-
-## Layout
-
-| Path | What lives there |
-| --- | --- |
-| `src/cli.rs` | The command surface: every flag and subcommand |
-| `src/commands/` | One module per command |
-| `tests/` | Tests that run the built binary, as a user would |
-| `docs/adr/` | Architecture decisions, newest last |
-| `tools/` | The installers the README points at |
+The gate, the layout and how commits are written are in
+[CONTRIBUTING.md](https://github.com/{{ repo }}/blob/main/CONTRIBUTING.md).
 
 ## License
 
-MIT - see [LICENSE](LICENSE).
+MIT - see [LICENSE](https://github.com/{{ repo }}/blob/main/LICENSE).

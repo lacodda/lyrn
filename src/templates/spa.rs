@@ -249,7 +249,7 @@ pub fn sources() -> Vec<SourceFile> {
         },
         SourceFile {
             path: ".gitignore",
-            contents: Contents::Text(include_str!("spa/gitignore.tmpl")),
+            contents: Contents::Text(concat!(include_str!("spa/gitignore.tmpl"), include_str!("community/gitignore.tmpl"))),
             executable: false,
             addon: None,
         },
@@ -268,18 +268,6 @@ pub fn sources() -> Vec<SourceFile> {
         SourceFile {
             path: ".github/workflows/ci.yml",
             contents: Contents::Text(include_str!("spa/github/ci.yml.tmpl")),
-            executable: false,
-            addon: None,
-        },
-        SourceFile {
-            path: "docs/adr/0001-record-architecture-decisions.md",
-            contents: Contents::Text(include_str!("spa/docs/0001-record-architecture-decisions.md.tmpl")),
-            executable: false,
-            addon: None,
-        },
-        SourceFile {
-            path: "docs/adr/README.md",
-            contents: Contents::Text(include_str!("spa/docs/adr-README.md.tmpl")),
             executable: false,
             addon: None,
         },

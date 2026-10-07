@@ -191,16 +191,37 @@ fn a_documentation_site_is_not_something_a_repository_is() {
     assert!(String::from_utf8_lossy(&out).contains("--form docs"));
 }
 
-/// A first ADR the repository already has keeps its number: a second 0001
-/// would make "ADR 1" mean two things.
+/// Decisions the repository already keeps keep their numbers, and nothing is
+/// slotted in among them: a second 0001 or 0002 would make "ADR 1" mean two
+/// things, and an index written for the standard's decisions would list these
+/// wrongly.
 #[test]
-fn an_adr_of_its_own_keeps_the_first_number() {
+fn decisions_of_its_own_are_left_as_they_are() {
     let dir = tempfile::tempdir().unwrap();
     old_cli(dir.path());
     write(dir.path(), "docs/adr/0001-use-rust.md", "# Use Rust\n");
     adopt(dir.path()).assert().success();
-    assert!(!dir.path().join("docs/adr/0001-record-architecture-decisions.md").exists());
-    assert!(dir.path().join("docs/adr/README.md").is_file());
+    for added in ["0001-record-architecture-decisions.md", "0002-dependabot-is-off.md", "README.md"] {
+        assert!(
+            !dir.path().join("docs/adr").join(added).exists(),
+            "adopt added docs/adr/{added} among the repository's own"
+        );
+    }
+    assert_eq!(std::fs::read_to_string(dir.path().join("docs/adr/0001-use-rust.md")).unwrap(), "# Use Rust\n");
+}
+
+/// A repository with no decisions recorded gets the standard's sequence whole:
+/// both decisions and the index that lists them, so no link in it dangles.
+#[test]
+fn a_repository_without_decisions_gets_the_whole_sequence() {
+    let dir = tempfile::tempdir().unwrap();
+    old_cli(dir.path());
+    adopt(dir.path()).assert().success();
+    let index = std::fs::read_to_string(dir.path().join("docs/adr/README.md")).unwrap();
+    for decision in ["0001-record-architecture-decisions.md", "0002-dependabot-is-off.md"] {
+        assert!(dir.path().join("docs/adr").join(decision).is_file(), "docs/adr/{decision} was not added");
+        assert!(index.contains(decision), "the index does not list {decision}");
+    }
 }
 
 /// Cargo's other place for binaries: a crate with `src/bin/` is a program,

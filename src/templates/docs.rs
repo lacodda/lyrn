@@ -64,8 +64,19 @@ pub fn sources() -> Vec<SourceFile> {
         text("docs/src/integrations/address.mjs", include_str!("docs/integrations/address.mjs")),
         text("docs/src/integrations/llms.mjs", include_str!("docs/integrations/llms.mjs")),
         text("docs/src/styles/brand.css", include_str!("docs/brand.css.tmpl")),
-        text("docs/src/assets/logo.svg", include_str!("docs/logo.svg.tmpl")),
-        text("docs/public/favicon.svg", include_str!("docs/logo.svg.tmpl")),
+        // The mark, as the exporter lays it out: the header takes level L, the
+        // favicon level S, the touch icon L again at 180px. The line's
+        // umbrella mark until the product has its own; `pnpm export-assets`
+        // redraws all three from the masters in `assets/`.
+        text("docs/src/assets/logo.svg", include_str!("dowel/marks/lacodda-L.svg")),
+        text("docs/public/favicon.svg", include_str!("dowel/marks/lacodda-S.svg")),
+        SourceFile {
+            path: "docs/public/apple-touch-icon.png",
+            contents: Contents::Binary(include_bytes!("spa/public/apple-touch-icon.png")),
+            executable: false,
+            addon: None,
+        },
+        text("docs/export-assets.mjs", include_str!("docs/export-assets.mjs.tmpl")),
         text(".github/workflows/docs.yml", include_str!("docs/github/docs.yml.tmpl")),
     ]
 }

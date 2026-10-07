@@ -1,6 +1,6 @@
 name = "plugin"
 description = "Plugin for a host of the line: an executable speaking JSON over stdio"
-standard = "2026.09"
+standard = "2026.10"
 
 # `cliff.toml` is a Tera template using bare `{{ }}` for its own variables, so
 # it has to travel untouched. GitHub Actions expressions are `${{ }}` and the

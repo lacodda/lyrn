@@ -1,10 +1,11 @@
-Would add 18 files in `.`:
+Would add 20 files in `.`:
 
   ├── .github/
   │   └── workflows/
   │       └── docs.yml
   └── docs/
       ├── public/
+      │   ├── apple-touch-icon.png
       │   └── favicon.svg
       ├── src/
       │   ├── assets/
@@ -28,6 +29,7 @@ Would add 18 files in `.`:
       │   └── content.config.ts
       ├── .gitignore
       ├── astro.config.mjs
+      ├── export-assets.mjs
       ├── package.json
       ├── pnpm-workspace.yaml
       └── tsconfig.json

@@ -1,12 +1,24 @@
-Would create 34 files in `demo-tool`:
+Would create 50 files in `demo-tool`:
 
   ├── .github/
-  │   └── workflows/
-  │       ├── ci.yml
-  │       ├── publish.yml
-  │       └── release.yml
+  │   ├── ISSUE_TEMPLATE/
+  │   │   ├── bug_report.yml
+  │   │   ├── config.yml
+  │   │   └── feature_request.yml
+  │   ├── workflows/
+  │   │   ├── audit.yml
+  │   │   ├── ci.yml
+  │   │   ├── publish.yml
+  │   │   └── release.yml
+  │   └── pull_request_template.md
+  ├── assets/
+  │   ├── logo-m.svg
+  │   ├── logo-s.svg
+  │   └── logo.svg
   ├── crates/
   │   ├── demo-tool/
+  │   │   ├── assets/
+  │   │   │   └── icon.ico
   │   │   ├── src/
   │   │   │   ├── commands/
   │   │   │   │   ├── hello.rs
@@ -15,7 +27,8 @@ Would create 34 files in `demo-tool`:
   │   │   │   ├── cli.rs
   │   │   │   └── main.rs
   │   │   ├── tests/
-  │   │   │   └── cli.rs
+  │   │   │   ├── cli.rs
+  │   │   │   └── installers.rs
   │   │   ├── Cargo.toml
   │   │   └── build.rs
   │   └── demo-tool-core/
@@ -26,7 +39,8 @@ Would create 34 files in `demo-tool`:
   ├── docs/
   │   └── adr/
   │       ├── 0001-record-architecture-decisions.md
-  │       ├── 0002-the-logic-lives-in-a-library-crate.md
+  │       ├── 0002-dependabot-is-off.md
+  │       ├── 0003-the-logic-lives-in-a-library-crate.md
   │       └── README.md
   ├── npm/
   │   ├── download.js
@@ -41,9 +55,14 @@ Would create 34 files in `demo-tool`:
   ├── .gitattributes
   ├── .gitignore
   ├── CHANGELOG.md
+  ├── CODE_OF_CONDUCT.md
+  ├── CONTRIBUTING.md
   ├── Cargo.toml
   ├── LICENSE
   ├── README.md
+  ├── SECURITY.md
   ├── cliff.toml
+  ├── deny.toml
+  ├── llms.txt
   ├── lyrn.toml
   └── rustfmt.toml

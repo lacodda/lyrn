@@ -23,8 +23,6 @@ const NOT_FROM_SPA: &[&str] = &[
     ".editorconfig",
     ".gitattributes",
     ".github/workflows/ci.yml",
-    "docs/adr/0001-record-architecture-decisions.md",
-    "docs/adr/README.md",
     "lyrn.toml",
 ];
 
@@ -153,7 +151,7 @@ pub fn sources() -> Vec<SourceFile> {
         },
         SourceFile {
             path: ".gitignore",
-            contents: Contents::Text(include_str!("service/gitignore.tmpl")),
+            contents: Contents::Text(concat!(include_str!("service/gitignore.tmpl"), include_str!("community/gitignore.tmpl"))),
             executable: false,
             addon: None,
         },
@@ -172,18 +170,6 @@ pub fn sources() -> Vec<SourceFile> {
         SourceFile {
             path: ".github/workflows/ci.yml",
             contents: Contents::Text(include_str!("service/github/ci.yml.tmpl")),
-            executable: false,
-            addon: None,
-        },
-        SourceFile {
-            path: "docs/adr/0001-record-architecture-decisions.md",
-            contents: Contents::Text(include_str!("service/docs-adr-0001.md.tmpl")),
-            executable: false,
-            addon: None,
-        },
-        SourceFile {
-            path: "docs/adr/README.md",
-            contents: Contents::Text(include_str!("service/docs-adr-README.md.tmpl")),
             executable: false,
             addon: None,
         },

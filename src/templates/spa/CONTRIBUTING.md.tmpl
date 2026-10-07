@@ -1,0 +1,13 @@
+# Contributing to {{ title }}
+
+## The gate
+
+```console
+$ pnpm install          # once
+$ pnpm lint             # eslint + types + tests
+$ pnpm build            # a production bundle in dist/
+```
+
+`pnpm lint` is the whole gate, and CI runs that same script rather than a
+sequence of its own, so a green terminal means a green pull request.
+

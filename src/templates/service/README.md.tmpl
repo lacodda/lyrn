@@ -15,14 +15,6 @@ $ curl localhost:8080/api/health
 {"status":"ok","version":"0.1.0"}
 ```
 
-```console
-$ cargo fmt --check && cargo clippy --all-targets -- -D warnings && cargo test
-```
-
-That is the gate CI runs. The tests skip themselves when `DATABASE_URL` is
-unset, which is right on a laptop without a database - CI always provides one,
-so the suite is never green and blind.
-
 ## Configuration
 
 Everything comes from the environment, so the same binary runs in a container,
@@ -59,23 +51,11 @@ $ docker compose -f deploy/compose.yml up -d --build
 The image is built on the target machine, which makes every deploy a proof
 that the code builds for that architecture.
 
-## Migrations
+## Contributing
 
-`migrations/` holds plain SQL, applied at startup: a binary and the schema it
-expects travel together, so there is no window where one is ahead of the other.
-Add a file with a later prefix; never edit one that has run somewhere.
-
-## Layout
-
-| Path | What lives there |
-| --- | --- |
-| `src/app.rs` | Every route the service answers, in one place |
-| `src/config.rs` | What it needs to know, and where it reads it from |
-| `src/error.rs` | One error type, mapped to status codes once |
-| `migrations/` | The schema, as plain SQL |
-| `deploy/` | Compose file for a stand |
-| `docs/adr/` | Architecture decisions, newest last |
+The gate, the layout and how commits are written are in
+[CONTRIBUTING.md](https://github.com/{{ repo }}/blob/main/CONTRIBUTING.md).
 
 ## License
 
-MIT - see [LICENSE](LICENSE).
+MIT - see [LICENSE](https://github.com/{{ repo }}/blob/main/LICENSE).

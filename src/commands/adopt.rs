@@ -3,15 +3,17 @@
 //! The line has repositories older than lyrn, and repositories started by
 //! hand. `adopt` reads what one already is - its form, its name, its
 //! description, where it lives - and adds the files of the standard it does
-//! not have yet: licence, changelog, editor and git settings, the CI gate, the
-//! first ADR, and `lyrn.toml`, which is what makes it a lyrn project that
-//! `doctor` and `upgrade` can later read.
+//! not have yet: licence, changelog, editor and git settings, the CI gate and
+//! the audit, the security policy and the code of conduct, the issue and pull
+//! request templates, the first ADRs, and `lyrn.toml`, which is what makes it a
+//! lyrn project that `doctor` and `upgrade` can later read.
 //!
 //! It never replaces a file. Unlike a form added to a repository, it does not
 //! refuse when some are present either: each file of the standard stands on
 //! its own, so the ones already there are kept, the rest are added, and the
 //! tree shown beforehand says which is which. A file under another common
-//! name - `LICENSE.md`, an ADR 0001 about something else - counts as present.
+//! name - `LICENSE.md` - counts as present, and so does `docs/adr/` as a whole
+//! when the repository keeps decisions of its own.
 
 use std::error::Error;
 use std::io::IsTerminal;
@@ -278,19 +280,22 @@ fn already_there(root: &Path, path: &Path) -> Option<String> {
     if let Some(other) = others.iter().find(|o| root.join(o).exists()) {
         return Some(format!("`{other}` is there"));
     }
-    // Numbering is what an ADR is found by: a second 0001 beside the one the
-    // repository already has would make "ADR 1" mean two things.
-    if posix == "docs/adr/0001-record-architecture-decisions.md" {
+    // The decisions are one sequence, so they are adopted as one: into a
+    // repository that keeps none, all of them; into one that keeps its own,
+    // none. Numbering is what an ADR is found by - a second 0002 beside the
+    // one already there would make "ADR 2" mean two things - and an index
+    // written for the standard's sequence would list somebody else's wrongly.
+    if posix.starts_with("docs/adr/") {
         for dir in ["docs/adr", "doc/adr"] {
             let Ok(entries) = std::fs::read_dir(root.join(dir)) else { continue };
-            let mut firsts: Vec<String> = entries
+            let mut kept: Vec<String> = entries
                 .filter_map(Result::ok)
                 .map(|e| e.file_name().to_string_lossy().into_owned())
-                .filter(|n| n.starts_with("0001"))
+                .filter(|n| n.ends_with(".md"))
                 .collect();
-            firsts.sort();
-            if let Some(first) = firsts.first() {
-                return Some(format!("`{dir}/{first}` is there"));
+            kept.sort();
+            if let Some(first) = kept.first() {
+                return Some(format!("`{dir}/` keeps its own, from `{first}`"));
             }
         }
     }
@@ -374,14 +379,29 @@ mod tests {
     }
 
     #[test]
-    fn a_first_adr_of_its_own_counts() {
+    fn decisions_of_its_own_count_for_the_whole_sequence() {
         let dir = tempfile::tempdir().unwrap();
         std::fs::create_dir_all(dir.path().join("docs/adr")).unwrap();
         std::fs::write(dir.path().join("docs/adr/0001-use-rust.md"), "# Use Rust").unwrap();
-        let adr = Path::new("docs/adr/0001-record-architecture-decisions.md");
-        assert_eq!(already_there(dir.path(), adr).as_deref(), Some("`docs/adr/0001-use-rust.md` is there"));
-        // The index is its own file: a repository with ADRs and no index
-        // still gets one.
+        // Every file of the standard's sequence - a decision, the one after
+        // it, and the index of both - is answered by the repository's own.
+        for standard in ["0001-record-architecture-decisions.md", "0002-dependabot-is-off.md", "README.md"] {
+            assert_eq!(
+                already_there(dir.path(), &Path::new("docs/adr").join(standard)).as_deref(),
+                Some("`docs/adr/` keeps its own, from `0001-use-rust.md`"),
+                "{standard}"
+            );
+        }
+        // Anything outside the decisions is decided on its own.
+        assert_eq!(already_there(dir.path(), Path::new("SECURITY.md")), None);
+    }
+
+    #[test]
+    fn a_repository_without_decisions_gets_them() {
+        let dir = tempfile::tempdir().unwrap();
+        assert_eq!(already_there(dir.path(), Path::new("docs/adr/0002-dependabot-is-off.md")), None);
+        // An empty directory keeps nothing.
+        std::fs::create_dir_all(dir.path().join("docs/adr")).unwrap();
         assert_eq!(already_there(dir.path(), Path::new("docs/adr/README.md")), None);
     }
 }

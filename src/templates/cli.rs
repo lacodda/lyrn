@@ -82,6 +82,21 @@ pub fn sources() -> Vec<SourceFile> {
             addon: None,
         },
         SourceFile {
+            path: "tests/installers.rs",
+            contents: Contents::Text(include_str!("cli/tests/installers.rs.tmpl")),
+            executable: false,
+            addon: None,
+        },
+        // The line's umbrella mark until the product has one of its own: the
+        // same image the desktop form ships, drawn level by level by
+        // `tools/render-placeholder-icon.py`. `build.rs` embeds it.
+        SourceFile {
+            path: "assets/icon.ico",
+            contents: Contents::Binary(include_bytes!("desktop/icons/icon.ico")),
+            executable: false,
+            addon: None,
+        },
+        SourceFile {
             path: "README.md",
             contents: Contents::Text(include_str!("cli/README.md.tmpl")),
             executable: false,
@@ -107,7 +122,7 @@ pub fn sources() -> Vec<SourceFile> {
         },
         SourceFile {
             path: ".gitignore",
-            contents: Contents::Text(include_str!("cli/gitignore.tmpl")),
+            contents: Contents::Text(concat!(include_str!("cli/gitignore.tmpl"), include_str!("community/gitignore.tmpl"))),
             executable: false,
             addon: None,
         },
@@ -180,18 +195,6 @@ pub fn sources() -> Vec<SourceFile> {
         SourceFile {
             path: "npm/prepack.js",
             contents: Contents::Text(include_str!("cli/npm/prepack.js.tmpl")),
-            executable: false,
-            addon: None,
-        },
-        SourceFile {
-            path: "docs/adr/0001-record-architecture-decisions.md",
-            contents: Contents::Text(include_str!("cli/docs-adr-0001.md.tmpl")),
-            executable: false,
-            addon: None,
-        },
-        SourceFile {
-            path: "docs/adr/README.md",
-            contents: Contents::Text(include_str!("cli/docs-adr-README.md.tmpl")),
             executable: false,
             addon: None,
         },

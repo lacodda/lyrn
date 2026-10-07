@@ -1,15 +1,13 @@
-// Embeds the Windows executable icon and version metadata, so the binary is
-// recognisable in Explorer and the task manager rather than showing the
-// default cog.
+// Embeds the Windows executable icon, so the binary is recognisable in
+// Explorer and the task manager rather than showing the default one.
+//
+// Unconditional on purpose: a package without its icon fails to build here,
+// rather than shipping a binary nobody notices is missing its mark.
 fn main() {
     #[cfg(windows)]
     {
-        println!("cargo:rerun-if-changed=assets/icon.ico");
-        if std::path::Path::new("assets/icon.ico").exists() {
-            winresource::WindowsResource::new()
-                .set_icon("assets/icon.ico")
-                .compile()
-                .expect("failed to embed the Windows resources");
-        }
+        const ICON: &str = "assets/icon.ico";
+        println!("cargo:rerun-if-changed={ICON}");
+        winresource::WindowsResource::new().set_icon(ICON).compile().expect("failed to embed the Windows resources");
     }
 }

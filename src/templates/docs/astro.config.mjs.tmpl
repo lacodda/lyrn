@@ -31,6 +31,10 @@ export default defineConfig({
 				alt: title,
 			},
 			favicon: '/favicon.svg',
+			// The touch icon is the mark at level L - 180px is far above the size
+			// where the S tile is the only thing that reads. Under the base path,
+			// like every file in public/.
+			head: [{ tag: 'link', attrs: { rel: 'apple-touch-icon', href: `${home.pathname}apple-touch-icon.png` } }],
 			customCss: ['./src/styles/brand.css'],
 			social: [{ icon: 'github', label: 'GitHub', href: 'https://github.com/{{ repo }}' }],
 			editLink: {

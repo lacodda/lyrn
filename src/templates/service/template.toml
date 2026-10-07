@@ -1,6 +1,6 @@
 name = "service"
 description = "HTTP service: axum, sqlx, Postgres"
-standard = "2026.09"
+standard = "2026.10"
 
 # `cliff.toml` is a Tera template using bare `{{ }}` for its own variables.
 # GitHub Actions writes `${{ }}`, which the renderer skips on its own, and the

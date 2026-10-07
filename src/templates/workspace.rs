@@ -16,22 +16,20 @@ use crate::templates::cli;
 pub const MANIFEST: &str = include_str!("workspace/template.toml");
 
 /// Files the cli form writes at the root that the workspace provides itself.
-const OVERRIDDEN: &[&str] = &[
-    "Cargo.toml",
-    "README.md",
-    ".github/workflows/ci.yml",
-    ".github/workflows/publish.yml",
-    "docs/adr/README.md",
-];
+const OVERRIDDEN: &[&str] = &["Cargo.toml", "README.md", ".github/workflows/ci.yml", ".github/workflows/publish.yml"];
 
-/// Whether a cli file is Rust that belongs inside a crate rather than at the
-/// repository root.
+/// Whether a cli file belongs inside the binary's crate rather than at the
+/// repository root: its Rust, and what its build reads.
 ///
 /// A rule rather than a list: a file added to the cli form later lands in the
 /// crate by itself. A list would keep working and quietly write the new file
 /// to the root, where cargo would not compile it and nothing would say so.
+///
+/// The icon is a build input like `build.rs`, and has to travel with the
+/// crate: `cargo install` builds the published crate, which carries only what
+/// is under its own directory.
 fn belongs_in_a_crate(path: &str) -> bool {
-    path == "build.rs" || path.starts_with("src/") || path.starts_with("tests/")
+    path == "build.rs" || path == "assets/icon.ico" || path.starts_with("src/") || path.starts_with("tests/")
 }
 
 /// Every file the `workspace` form writes.
@@ -74,6 +72,20 @@ pub fn sources() -> Vec<SourceFile> {
             contents: Contents::Text(include_str!("cli/src/update.rs.tmpl")),
             executable: false,
             addon: Some(Addon::SelfUpdate),
+        },
+        // Finds the installers by walking up from the crate, so the same test
+        // holds them from two levels down.
+        SourceFile {
+            path: "crates/{{ name }}/tests/installers.rs",
+            contents: Contents::Text(include_str!("cli/tests/installers.rs.tmpl")),
+            executable: false,
+            addon: None,
+        },
+        SourceFile {
+            path: "crates/{{ name }}/assets/icon.ico",
+            contents: Contents::Binary(include_bytes!("desktop/icons/icon.ico")),
+            executable: false,
+            addon: None,
         },
     ]);
 
@@ -152,14 +164,8 @@ pub fn sources() -> Vec<SourceFile> {
             addon: None,
         },
         SourceFile {
-            path: "docs/adr/0002-the-logic-lives-in-a-library-crate.md",
-            contents: Contents::Text(include_str!("workspace/docs-adr-0002.md.tmpl")),
-            executable: false,
-            addon: None,
-        },
-        SourceFile {
-            path: "docs/adr/README.md",
-            contents: Contents::Text(include_str!("workspace/docs-adr-README.md.tmpl")),
+            path: "docs/adr/0003-the-logic-lives-in-a-library-crate.md",
+            contents: Contents::Text(include_str!("workspace/docs-adr-0003.md.tmpl")),
             executable: false,
             addon: None,
         },

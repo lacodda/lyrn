@@ -1,0 +1,188 @@
+// Draws every raster of the mark from its masters, by the line's rule about
+// which level of the mark reads at which size.
+//
+//   pnpm export-assets          (in docs/)
+//
+// The masters are `assets/logo.svg` (L), `assets/logo-m.svg` (M) and
+// `assets/logo-s.svg` (S), with `assets/banner.svg` beside them once there is
+// one: the line's umbrella mark until the product has a mark of its own, then
+// that mark's. Everything this writes is drawn from them and never edited by
+// hand - change a master and run it again.
+import sharp from 'sharp'
+import fs from 'node:fs'
+import path from 'node:path'
+import { fileURLToPath } from 'node:url'
+
+const DOCS = path.dirname(fileURLToPath(import.meta.url))
+const ROOT = path.resolve(DOCS, '..')
+const ASSETS = path.join(ROOT, 'assets')
+
+const L = path.join(ASSETS, 'logo.svg')
+const M = path.join(ASSETS, 'logo-m.svg')
+const S = path.join(ASSETS, 'logo-s.svg')
+const BANNER = path.join(ASSETS, 'banner.svg')
+// The line's dark plate, the same in both themes.
+const PLATE = '#1B2126'
+
+for (const master of [L, M, S]) {
+  if (!fs.existsSync(master)) {
+    fail(`no master at ${path.relative(ROOT, master)}: the mark's three levels live in assets/ as logo.svg (L), logo-m.svg (M) and logo-s.svg (S)`)
+  }
+}
+
+// The level rule of the line: S at 27px and below, where only the filled tile
+// survives; M from 28 to 63; L from 64 up. Applied to every image inside the
+// .ico rather than to the file - one master cut to every size is a coloured
+// blob in the taskbar, and every product of the line shipped that once.
+function levelFor(size) {
+  if (size <= 27) return S
+  if (size <= 63) return M
+  return L
+}
+
+// Largest first. Windows picks by nearest size and ignores the order, but
+// Tauri takes the first entry for the window, and a 16px one there is a title
+// bar stretched out of sixteen pixels.
+const ICO_SIZES = [256, 128, 64, 48, 32, 24, 16]
+
+const { name, form } = project()
+
+// Where this repository's build reads its icons from, by form. One copy each,
+// and none where nothing reads one: an icon no build uses is a copy that
+// drifts from the masters unnoticed.
+const ico = {
+  cli: ['assets/icon.ico'],
+  // `cargo install` builds the published crate, which carries only what is
+  // under its own directory: an icon reached through ../../assets builds here
+  // and is missing from crates.io.
+  workspace: [`crates/${name}/assets/icon.ico`],
+  desktop: ['src-tauri/icons/icon.ico'],
+}[form] ?? []
+const pngs = {
+  // Tauri bundles this one for every platform but Windows.
+  desktop: [['src-tauri/icons/icon.png', 512]],
+}[form] ?? []
+pngs.push(...webAppIcons())
+
+const icoBytes = await drawIco()
+for (const target of ico) write(target, icoBytes)
+
+for (const [target, size] of pngs) write(target, await png(levelFor(size), size))
+
+// The canonical set every repository of the line keeps in assets/.
+write('assets/favicon-32.png', await png(S, 32)) // the favicon's exception: see below
+write('assets/apple-touch-icon.png', await png(levelFor(180), 180))
+write('assets/logo-512.png', await png(levelFor(512), 512))
+
+// The documentation site's copies: the header is L, the favicon S. A favicon
+// is the one documented exception to `levelFor` - a browser draws it into 16px
+// of tab whatever size the file is, and only the filled tile survives that.
+copy(L, 'docs/src/assets/logo.svg')
+copy(S, 'docs/public/favicon.svg')
+copy(path.join(ASSETS, 'apple-touch-icon.png'), 'docs/public/apple-touch-icon.png')
+
+if (fs.existsSync(BANNER)) {
+  write('assets/social-preview.png', await socialPreview())
+} else {
+  console.log('no assets/banner.svg yet: the social preview is drawn once the mark has its banner')
+}
+
+/** What lyrn.toml says this repository is: its name and its form. */
+function project() {
+  const file = path.join(ROOT, 'lyrn.toml')
+  if (!fs.existsSync(file)) {
+    fail('no lyrn.toml at the root: it names the form, and the form says where the build reads its icons from. `lyrn adopt` writes one.')
+  }
+  const text = fs.readFileSync(file, 'utf8')
+  const field = (key) => text.match(new RegExp(`^${key}\\s*=\\s*"([^"]*)"`, 'm'))?.[1]
+  const name = field('name')
+  const form = field('form')
+  if (!name || !form) fail('lyrn.toml names no project or no form')
+  return { name, form }
+}
+
+/** The icons a web app manifest lists, and the touch icon beside them. A
+ * project that is not installable has no manifest, and gets neither. */
+function webAppIcons() {
+  const manifest = path.join(ROOT, 'public', 'manifest.webmanifest')
+  if (!fs.existsSync(manifest)) return []
+  const { icons = [] } = JSON.parse(fs.readFileSync(manifest, 'utf8'))
+  const listed = icons.map(({ src, sizes }) => {
+    const size = Number(String(sizes).split('x')[0])
+    if (!Number.isInteger(size) || size <= 0) fail(`public/manifest.webmanifest: cannot read the size of ${src} ("${sizes}")`)
+    return [path.posix.join('public', src.replace(/^\//, '')), size]
+  })
+  return [...listed, ['public/apple-touch-icon.png', 180]]
+}
+
+async function png(master, size) {
+  return sharp(master, { density: 384 }).resize(size, size).png().toBuffer()
+}
+
+async function drawIco() {
+  const images = []
+  for (const size of ICO_SIZES) images.push(await png(levelFor(size), size))
+  return buildIco(images, ICO_SIZES)
+}
+
+// The container: a header, one directory entry per image, then the images
+// themselves as whole PNG files.
+function buildIco(images, sizes) {
+  const header = Buffer.alloc(6)
+  header.writeUInt16LE(0, 0) // reserved
+  header.writeUInt16LE(1, 2) // type: icon
+  header.writeUInt16LE(images.length, 4)
+
+  const entries = Buffer.alloc(16 * images.length)
+  let offset = header.length + entries.length
+  images.forEach((image, i) => {
+    const side = sizes[i] >= 256 ? 0 : sizes[i] // 0 means 256
+    const at = 16 * i
+    entries.writeUInt8(side, at) // width
+    entries.writeUInt8(side, at + 1) // height
+    entries.writeUInt8(0, at + 2) // palette
+    entries.writeUInt8(0, at + 3) // reserved
+    entries.writeUInt16LE(1, at + 4) // colour planes
+    entries.writeUInt16LE(32, at + 6) // bits per pixel
+    entries.writeUInt32LE(image.length, at + 8)
+    entries.writeUInt32LE(offset, at + 12)
+    offset += image.length
+  })
+  return Buffer.concat([header, entries, ...images])
+}
+
+// GitHub's social preview, 1280x640: the banner's artwork, centred on the
+// line's dark plate with room around it - GitHub crops the edges in some of
+// the places it shows the picture. It is uploaded by hand (Settings, Social
+// preview): there is no API for it.
+//
+// The banner's own plate is the same colour as the preview's, but its rounded
+// corners are antialiased against transparency and leave a visible seam, and
+// the artwork fills only part of it - how much depends on the product's line
+// of text. So the banner is flattened onto the plate colour and trimmed to its
+// artwork, rather than placed whole or cut at a width that fits one product.
+async function socialPreview() {
+  const flat = await sharp(BANNER, { density: 384 }).flatten({ background: PLATE }).png().toBuffer()
+  const artwork = await sharp(flat).trim({ background: PLATE, threshold: 8 }).png().toBuffer()
+  const placed = await sharp(artwork).resize({ width: 1040, height: 460, fit: 'inside' }).png().toBuffer()
+  return sharp({ create: { width: 1280, height: 640, channels: 4, background: PLATE } })
+    .composite([{ input: placed, gravity: 'centre' }])
+    .png()
+    .toBuffer()
+}
+
+function write(target, bytes) {
+  const file = path.join(ROOT, target)
+  fs.mkdirSync(path.dirname(file), { recursive: true })
+  fs.writeFileSync(file, bytes)
+  console.log(`wrote ${target}`)
+}
+
+function copy(from, target) {
+  write(target, fs.readFileSync(from))
+}
+
+function fail(message) {
+  console.error(message)
+  process.exit(1)
+}

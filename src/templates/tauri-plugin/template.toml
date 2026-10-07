@@ -1,6 +1,6 @@
 name = "tauri-plugin"
 description = "Tauri 2 plugin: a Rust crate and the npm package that calls it"
-standard = "2026.09"
+standard = "2026.10"
 
 # `cliff.toml` is a Tera template using bare `{{ }}` for its own variables, so
 # it has to travel untouched. GitHub Actions expressions are `${{ }}` and the

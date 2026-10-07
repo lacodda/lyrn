@@ -4,6 +4,7 @@
 //! the binary so that `lyrn new` works offline.
 
 pub mod cli;
+pub mod community;
 pub mod desktop;
 pub mod docs;
 pub mod dowel;
@@ -32,9 +33,10 @@ pub fn manifest_for(form: Form) -> &'static str {
     }
 }
 
-/// The files a form writes.
+/// The files a form writes: its own, and what every repository of the line
+/// carries beside them.
 pub fn sources_for(form: Form) -> Vec<SourceFile> {
-    match form {
+    let mut files = match form {
         Form::Spa => spa::sources(),
         Form::Cli => cli::sources(),
         Form::Desktop => desktop::sources(),
@@ -44,7 +46,9 @@ pub fn sources_for(form: Form) -> Vec<SourceFile> {
         Form::Plugin => plugin::sources(),
         Form::TauriPlugin => tauri_plugin::sources(),
         Form::Docs => docs::sources(),
-    }
+    };
+    files.extend(community::sources(form));
+    files
 }
 
 /// The files every repository of the line carries whatever its code does:
@@ -64,11 +68,20 @@ pub const STANDARD: &[&str] = &[
     ".gitattributes",
     ".gitignore",
     ".github/workflows/ci.yml",
+    ".github/workflows/audit.yml",
+    ".github/ISSUE_TEMPLATE/bug_report.yml",
+    ".github/ISSUE_TEMPLATE/feature_request.yml",
+    ".github/ISSUE_TEMPLATE/config.yml",
+    ".github/pull_request_template.md",
+    "SECURITY.md",
+    "CODE_OF_CONDUCT.md",
     "docs/adr/0001-record-architecture-decisions.md",
+    "docs/adr/0002-dependabot-is-off.md",
     "docs/adr/README.md",
     "lyrn.toml",
-    // Only the Rust forms write one.
+    // Only the Rust forms write these.
     "rustfmt.toml",
+    "deny.toml",
 ];
 
 /// The files of the standard among a template's, as the template writes them.
@@ -98,6 +111,8 @@ mod tests {
     // by `template::problems` - the same check `lyrn template check` runs on a
     // template from outside - in `template::tests`.
 
+    const RUST_ONLY: &[&str] = &["rustfmt.toml", "deny.toml"];
+
     /// `adopt` promises the whole standard, so every form it can adopt has to
     /// write all of it - a form that dropped `cliff.toml` would silently
     /// adopt repositories without one.
@@ -106,7 +121,7 @@ mod tests {
         for form in Form::ALL.iter().filter(|f| f.adoptable()) {
             let files: Vec<TemplateFile> = sources_for(*form).into_iter().map(TemplateFile::from).collect();
             let paths: Vec<String> = standard_files(&files).into_iter().map(|f| f.path).collect();
-            for entry in STANDARD.iter().filter(|e| **e != "rustfmt.toml") {
+            for entry in STANDARD.iter().filter(|e| !RUST_ONLY.contains(e)) {
                 assert!(paths.iter().any(|p| p == entry), "{form} does not write `{entry}`, which `lyrn adopt` promises");
             }
         }

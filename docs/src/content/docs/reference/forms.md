@@ -32,6 +32,14 @@ docs           Documentation site added to an existing repository: Starlight, ll
 A form is the shape of the repository, not a choice of framework. The line runs
 one stack; a form decides what kind of thing is being built with it.
 
+Every form that starts a repository also writes what every repository of the
+line carries beside its code: `CONTRIBUTING.md` with the form's own gate and
+layout, a security policy, a code of conduct, `llms.txt`, issue and pull
+request templates, an audit workflow with its `deny.toml` or license check, two
+first decisions in `docs/adr/`, and the mark's three masters in `assets/`.
+[What the standard puts in](/concepts/what-the-standard-puts-in/) says why each
+is there.
+
 ## spa
 
 A single-page application:
@@ -109,7 +117,8 @@ A Rust command-line tool:
 | Arguments | clap, with derive |
 | Errors | anyhow, printed with their cause chain |
 | Prompts | dialoguer |
-| Tests | `tests/cli.rs`, running the built binary |
+| Tests | `tests/cli.rs`, running the built binary; `tests/installers.rs`, holding the installers |
+| Icon | `assets/icon.ico`, embedded by `build.rs` - the line's mark until the product has its own |
 | Release | Three targets, installers, an npm wrapper, crates.io over OIDC |
 
 The binary is built with `lto`, one codegen unit and a stripped symbol table:
@@ -132,6 +141,21 @@ synced between machines, pasted into issues and committed by accident.
 **`self-update`** adds a command that reports whether a newer release exists.
 It reads the tag from the redirect `/releases/latest` performs rather than the
 REST API, which is capped at 60 unauthenticated calls an hour per address.
+
+### The installers
+
+`tests/installers.rs` holds the two installers to three mistakes the line's
+tools each shipped once. Run in Git Bash, MSYS2 or Cygwin, the Unix script has
+to send the user to `install.ps1` instead of saying there is no Windows build -
+checked by running it with `uname` answering as each of them, so a case written
+below the catch-all does not pass. The fallback `cargo install` it suggests has
+to name the crate that is published. And the PowerShell script has to keep the
+user `PATH` an expandable string, which `SetEnvironmentVariable` silently
+would not.
+
+The npm launcher waits through Ctrl+C. The keystroke reaches the launcher as
+well as the binary; one that died of it at once would hand the prompt back
+while the binary was still finishing, and lose its exit code.
 
 ## desktop
 
@@ -164,8 +188,11 @@ inside the `.ico`**, not to the file as a whole: the filled tile at 27px and
 below, where an outline would collapse into noise, and the outlined mark on a
 dark plate above that.
 
-Replace it with `pnpm tauri icon path/to/mark.png` once the mark exists, and
-set `mark = "chosen"`. Two things to keep when you do:
+Once the mark exists, its three levels replace the masters in `assets/`, and
+`pnpm export-assets` in the documentation site
+([`--form docs`](#the-mark)) draws the icons from them; then set
+`mark = "chosen"`. Not `pnpm tauri icon`, which cuts every size from one
+picture. Two things the exporter keeps that a single picture cannot:
 
 - **The largest image comes first.** Windows picks by nearest size and ignores
   order, but `tauri-codegen` takes the first entry verbatim for the window, so
@@ -258,6 +285,15 @@ version of each has to go up by hand: a publisher cannot be attached to a crate
 that does not exist. Missing the second one fails with a message about an
 invalid token, which is not what is wrong.
 
+### The icon
+
+The `.ico` the binary embeds lives in `crates/<name>/assets/`, not in the
+repository's `assets/` beside the masters. `cargo install` builds the published
+crate, and a crate carries only what is under its own directory: an icon reached
+through `../../assets` builds on the machine that has the repository and is
+missing from crates.io. `build.rs` embeds it unconditionally, so a package
+without it fails to build instead of shipping unmarked.
+
 ### The MSRV job
 
 CI reads `rust-version` as the **maximum** across the workspace's packages
@@ -297,7 +333,7 @@ the workspace's own `tsconfig.base.json` keeps - an extensionless specifier
 typechecks, `tsc` emits it unchanged, and the package builds, packs and
 publishes. Node's resolver then refuses it. The failure belongs entirely to
 whoever installs the package, and nothing in this repository would have caught
-it (ADR 0002).
+it (ADR 0003).
 
 So CI installs the packed tarball into a scratch directory and imports it with
 a plain `node`. A different process, outside the workspace, resolving the way a
@@ -349,7 +385,7 @@ $ lyrn new wordcount --form plugin --host kilna
 It is not a library and not a sandboxed runtime. Rust has no stable ABI, so a
 dynamically loaded plugin would break on every host release; and the
 integrations a plugin exists for - a mail client, a corporate API, a device -
-are exactly the ones a sandbox forbids. The generated ADR 0002 says so in the
+are exactly the ones a sandbox forbids. The generated ADR 0003 says so in the
 repository itself.
 
 The plugin lives for the duration of one call and holds no state. The host
@@ -414,6 +450,7 @@ Added 18 files in `.`.
 | Pages | A front page, Getting Started, a guide and a reference page to replace |
 | For agents | `llms.txt`, `llms-full.txt` and a `.md` twin of every page |
 | Checks | The site's address, and every internal link against it |
+| The mark | `export-assets.mjs`, drawing every icon from the masters in `assets/` |
 | Publishing | `.github/workflows/docs.yml`, to GitHub Pages |
 
 ### What it will not touch
@@ -446,6 +483,31 @@ A page may render Starlight's components. Cards, tabs, asides, steps, link
 cards and badges are turned into the Markdown they stand for; any other
 component fails the build and names itself, because its content would
 otherwise be missing from the twin without anyone noticing.
+
+### The mark
+
+`pnpm export-assets` draws every raster of the mark from its three masters in
+`assets/` - `logo.svg` (L), `logo-m.svg` (M), `logo-s.svg` (S) - by the line's
+rule: a size takes the level that reads at it, S at 27px and under, M up to
+63px, L above, and the rule applies to each image inside the `.ico`, largest
+first. It writes the site's header (L) and favicon (S), the touch icon, the
+canonical rasters in `assets/`, and the icons the repository's build reads,
+wherever its form keeps them - `lyrn.toml` says which form that is:
+
+| Form | Icons the build reads |
+| --- | --- |
+| `cli` | `assets/icon.ico` |
+| `workspace` | `crates/<name>/assets/icon.ico`, inside the crate that is published |
+| `desktop` | `src-tauri/icons/icon.ico` and `icon.png` |
+| `spa` with `pwa` | Every icon `public/manifest.webmanifest` lists, and the touch icon |
+
+A form whose build reads no icon gets none: an icon nothing reads is a copy
+that drifts from the masters unnoticed. With `assets/banner.svg` beside the
+masters it also draws the 1280×640 social preview, which is uploaded to the
+repository's settings by hand.
+
+The site starts with the line's umbrella mark in those places, the same one
+the repository's masters hold until the product has its own.
 
 ### The address
 

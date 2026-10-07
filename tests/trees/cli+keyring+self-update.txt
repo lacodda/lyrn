@@ -1,13 +1,25 @@
-Would create 31 files in `demo-tool`:
+Would create 47 files in `demo-tool`:
 
   ├── .github/
-  │   └── workflows/
-  │       ├── ci.yml
-  │       ├── publish.yml
-  │       └── release.yml
+  │   ├── ISSUE_TEMPLATE/
+  │   │   ├── bug_report.yml
+  │   │   ├── config.yml
+  │   │   └── feature_request.yml
+  │   ├── workflows/
+  │   │   ├── audit.yml
+  │   │   ├── ci.yml
+  │   │   ├── publish.yml
+  │   │   └── release.yml
+  │   └── pull_request_template.md
+  ├── assets/
+  │   ├── icon.ico
+  │   ├── logo-m.svg
+  │   ├── logo-s.svg
+  │   └── logo.svg
   ├── docs/
   │   └── adr/
   │       ├── 0001-record-architecture-decisions.md
+  │       ├── 0002-dependabot-is-off.md
   │       └── README.md
   ├── npm/
   │   ├── download.js
@@ -25,7 +37,8 @@ Would create 31 files in `demo-tool`:
   │   ├── main.rs
   │   └── update.rs
   ├── tests/
-  │   └── cli.rs
+  │   ├── cli.rs
+  │   └── installers.rs
   ├── tools/
   │   ├── install.ps1
   │   └── install.sh
@@ -33,10 +46,15 @@ Would create 31 files in `demo-tool`:
   ├── .gitattributes
   ├── .gitignore
   ├── CHANGELOG.md
+  ├── CODE_OF_CONDUCT.md
+  ├── CONTRIBUTING.md
   ├── Cargo.toml
   ├── LICENSE
   ├── README.md
+  ├── SECURITY.md
   ├── build.rs
   ├── cliff.toml
+  ├── deny.toml
+  ├── llms.txt
   ├── lyrn.toml
   └── rustfmt.toml

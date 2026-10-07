@@ -1,0 +1,28 @@
+
+## The icons
+
+`src-tauri/icons/` holds the line's umbrella mark - lambda on graphite - until
+the product has a mark of its own; `lyrn.toml` says `mark = "placeholder"`
+meanwhile, and `assets/` holds the same mark as three master SVGs.
+
+A mark of its own replaces those three masters, and `docs/export-assets.mjs`
+draws every icon from them - it comes with the documentation site
+(`lyrn new {{ name }} --form docs`). Not `pnpm tauri icon`: it cuts every size
+from one picture, and the line's rule is that a size takes the level of the
+mark that reads at it - S at 27px and under, M up to 63px, L above. In the
+`.ico` the **largest image comes first**: Tauri takes the first entry for the
+window, and a 16px one there leaves the title bar blurred.
+
+## Layout
+
+| Path | What lives there |
+| --- | --- |
+| `src/` | The interface |
+| `src/components/ui/` | dowel's primitives, copied from the registry and held to it by `pnpm lint` |
+| `src-tauri/src/lib.rs` | Where the application starts; `main.rs` is a thin shell |
+| `src-tauri/src/commands.rs` | What the webview is allowed to call |
+| `src-tauri/capabilities/` | The permissions the window is granted |
+| `src-tauri/icons/` | The icons the bundle and the window use |
+| `assets/` | The mark's three master SVGs |
+| `tools/` | The registry and license checks `pnpm lint` and the audit run |
+| `docs/adr/` | Architecture decisions, newest last |

@@ -1,0 +1,38 @@
+
+## Commits
+
+[Conventional Commits](https://www.conventionalcommits.org/), in English:
+`feat:`, `fix:`, `docs:`, `chore:` and the rest. The changelog is generated
+from them (`cliff.toml`), so a commit message is the line the release notes
+will carry.
+
+## Decisions
+
+An architectural decision gets a record in [`docs/adr/`](docs/adr/README.md):
+one file, numbered, newest last. A decision that replaces an earlier one says
+so, and the earlier one is marked superseded rather than deleted.
+
+## Dependencies
+
+Updated by hand, at most once a week, in a commit of their own - Dependabot is
+off on purpose ([ADR 0002](docs/adr/0002-dependabot-is-off.md)). The audit
+workflow fails on a published advisory, and on a dependency whose license is
+not on the accepted list.
+
+## Assistant files
+
+Instructions for coding assistants - `CLAUDE.md`, `AGENTS.md`, `.claude/`,
+`.cursor/` and the like - stay on the machine they were written for, and
+`.gitignore` keeps them out of the repository. What anyone needs to know about
+the project, human or agent, is in this file and in [`llms.txt`](llms.txt).
+
+## Conduct and security
+
+Everyone taking part follows the [Code of Conduct](CODE_OF_CONDUCT.md). A
+vulnerability is reported privately, as [SECURITY.md](SECURITY.md) describes -
+never in a public issue.
+
+## License
+
+By contributing, you agree that your contributions are licensed under the
+project's [MIT license](LICENSE).

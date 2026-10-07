@@ -43,27 +43,11 @@ the row - a plugin adds and overwrites its own keys but never clears the rest),
 
 Plugins live for the duration of one call. Nothing here starts a service.
 
-## Developing
+## Contributing
 
-```console
-$ cargo fmt --check && cargo clippy --all-targets -- -D warnings && cargo test
-```
-
-That is the same gate CI runs, so a green terminal means a green pull request.
-
-`tests/protocol.rs` runs the built binary the way {{ host }} runs it and holds
-the answers to what the host accepts - a plugin that passes its unit tests and
-fails there is one {{ host }} would list and refuse.
-
-## Layout
-
-| Path | What lives there |
-| --- | --- |
-| `src/main.rs` | The manifest and the plugin's own work |
-| `src/protocol.rs` | The wire: an invocation in, an outcome out |
-| `tests/protocol.rs` | The plugin run as the host runs it |
-| `docs/adr/` | Architecture decisions, newest last |
+The gate, the layout and how commits are written are in
+[CONTRIBUTING.md](https://github.com/{{ repo }}/blob/main/CONTRIBUTING.md).
 
 ## License
 
-MIT (c) [{{ author }}](https://lacodda.com)
+MIT - see [LICENSE](https://github.com/{{ repo }}/blob/main/LICENSE).

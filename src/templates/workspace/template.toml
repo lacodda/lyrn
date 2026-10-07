@@ -1,6 +1,6 @@
 name = "workspace"
 description = "Cargo workspace: a library crate plus the CLI that uses it"
-standard = "2026.09"
+standard = "2026.10"
 
 # `cliff.toml` is a Tera template using bare `{{ }}` for its own variables, so
 # it has to travel untouched. GitHub Actions expressions are `${{ }}` and the

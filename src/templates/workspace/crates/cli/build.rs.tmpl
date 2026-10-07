@@ -1,20 +1,16 @@
-// Embeds the Windows executable icon and version metadata, so the binary is
-// recognisable in Explorer and the task manager rather than showing the
-// default cog.
+// Embeds the Windows executable icon, so the binary is recognisable in
+// Explorer and the task manager rather than showing the default one.
 //
-// The path climbs out of the crate: a build script runs with its own crate as
-// the working directory, and the brand artwork belongs to the repository, not
-// to one member of it.
+// The icon lives inside this crate: `cargo install` builds the published
+// crate, which carries only what is under its own directory, so an icon
+// reached through `../../assets` would build here and be missing from
+// crates.io. Unconditional for the same reason: a package without its icon
+// fails to build, rather than shipping a binary nobody notices is unmarked.
 fn main() {
     #[cfg(windows)]
     {
-        const ICON: &str = "../../assets/icon.ico";
+        const ICON: &str = "assets/icon.ico";
         println!("cargo:rerun-if-changed={ICON}");
-        if std::path::Path::new(ICON).exists() {
-            winresource::WindowsResource::new()
-                .set_icon(ICON)
-                .compile()
-                .expect("failed to embed the Windows resources");
-        }
+        winresource::WindowsResource::new().set_icon(ICON).compile().expect("failed to embed the Windows resources");
     }
 }
