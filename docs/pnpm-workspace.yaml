@@ -1,0 +1,13 @@
+# The site is a project of its own: this file is where pnpm stops looking
+# upward, and where its audit settings live.
+
+# Advisories accepted on purpose, each with the reason next to it. The audit
+# workflow fails on any other.
+auditConfig:
+  ignoreGhsas:
+    # postcss-selector-parser 6.x, reached through expressive-code ->
+    # postcss-nested: quadratic parsing of a long flat selector. Only a parser
+    # of untrusted selectors in a request path is exposed; the site parses its
+    # own CSS at build time. The fix is in 7.x, which postcss-nested 6 does not
+    # take - drop this line when expressive-code moves on.
+    - GHSA-rj75-hqrm-r3gf
