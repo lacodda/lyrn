@@ -26,7 +26,7 @@ made, and made the same way for every product on the line.
 
 ```console
 $ lyrn new demo-app --accent kilna --yes
-Created 30 files in `demo-app`.
+Created 44 files in `demo-app`.
 Installing dependencies... done
 Starting the repository... done
 Staging the first commit... done

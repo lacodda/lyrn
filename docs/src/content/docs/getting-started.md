@@ -34,7 +34,7 @@ irm https://raw.githubusercontent.com/lacodda/lyrn/main/tools/install.ps1 | iex
 
 ```console
 $ lyrn new demo-app --accent kilna
-Created 25 files in `demo-app`.
+Created 44 files in `demo-app`.
 Installing dependencies... done
 Starting the repository... done
 Staging the first commit... done
@@ -65,11 +65,18 @@ Nothing has to be written to find out what would be:
 
 ```console
 $ lyrn new demo-app --dry-run
-Would create 25 files in `demo-app`:
+Would create 44 files in `demo-app`:
 
-  .editorconfig
-  .gitattributes
-  .github/workflows/ci.yml
+  ├── .github/
+  │   ├── ISSUE_TEMPLATE/
+  │   │   ├── bug_report.yml
+  │   │   ├── config.yml
+  │   │   └── feature_request.yml
+  │   ├── workflows/
+  │   │   ├── audit.yml
+  │   │   └── ci.yml
+  │   └── pull_request_template.md
+  ├── assets/
   ...
 ```
 
