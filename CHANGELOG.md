@@ -1,5 +1,20 @@
 # Changelog
 
+## 🎉 [2.10.0] - 2026-10-07
+
+### ✨ Features
+
+- Carry the line's hygiene in every generated repository
+
+### 🛟 Miscellaneous Tasks
+
+- Bring lyrn up to its own standard
+
+### 🛠️ Bug Fixes
+
+- Keep the npm launcher alive through Ctrl+C
+- Take time 0.3.55 for RUSTSEC-2026-0009
+
 ## 🎉 [2.9.1] - 2026-09-30
 
 ### 🛠️ Bug Fixes

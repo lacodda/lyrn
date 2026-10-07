@@ -151,11 +151,13 @@ More forms — egui — follow in 2.x.
 
 ## Status
 
-v2.9.1, in daily use. All nine forms and their add-ons work today, each
+v2.10.0, in daily use. All nine forms and their add-ons work today, each
 generated and put through its own gate on Linux, macOS and Windows on every
-push; `lyrn adopt` brings an older repository up to the same standard, and a
-template from outside is used only at a tag its own CI passed. What landed in
-each version:
+push, and every repository they start carries the line's hygiene from its
+first commit - a contributing guide, a security policy, a code of conduct and
+an audit of its dependencies; `lyrn adopt` brings an older repository up to
+the same standard, and a template from outside is used only at a tag its own
+CI passed. What landed in each version:
 [CHANGELOG](https://github.com/lacodda/lyrn/blob/main/CHANGELOG.md).
 
 ## Migrating from 1.x

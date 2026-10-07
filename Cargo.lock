@@ -992,7 +992,7 @@ checksum = "4050469837a6ff301cd14c1f8f24f88549e6d548f24f64e2148eb0f72cebc51f"
 
 [[package]]
 name = "lyrn"
-version = "2.9.1"
+version = "2.10.0"
 dependencies = [
  "assert_cmd",
  "chrono",
