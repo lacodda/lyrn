@@ -21,6 +21,8 @@ exclude = [
     "/.github/",
     "/cliff.toml",
     "/rustfmt.toml",
+    "/deny.toml",
+    "/lyrn.toml",
     "/assets/social-preview.png",
     "/assets/logo-512.png",
     "/assets/apple-touch-icon.png",

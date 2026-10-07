@@ -14,8 +14,9 @@
 `lyrn new` creates a repository that is ready to work in: Vite, React,
 TypeScript, Tailwind and the [dowel](https://lacodda.github.io/dowel) design
 system, together with the things a project usually grows only after the third
-time somebody wishes it had them — a CI gate, a changelog, an ADR directory, an
-editor config, a license.
+time somebody wishes it had them — a CI gate and an audit, a changelog, the
+first decisions, a security policy and a code of conduct, an editor config, a
+license.
 
 It is not a scaffolder for any framework you like. It is **one stack, assembled
 to the end**. The choice a generator usually hands back to you has already been
@@ -164,6 +165,11 @@ Vite now, and the wrapper is gone: `lyrn create`, `start`, `build` and `export`
 no longer exist. An existing 1.x project keeps working — pin `lyrn@1.3.0`, or
 move to Vite directly, which is what the 1.x templates were producing
 configuration for anyway.
+
+## Contributing
+
+The gate, where things live and how commits are written:
+[CONTRIBUTING.md](https://github.com/lacodda/lyrn/blob/main/CONTRIBUTING.md).
 
 ## License
 

@@ -1,0 +1,22 @@
+# lyrn
+
+> Start a new web application on the lacodda line's stack with one command - one stack assembled to the end, and a repository ready to work in from the first commit.
+
+lyrn is a Rust command-line tool. `lyrn new` generates a repository in one of
+nine forms, `lyrn adopt` brings an existing one up to the same standard, and
+`lyrn template` checks or exports templates. Everything below is written for
+people and agents alike: there is no second set of instructions kept elsewhere.
+
+## Docs
+
+- [README](README.md): what it is, how to install it, what working with it looks like
+- [Contributing](CONTRIBUTING.md): the gate to run before a commit, where things live, how commits are written
+- [Architecture decisions](docs/adr/README.md): why it is built the way it is, one decision per file
+- [Changelog](CHANGELOG.md): what each release changed
+- [Documentation site](https://lyrn.lacodda.com/llms.txt): every page of the manual, in the form an agent reads
+
+## Optional
+
+- [Security policy](SECURITY.md): how to report a vulnerability, privately
+- [Code of Conduct](CODE_OF_CONDUCT.md): how people taking part treat each other
+- [License](LICENSE): MIT

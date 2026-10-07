@@ -13,3 +13,5 @@ earlier one says so; the earlier one is marked superseded rather than deleted.
 | [0006](0006-mono-not-vite-lib.md) | One monorepo form, not a standalone library form | Accepted |
 | [0007](0007-a-form-that-adds.md) | A form that adds to a repository never replaces a file | Accepted |
 | [0008](0008-templates-from-outside.md) | A template from outside is used at a tag whose CI passed | Accepted |
+| [0009](0009-the-hygiene-is-written-once.md) | What every repository carries is written once | Accepted |
+| [0010](0010-dependabot-is-off.md) | Dependabot is off on purpose | Accepted |
