@@ -1,5 +1,16 @@
 # Changelog
 
+## 🎉 [2.10.1] - 2026-10-07
+
+### 📖 Documentation
+
+- Count the files a new project starts with
+
+### 🛠️ Bug Fixes
+
+- Audit the documentation site's packages
+- Update the documentation site past its advisories
+
 ## 🎉 [2.10.0] - 2026-10-07
 
 ### ✨ Features
