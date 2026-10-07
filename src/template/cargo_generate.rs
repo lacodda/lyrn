@@ -366,10 +366,10 @@ fn answer(key: &str, placeholder: &Placeholder, answers: &Answers) -> Result<Val
                 }
                 (None, false, _) => default.ok_or_else(|| missing(key, placeholder))?,
             };
-            if let Some(choices) = &placeholder.choices {
-                if !choices.contains(&value) {
-                    return Err(format!("`{key}` is one of {}, not `{value}`", choices.join(", ")).into());
-                }
+            if let Some(choices) = &placeholder.choices
+                && !choices.contains(&value)
+            {
+                return Err(format!("`{key}` is one of {}, not `{value}`", choices.join(", ")).into());
             }
             if let Some(pattern) = &placeholder.regex {
                 let regex = regex::Regex::new(pattern).map_err(|e| format!("the placeholder `{key}` carries a regex that does not compile: {e}"))?;

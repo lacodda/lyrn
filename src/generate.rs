@@ -311,14 +311,14 @@ pub fn decide_sections(text: &str, enabled: &[String], decides: impl Fn(&str) ->
                 }
                 continue;
             }
-        } else if let Some(name) = marker("{{/") {
-            if deciding == Some(name) {
-                deciding = None;
-                if skipping == Some(name) {
-                    skipping = None;
-                }
-                continue;
+        } else if let Some(name) = marker("{{/")
+            && deciding == Some(name)
+        {
+            deciding = None;
+            if skipping == Some(name) {
+                skipping = None;
             }
+            continue;
         }
         if skipping.is_some() {
             continue;
@@ -347,8 +347,6 @@ pub fn plan_with(sources: &[TemplateFile], manifest: &TemplateManifest, context:
     for source in sources {
         // A file belonging to an add-on that was not asked for is simply not
         // written; nothing downstream has to know it exists.
-        // `is_some_and` rather than a let-chain: those are stable from 1.88
-        // and this crate promises 1.85.
         if source.addon.as_ref().is_some_and(|required| !addons.contains(required)) {
             continue;
         }

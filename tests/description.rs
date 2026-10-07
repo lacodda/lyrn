@@ -83,9 +83,8 @@ fn every_structured_file_survives_the_description() {
             if name.ends_with(".toml") && name != "cliff.toml" {
                 let value: toml::Table = toml::from_str(&text).unwrap_or_else(|e| panic!("{form}: {shown} is not TOML any more: {e}"));
                 let package = value.get("package").and_then(|p| p.as_table());
-                // `filter` rather than a let-chain: those are stable from 1.88
-                // and this crate promises 1.85. The library crate of a
-                // workspace describes itself in terms of the project.
+                // The library crate of a workspace describes itself in terms
+                // of the project.
                 let description = package
                     .and_then(|p| p.get("description"))
                     .and_then(|d| d.as_str())
