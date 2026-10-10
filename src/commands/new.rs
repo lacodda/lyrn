@@ -96,7 +96,7 @@ pub fn build_context(wanted: &Wanted, native: &Native, origin: &Origin, interact
 
     let author = match &identity.author {
         Some(value) => value.clone(),
-        None => git_config("user.name").unwrap_or_else(|| "The author".to_string()),
+        None => git_identity("user.name").unwrap_or_else(|| "The author".to_string()),
     };
 
     // Resolved once: the lookup can spawn `gh`, and it is asked for twice.
@@ -273,8 +273,8 @@ pub fn generate_project(name: &str, template: &Template, project: &ProjectArgs, 
         Kind::CargoGenerate(cargo) => {
             refuse_what_cargo_generate_ignores(project)?;
             naming::validate_name(name)?;
-            let username = project.identity.author.clone().or_else(|| git_config("user.name")).unwrap_or_default();
-            let authors = match (project.identity.author.is_some(), git_config("user.email")) {
+            let username = project.identity.author.clone().or_else(|| git_identity("user.name")).unwrap_or_default();
+            let authors = match (project.identity.author.is_some(), git_identity("user.email")) {
                 (false, Some(email)) if !username.is_empty() => format!("{username} <{email}>"),
                 _ => username.clone(),
             };
@@ -623,7 +623,22 @@ fn msrv() -> String {
 }
 
 pub fn git_config(key: &str) -> Option<String> {
-    let output = Process::new("git").args(["config", "--get", key]).output().ok()?;
+    read_git_config(&["config", "--get", key])
+}
+
+/// Who the author is: the global git identity, and nothing else.
+///
+/// Not `git config` where the command happens to run: inside a repository
+/// with an identity of its own, that would stamp somebody else's name - or an
+/// old alias - into the new project's LICENSE and manifests, which is exactly
+/// what `lyrn doctor`'s identity rule warns about. `--includes` keeps the
+/// files a global config pulls in, which is where many keep the identity.
+pub fn git_identity(key: &str) -> Option<String> {
+    read_git_config(&["config", "--global", "--includes", "--get", key])
+}
+
+fn read_git_config(args: &[&str]) -> Option<String> {
+    let output = Process::new("git").args(args).output().ok()?;
     if !output.status.success() {
         return None;
     }

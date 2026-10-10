@@ -110,7 +110,7 @@ is, so it is not adopted; `lyrn adopt` says when there is none, and
 | `--name <name>` | from its manifest | The project name |
 | `--accent <colour>` | its own, else asked | A product of the line, or a `#rrggbb` value |
 | `--description <text>` | from its manifest | One line describing what the project is |
-| `--author <name>` | `git config user.name` | Recorded in LICENSE |
+| `--author <name>` | the global `git config user.name` | Recorded in LICENSE |
 | `--repo <owner/name>` | the `origin` remote | The GitHub repository it lives in |
 | `-y`, `--yes` | — | Accept the defaults instead of asking |
 | `--dry-run` | — | Show what would be added and kept, and write nothing |

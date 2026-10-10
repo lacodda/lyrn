@@ -36,7 +36,7 @@ error: the name starts with `D`; it has to start with a lowercase letter
 | `--host <host>` | — | The application a plugin extends; `--form plugin` only |
 | `--accent <colour>` | asked, else graphite | A product of the line, or a `#rrggbb` value |
 | `--description <text>` | asked, else generic | One line describing what the project is |
-| `--author <name>` | `git config user.name` | Recorded in LICENSE |
+| `--author <name>` | the global `git config user.name` | Recorded in LICENSE |
 | `--path <path>` | `./<name>`; `.` for `docs` | Where to create it |
 | `--repo <owner/name>` | looked up | The GitHub repository it will live in |
 | `--with <addon,...>` | none | Optional pieces, per form; see [Forms](/reference/forms/) |

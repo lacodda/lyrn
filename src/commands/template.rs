@@ -212,7 +212,7 @@ fn readme(form: Form, repo: &str, addons: &[AddonManifest]) -> String {
 
 fn licence() -> String {
     let year = chrono::Local::now().format("%Y");
-    let author = new::git_config("user.name").unwrap_or_else(|| "The author".to_string());
+    let author = new::git_identity("user.name").unwrap_or_else(|| "The author".to_string());
     format!(
         "MIT License
 
