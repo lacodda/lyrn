@@ -1,6 +1,6 @@
 # {{ title }}
 
-{{ description }}
+> {{ description }}
 
 Built on the lacodda line's stack for command-line tools: Rust, clap, anyhow.
 Scaffolded with [lyrn](https://github.com/lacodda/lyrn).

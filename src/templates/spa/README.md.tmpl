@@ -1,6 +1,6 @@
 # {{ title }}
 
-{{ description }}
+> {{ description }}
 
 Built on the lacodda line's stack: [Vite](https://vite.dev), React, TypeScript,
 [Tailwind](https://tailwindcss.com) and the [dowel](https://lacodda.github.io/dowel)
