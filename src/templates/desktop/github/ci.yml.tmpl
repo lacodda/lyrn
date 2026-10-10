@@ -60,3 +60,29 @@ jobs:
       - name: Test
         working-directory: src-tauri
         run: cargo test
+
+  # rust-version is a promise, and nothing holds it on its own: the first time
+  # the shell uses a newer API the number silently rots. Read it from the
+  # manifest and build on exactly that toolchain.
+  msrv:
+    name: msrv
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v7
+      - name: Install Linux build deps
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y libwebkit2gtk-4.1-dev libappindicator3-dev librsvg2-dev patchelf
+      - name: Read rust-version from the manifest
+        id: msrv
+        working-directory: src-tauri
+        run: echo "version=$(cargo metadata --no-deps --format-version 1 | jq -r '.packages[0].rust_version')" >> "$GITHUB_OUTPUT"
+      - uses: dtolnay/rust-toolchain@master
+        with:
+          toolchain: ${{ steps.msrv.outputs.version }}
+      - uses: Swatinem/rust-cache@v2
+        with:
+          workspaces: src-tauri
+      - name: Build on the declared MSRV
+        working-directory: src-tauri
+        run: cargo check --all-targets
