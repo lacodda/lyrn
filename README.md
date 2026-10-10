@@ -49,6 +49,28 @@ registry: 1 copy matches dowel-ui 0.33.0
 That gate is the same one CI runs, so a green terminal means a green pull
 request.
 
+```console
+$ lyrn doctor
+lyrn doctor: ~/demo-app, a `spa` project on standard 2026.10
+
+✓ standard   all 19 files of the `spa` standard
+✓ readme     the longest block is 18 words, in 25 lines
+✓ mark       a mark of its own
+✓ actions    6 actions in 2 workflows, none retired or behind the standard
+- msrv       not a Rust project
+✓ node       pnpm 10 and Node 22+ across 1 project
+✓ audit      1 lockfile audited
+✓ ai-traces  no assistant files tracked or in the history, no stamps, .gitignore keeps them out
+✓ authors    1 commit, all by Kirill Lakhtachev <lahtachev@gmail.com>
+✓ identity   commits as `Kirill Lakhtachev <lahtachev@gmail.com>`, the global identity; the global excludes file keeps assistant files out
+
+9 passed, 1 not applicable
+```
+
+On an older repository the same command says what is off - a retired action,
+a lockfile nobody audits, an old alias in the history - with the fix for each,
+and `lyrn doctor --explain <rule>` says why the rule exists.
+
 ## Install
 
 ```console

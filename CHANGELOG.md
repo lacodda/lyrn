@@ -1,5 +1,23 @@
 # Changelog
 
+## 🎉 [2.11.0] - 2026-10-10
+
+### ✨ Features
+
+- Hold a repository to the line's standard with lyrn doctor
+
+### 📖 Documentation
+
+- Point the site at lyrn doctor
+
+### 🛠️ Bug Fixes
+
+- Launch lyrn the way the cli form launches
+- Pin the documentation site's pnpm
+- Take the author from the global git identity
+- Say a project's promise as a quote under its title
+- Hold the desktop form to its rust-version
+
 ## 🎉 [2.10.1] - 2026-10-07
 
 ### 📖 Documentation
