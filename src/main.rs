@@ -5,6 +5,7 @@ mod host;
 mod model;
 mod naming;
 mod render;
+mod repo;
 mod template;
 mod templates;
 
@@ -21,6 +22,13 @@ fn main() -> ExitCode {
         cli::Command::New(args) => commands::new::run(*args),
         cli::Command::Init(args) => commands::init::run(*args),
         cli::Command::Adopt(args) => commands::adopt::run(*args),
+        // A finding is an answer, not an error: the report has said what is
+        // wrong, and the exit code is what a gate reads.
+        cli::Command::Doctor(args) => match commands::doctor::run(args) {
+            Ok(true) => return ExitCode::SUCCESS,
+            Ok(false) => return ExitCode::FAILURE,
+            Err(e) => Err(e),
+        },
         cli::Command::Forms => {
             list_forms();
             Ok(())

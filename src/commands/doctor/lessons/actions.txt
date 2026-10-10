@@ -1,0 +1,17 @@
+A release pipeline once could not run at all: it used actions/create-release@v1
+and upload-artifact@v1, archived and retired, and `::set-output`, a workflow
+command GitHub had deprecated years before. Nothing failed until the day of a
+release, which is the worst day to find out.
+
+The rule fails an action GitHub has retired or archived - create-release,
+upload-release-asset, the actions-rs family, the artifact actions before v4,
+the cache before v3, the Pages actions built on the old artifacts - and the
+workflow commands GitHub disabled or deprecated (`::set-output`,
+`::save-state`, `::set-env`, `::add-path`).
+
+It also fails an action on an older major than the templates lyrn writes: the
+line takes every major as it comes, and the templates are where the current
+one is recorded. When a template moves to a new major, this rule moves with it.
+A workflow that does not parse fails too - GitHub runs none of it.
+
+A commit pin counts by the version in its comment: `@<sha> # v4.2.2`.

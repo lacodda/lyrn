@@ -441,3 +441,36 @@ fn the_docs_form_ships_the_checks_this_site_builds_with() {
         assert!(astro.contains(integration), "docs/astro.config.mjs does not build with `{integration}`");
     }
 }
+
+/// `lyrn doctor --explain <rule>` sends the reader to the rule's section of
+/// the reference page, by the rule's name. A rule added without a section
+/// would send them to the top of a page that does not mention it.
+#[test]
+fn every_doctor_rule_has_a_section_on_its_page() {
+    let refusal = common::lyrn().args(["doctor", "--explain", "no-such-rule"]).output().unwrap();
+    let refusal = String::from_utf8(refusal.stderr).unwrap();
+    let listed = refusal
+        .split("[possible values: ")
+        .nth(1)
+        .and_then(|rest| rest.split(']').next())
+        .expect("clap lists the rules it accepts");
+    let rules: Vec<&str> = listed.split(", ").collect();
+    assert!(rules.len() >= 10, "{rules:?}");
+
+    let page = read("docs/src/content/docs/reference/doctor.md");
+    for rule in rules {
+        assert!(
+            page.contains(&format!("\n### {rule}\n")),
+            "docs/reference/doctor.md has no `### {rule}` section"
+        );
+    }
+}
+
+/// lyrn is installed through the same npm launcher the cli form writes, so it
+/// is that launcher, word for word: a fix made in one place - waiting out
+/// Ctrl+C instead of dying under the binary - reaches both.
+#[test]
+fn lyrn_launches_the_way_the_cli_form_does() {
+    let template = read("src/templates/cli/npm/run.js.tmpl").replace("{{ name }}", "lyrn");
+    assert!(read("npm/run.js") == template, "npm/run.js differs from the launcher the cli form writes");
+}

@@ -1,0 +1,17 @@
+The standard turns off Dependabot's pull requests and keeps its other half as
+an audit workflow: advisories and licenses checked on every push and every
+Monday. The trade only holds if the audit sees everything Dependabot would.
+
+It did not. The audit read the lockfile at the top of the repository, and the
+documentation site under docs/ had a lockfile of its own that no job read.
+Twenty-two advisories accumulated there, eight of them high, and the first
+anyone heard of them was an email from GitHub.
+
+The rule lists every tracked Cargo.lock, pnpm-lock.yaml and package-lock.json
+and fails each one no workflow audits: `cargo deny check` or cargo-deny-action
+(with the advisories check), `cargo audit`, `pnpm audit` or `npm audit` run in
+its directory - by `working-directory`, a job's defaults, `cd`, `--dir` or
+`--manifest-path`. Lockfiles under fixtures/ and testdata/ are left out.
+
+A documentation site added with `lyrn new <name> --form docs` brings its own
+docs-audit.yml.

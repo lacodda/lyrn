@@ -42,6 +42,20 @@ const EVERY_FORM: &[&str] = &[
     "assets/logo-s.svg",
 ];
 
+/// The block every generated `.gitignore` ends with: the files coding
+/// assistants write, kept on the machine that wrote them.
+pub const ASSISTANT_BLOCK: &str = include_str!("community/gitignore.tmpl");
+
+/// The patterns of that block, one per file or directory. `lyrn doctor` holds
+/// repositories, histories and excludes files to exactly these.
+pub fn assistant_patterns() -> Vec<&'static str> {
+    ASSISTANT_BLOCK
+        .lines()
+        .map(str::trim)
+        .filter(|l| !l.is_empty() && !l.starts_with('#'))
+        .collect()
+}
+
 /// The files this module adds to a form. None for a form that adds to an
 /// existing repository: that repository has its own.
 pub fn sources(form: Form) -> Vec<SourceFile> {
@@ -294,11 +308,20 @@ mod tests {
 
     #[test]
     fn every_gitignore_keeps_assistant_files_out() {
-        let block = include_str!("community/gitignore.tmpl");
         for form in Form::ALL.iter().filter(|f| **f != Form::Docs) {
             let gitignore = sources_for(*form).into_iter().find(|s| s.path == ".gitignore").unwrap();
             let Contents::Text(text) = gitignore.contents else { panic!() };
-            assert!(text.ends_with(block), "{form}: .gitignore does not keep assistant files out");
+            assert!(text.ends_with(ASSISTANT_BLOCK), "{form}: .gitignore does not keep assistant files out");
         }
+    }
+
+    #[test]
+    fn the_assistant_patterns_are_the_block_without_its_comment() {
+        let patterns = assistant_patterns();
+        assert!(
+            patterns.contains(&"CLAUDE.md") && patterns.contains(&".claude/") && patterns.contains(&"AGENTS.md"),
+            "{patterns:?}"
+        );
+        assert!(patterns.iter().all(|p| !p.starts_with('#') && !p.is_empty()));
     }
 }

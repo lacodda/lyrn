@@ -1,0 +1,12 @@
+A new project starts with the line's umbrella mark - a lambda on graphite - so
+that its icons, favicon and installers are never the framework's default. That
+placeholder is meant to be replaced: a product that ships it looks like every
+other project that never got a mark of its own.
+
+lyrn records the fact in lyrn.toml when it generates the project, rather than
+leaving the doctor to compare icon bytes against a copy of the placeholder,
+which would go stale the first time the placeholder is redrawn.
+
+Choose the product's mark, put its masters in assets/, and set
+`mark = "chosen"` under [project] in lyrn.toml. This only warns: the mark is a
+matter of taste, not of correctness.

@@ -1,0 +1,15 @@
+Every repository of the line carries the same hygiene whatever its code does:
+a licence, a changelog and its generator, editor and git settings, the CI gate
+and the audit, a security policy, a code of conduct, issue and pull request
+templates, the first decisions in docs/adr/, and lyrn.toml - which is what lets
+the doctor know the repository's form at all.
+
+The line learnt this one repository at a time: a project without SECURITY.md
+had nowhere to send a vulnerability, one without an audit workflow learnt about
+its advisories from an email, one without lyrn.toml could not be told apart
+from a library. Each was fixed where it was noticed and missed everywhere else.
+
+The rule reads the same list `lyrn adopt` writes, for the form the repository
+has, and counts a file kept under another common name (LICENSE.md, ci.yaml).
+To satisfy it, run `lyrn adopt`: it adds exactly the missing files and never
+touches one that is there.

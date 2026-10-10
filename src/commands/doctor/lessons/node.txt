@@ -1,0 +1,15 @@
+The line builds JavaScript with one pnpm major and one Node floor, and they are
+whatever the templates lyrn writes say: `packageManager` in a generated
+package.json, `node-version` in its workflows.
+
+Two lessons stand behind the numbers. A Node version past its end of life
+keeps working in CI until the day a dependency drops it, and then every
+workflow on it fails at once. And a pnpm major that is not the line's - the
+pnpm 11 line would not install on Windows for months, while `pnpm self-update`
+reported success and rewrote packageManager - breaks every other machine that
+builds the project.
+
+The rule fails a pnpm project pinned to an older pnpm, a workflow on an older
+Node, and pnpm/action-setup asked for an older pnpm. It warns when a project
+pins nothing (each machine then uses whatever pnpm it has), when it is ahead of
+the line, and when setup-node is given no version at all.

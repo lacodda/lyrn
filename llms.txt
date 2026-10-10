@@ -3,7 +3,8 @@
 > Start a new web application on the lacodda line's stack with one command - one stack assembled to the end, and a repository ready to work in from the first commit.
 
 lyrn is a Rust command-line tool. `lyrn new` generates a repository in one of
-nine forms, `lyrn adopt` brings an existing one up to the same standard, and
+nine forms, `lyrn adopt` brings an existing one up to the same standard,
+`lyrn doctor` holds a repository to it and says why each rule exists, and
 `lyrn template` checks or exports templates. Everything below is written for
 people and agents alike: there is no second set of instructions kept elsewhere.
 

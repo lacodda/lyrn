@@ -1,0 +1,23 @@
+A public history is read under a real name. An old alias, a misspelt surname, a
+machine that once committed as user@localhost - each appears on every page of
+the project as somebody else.
+
+The lesson: one repository's history carried a surname spelt two ways and a
+second identity under an old handle. Pushed commits are not rewritten, so the
+fix was `.mailmap`, git's own file for saying who is who - and the rule is the
+gate that keeps it true.
+
+Every author in the history, and every person named in a `Co-authored-by`
+trailer, is resolved through .mailmap and has to come out as either the global
+git identity of this machine or someone .mailmap names as themselves. An alias
+of yours is mapped to you:
+
+    Your Name <you@example.com> old-handle <old@example.com>
+
+and anyone else who wrote a commit is named:
+
+    Their Name <them@example.com>
+
+An assistant named as co-author is left to `ai-traces`: no .mailmap line should
+make it somebody. On CI, where a runner has no identity of its own, .mailmap is
+the whole list.

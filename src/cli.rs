@@ -25,6 +25,8 @@ pub enum Command {
     Init(Box<InitArgs>),
     /// Bring an existing repository up to the line's standard
     Adopt(Box<AdoptArgs>),
+    /// Hold a repository to the line's standard, and say what is off and why
+    Doctor(DoctorArgs),
     /// List the forms a project can take, and your own templates
     Forms,
     /// Check a template, or write a built-in form out as one
@@ -80,6 +82,17 @@ pub struct InitArgs {
 
     #[command(flatten)]
     pub project: ProjectArgs,
+}
+
+#[derive(clap::Args)]
+pub struct DoctorArgs {
+    /// The repository to examine; defaults to the one the current directory
+    /// is in
+    pub path: Option<PathBuf>,
+
+    /// Say why a rule exists and how to satisfy it, instead of examining
+    #[arg(long, value_name = "RULE")]
+    pub explain: Option<crate::commands::doctor::Rule>,
 }
 
 #[derive(clap::Args)]
@@ -165,7 +178,7 @@ pub struct IdentityArgs {
     #[arg(long)]
     pub description: Option<String>,
 
-    /// The author recorded in LICENSE; defaults to `git config user.name`
+    /// The author recorded in LICENSE; defaults to the global git identity
     #[arg(long)]
     pub author: Option<String>,
 

@@ -1,0 +1,14 @@
+`rust-version` in Cargo.toml is a promise to everyone who runs `cargo install`:
+Cargo believes it and picks dependency versions by it. Nothing checks it on its
+own. The first time the code uses a newer API, the promise is broken and the
+crate fails to build for exactly the people it claims to support.
+
+So the standard pairs the number with a CI job named `msrv` that reads it from
+the manifest with `cargo metadata` and builds on that toolchain. Reading it,
+rather than writing the number into the workflow too, matters: two copies agree
+the day they are written and disagree after the next bump.
+
+The rule fails a Rust manifest (Cargo.toml, src-tauri/Cargo.toml) with no
+rust-version, a declared version no job builds on, and a job that builds on a
+different number or on a channel such as `stable`. It warns when the job
+repeats the number by hand. The job `lyrn new` writes is the model.

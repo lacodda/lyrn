@@ -1,0 +1,17 @@
+A coding assistant's instructions - CLAUDE.md, AGENTS.md, .claude/, .cursor/
+and the rest - describe one person's way of working on one machine. What anyone
+else needs to know is in CONTRIBUTING.md and llms.txt. And an assistant is a
+tool, not an author.
+
+The lesson: assistant files and `Co-authored-by` trailers naming an assistant
+reached a public history once, and taking them out meant rewriting it and
+force-pushing a branch and its tags - after one of those tags had already
+published a package that could not be taken back.
+
+The rule fails when .gitignore does not keep out every file of the standard's
+assistant block (any `lyrn new` project's .gitignore ends with it) and when
+such a file is tracked; `git rm -r --cached` untracks it and leaves it on disk.
+It warns when one is anywhere in the history, and when a commit message
+carries an assistant's stamp: a co-author trailer naming one, a "Generated
+with" line, a session link. Those need a rewrite of history, which is the
+owner's call once it is pushed; a commit-msg hook keeps new ones out.

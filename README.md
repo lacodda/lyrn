@@ -61,6 +61,7 @@ $ npm install -g lyrn          # or: cargo install lyrn
 $ lyrn new <name> [options]      # a project in a directory of its own
 $ lyrn init [path] [options]     # the same, in a directory that already exists
 $ lyrn adopt [path]              # the standard's missing files, into an old repository
+$ lyrn doctor [path]             # what is off against the standard, and why each rule exists
 $ lyrn forms                     # the forms, their add-ons, and your own templates
 $ lyrn template check [path]     # hold a template to what lyrn accepts
 ```
@@ -72,7 +73,7 @@ $ lyrn template check [path]     # hold a template to what lyrn accepts
 | `--host <host>` | The application a plugin extends; `--form plugin` only |
 | `--accent <colour>` | A product of the line, or a `#rrggbb` value |
 | `--description <text>` | One line describing what the project is |
-| `--author <name>` | Recorded in LICENSE; defaults to `git config user.name` |
+| `--author <name>` | Recorded in LICENSE; defaults to the global `git config user.name` |
 | `--path <path>` | Where to create it; `--form docs` adds to the current directory |
 | `--repo <owner/name>` | The GitHub repository it will live in |
 | `--with <addon,...>` | Optional pieces of the form, comma-separated |
@@ -151,13 +152,10 @@ More forms — egui — follow in 2.x.
 
 ## Status
 
-v2.10.1, in daily use. All nine forms and their add-ons work today, each
-generated and put through its own gate on Linux, macOS and Windows on every
-push, and every repository they start carries the line's hygiene from its
-first commit - a contributing guide, a security policy, a code of conduct and
-an audit of its dependencies; `lyrn adopt` brings an older repository up to
-the same standard, and a template from outside is used only at a tag its own
-CI passed. What landed in each version:
+v2.11.0, in daily use. All nine forms work and pass their own `lyrn doctor`,
+each generated and put through its gate on Linux, macOS and Windows on every
+push; `lyrn adopt` brings an older repository up to the standard, and
+`lyrn doctor` says what is still off and why. What landed in each version:
 [CHANGELOG](https://github.com/lacodda/lyrn/blob/main/CHANGELOG.md).
 
 ## Migrating from 1.x

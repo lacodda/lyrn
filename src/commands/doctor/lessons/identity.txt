@@ -1,0 +1,19 @@
+Two settings of the machine decide what reaches a history before any rule of
+the repository can: who commits, and which files git sees at all.
+
+An identity set inside one repository is how a wrong name gets published. The
+global identity is right everywhere else, so nobody looks at the local one
+again - until it is on GitHub. The rule warns when commits here are signed by
+an identity other than the global one, and says which config file it comes
+from; it fails when there is no identity at all, since git then guesses one
+from the machine's name.
+
+A global excludes file (`core.excludesFile`, or git's default
+~/.config/git/ignore) keeps an assistant's files out of every repository at
+once, including the ones whose .gitignore has never heard of them. The rule
+warns when there is none, or when it does not keep out every file of the
+standard's assistant block.
+
+`lyrn new` takes the author for LICENSE and the manifests from the global
+identity too, never from the directory it happens to run in. On CI this rule
+is not applicable: a runner has neither setting of its own.
