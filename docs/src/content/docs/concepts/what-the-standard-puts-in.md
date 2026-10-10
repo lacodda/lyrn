@@ -16,7 +16,7 @@ is there because leaving it out costs more later.
 | `.editorconfig` | Indentation stops being a matter of whose editor opened the file |
 | `.gitattributes` | `eol=lf`, so a tool that rewrites a file to CRLF cannot hide the real change in the diff |
 | `components.json` | `shadcn add` knows where to copy a dowel primitive |
-| `lyrn.toml` | What this was generated from, and whether it has a mark yet, for `doctor` and `upgrade` later |
+| `lyrn.toml` | What this was generated from, and whether it has a mark yet, for [`lyrn doctor`](/reference/doctor/) and `upgrade` later |
 | `CONTRIBUTING.md` | The gate, where things live, how commits are written - so the README can stay a shopfront |
 | `llms.txt` | The same map for an agent; assistants' own instruction files stay on the machine, out of git |
 | `SECURITY.md` | A vulnerability is reported privately, not in a public issue |
