@@ -41,9 +41,8 @@ pub struct Target {
 }
 
 /// kilna: the first and so far only implementation of the line's plugin
-/// convention. Read from `C:\Projects\kilna\src-tauri\src\plugin\` rather than
-/// from a specification, because the code is what a generated plugin has to
-/// satisfy.
+/// convention. Read from kilna's `src-tauri/src/plugin/` rather than from a
+/// specification, because the code is what a generated plugin has to satisfy.
 const KILNA: Host = Host {
     name: "kilna",
     about: "a desktop workbench for content makers",

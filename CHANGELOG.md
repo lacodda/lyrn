@@ -309,7 +309,7 @@ generating configuration for.
 
 - Added merging of custom and default webpack configurations using the "webpack-merge" package
 - Added generation of path to configuration files to the file "lyrn.json"
-- Improved "export" сommand
+- Improved "export" command
 - Added a new command called "export"
 
 ### 🎛️ Refactor
