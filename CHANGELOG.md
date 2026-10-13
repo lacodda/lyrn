@@ -1,5 +1,15 @@
 # Changelog
 
+## 🎉 [2.12.0] - 2026-10-13
+
+### ✨ Features
+
+- Hold every repository to the standard at once
+
+### 🛠️ Bug Fixes
+
+- Keep this machine's path and a mistyped word out of the sources
+
 ## 🎉 [2.11.0] - 2026-10-10
 
 ### ✨ Features

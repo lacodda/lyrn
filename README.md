@@ -41,7 +41,7 @@ Next:
 $ cd demo-app && pnpm lint
 > eslint . && tsc --noEmit && pnpm registry && pnpm test
 
-registry: 1 copy matches dowel-ui 0.33.0
+registry: 1 copy matches dowel-ui 0.36.0
  Test Files  2 passed (2)
       Tests  3 passed (3)
 ```
@@ -179,7 +179,7 @@ More forms — egui — follow in 2.x.
 
 ## Status
 
-v2.11.0, in daily use. All nine forms work and pass their own `lyrn doctor`,
+v2.12.0, in daily use. All nine forms work and pass their own `lyrn doctor`,
 each generated and put through its gate on Linux, macOS and Windows on every
 push; `lyrn adopt` brings an older repository up to the standard, and
 `lyrn doctor --all` says what is still off across all of them. What landed in each version:
