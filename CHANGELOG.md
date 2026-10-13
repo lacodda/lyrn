@@ -8,6 +8,7 @@
 
 ### 🛠️ Bug Fixes
 
+- Pass over a project rigger has retired
 - Keep this machine's path and a mistyped word out of the sources
 
 ## 🎉 [2.11.0] - 2026-10-10
