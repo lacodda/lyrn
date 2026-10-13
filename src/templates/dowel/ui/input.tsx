@@ -14,7 +14,15 @@ import { cn } from 'dowel-ui'
  */
 export const fieldClasses = cn(
   'w-full rounded-md border border-line bg-transparent px-2.5 py-1.5',
-  'text-sm text-text placeholder:text-faint',
+  /* 16px under a finger. iOS Safari zooms the page into any field whose
+   * text is smaller when it takes the focus, and does not zoom back out - on
+   * a sign-in screen that is the form at 130% with the password off the side
+   * of the screen. Keyed to the pointer rather than the width: a phone on its
+   * side is wider than `sm` and zooms all the same, and a narrow desktop
+   * window has a mouse and wants the set's 12px. A different variant from a
+   * size's own `text-xs` or `text-base`, so it survives every one of them.
+   * `tests/entry-text.test.ts` holds every field in the set to it. */
+  'text-sm pointer-coarse:text-lg text-text placeholder:text-faint',
   'transition-colors hover:border-line-2',
   'focus-visible:outline-2 focus-visible:outline-offset-0 focus-visible:outline-accent',
   // A field nobody can type in should look like one.
