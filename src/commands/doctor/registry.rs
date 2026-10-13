@@ -49,6 +49,14 @@ fn parse(json: &str) -> Result<(Vec<Target>, Vec<Skipped>), Box<dyn Error>> {
         if field("kind").is_some_and(|kind| kind != "repo") {
             continue;
         }
+        if let Some(retired) = field("retired_at") {
+            let day = retired.split('T').next().unwrap_or(retired);
+            skipped.push(Skipped {
+                name: name.to_string(),
+                reason: format!("retired in rigger's record on {day}"),
+            });
+            continue;
+        }
         if field("tier") == Some("out") {
             skipped.push(Skipped {
                 name: name.to_string(),
@@ -79,6 +87,7 @@ mod tests {
             {"name": "beta", "path": "/src/beta", "kind": "repo", "tier": null},
             {"name": "alpha", "path": "/src/alpha", "kind": "repo", "tier": "A"},
             {"name": "frozen", "path": "/src/frozen", "kind": "repo", "tier": "out"},
+            {"name": "gone", "path": "/src/gone", "kind": "repo", "tier": "out", "retired_at": "2026-10-13T17:41:26Z"},
             {"name": "line", "path": "service:line", "kind": "service", "tier": null}
         ]"#;
         let (targets, skipped) = parse(json).unwrap();
@@ -87,10 +96,16 @@ mod tests {
         assert_eq!(targets[0].path, PathBuf::from("/src/alpha"));
         assert_eq!(
             skipped,
-            [Skipped {
-                name: "frozen".into(),
-                reason: "out of the line in rigger's record".into()
-            }]
+            [
+                Skipped {
+                    name: "frozen".into(),
+                    reason: "out of the line in rigger's record".into()
+                },
+                Skipped {
+                    name: "gone".into(),
+                    reason: "retired in rigger's record on 2026-10-13".into()
+                }
+            ]
         );
     }
 

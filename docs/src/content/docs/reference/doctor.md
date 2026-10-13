@@ -251,7 +251,7 @@ tally       2024     1.88  22    10.34.6    on the standard  2 days ago
 `--all` examines every project in [rigger](https://github.com/lacodda/rigger)'s
 record - the one list of which projects are yours and where each lives - rather
 than every directory that happens to sit beside the others. A project the
-record keeps out of the line is named as not examined; a path the record has
+record has retired or keeps out of the line is named as not examined; a path the record has
 that is not there fails its row. Without rigger, name the repositories instead.
 
 ### The stack
