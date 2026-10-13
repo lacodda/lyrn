@@ -1,0 +1,19 @@
+Nothing from the computer a repository was written on belongs in it. A path
+copied from a terminal carries the account it was copied on; a script that
+finds its files by an absolute path works on one machine and tells everyone
+else where its author keeps their projects.
+
+The line found its asset exporters reading every product's assets/ by the full
+path into the projects directory, and a test reading the brand registry from
+the owner's notes by the owner's path. Each worked on the one machine it was
+written on, so nothing failed, and each was public.
+
+What counts is decided by this machine rather than guessed: the home of its
+account in any spelling (C:\Users\<you>, /c/Users/<you>, /home/<you>), a path
+into the directory the repository lives in that names something actually
+there, and the machine's own name. A made-up example path names nothing on
+this computer and is left alone. On a CI runner the rule does not apply: the
+runner's home and name are nobody's.
+
+Resolve paths from the script's own location or the repository's top, and use
+`~` or $HOME where a home is meant.

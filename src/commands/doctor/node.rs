@@ -8,7 +8,7 @@ use std::collections::BTreeMap;
 
 use regex::Regex;
 
-use super::{Finding, Outcome, Repo, plural, some_of};
+use super::{Finding, Outcome, Repair, Repo, newline_of, plural, some_of};
 use crate::generate::Contents;
 use crate::model::Form;
 use crate::templates;
@@ -77,10 +77,14 @@ pub fn check(repo: &Repo) -> Outcome {
             continue;
         };
         match json.get("packageManager").and_then(|v| v.as_str()) {
-            None => findings.push(
-                Finding::warn(format!("{manifest} names no packageManager: CI and every machine use whatever pnpm they have"))
-                    .fix(format!("add `\"packageManager\": \"{}\"`", standard.package_manager)),
-            ),
+            None => {
+                let mut finding = Finding::warn(format!("{manifest} names no packageManager: CI and every machine use whatever pnpm they have"))
+                    .fix(format!("add `\"packageManager\": \"{}\"`", standard.package_manager));
+                if let Some(pinned) = with_package_manager(&text, &standard.package_manager) {
+                    finding = finding.repair(Repair::new(manifest.clone(), pinned, format!("pins {}", standard.package_manager)));
+                }
+                findings.push(finding);
+            }
             Some(pinned) => {
                 let major = pinned
                     .strip_prefix("pnpm@")
@@ -171,6 +175,28 @@ pub fn check(repo: &Repo) -> Outcome {
     })
 }
 
+/// The manifest with `packageManager` as its last field, written the way the
+/// file writes its others - its indentation, its line endings - so the diff
+/// is the one line. `None` if the result would not parse.
+fn with_package_manager(text: &str, package_manager: &str) -> Option<String> {
+    let end = text.rfind('}')?;
+    let before = text[..end].trim_end();
+    let newline = newline_of(text);
+    let indent: String = text
+        .lines()
+        .nth(1)
+        .map(|line| line.chars().take_while(|c| c.is_whitespace()).collect())
+        .filter(|indent: &String| !indent.is_empty())
+        .unwrap_or_else(|| "  ".to_string());
+    let comma = if before.ends_with('{') { "" } else { "," };
+    let pinned = format!(
+        "{before}{comma}{newline}{indent}\"packageManager\": \"{package_manager}\"{newline}{}",
+        &text[end..]
+    );
+    let json: serde_json::Value = serde_json::from_str(&pinned).ok()?;
+    (json.get("packageManager")?.as_str()? == package_manager).then_some(pinned)
+}
+
 fn push_once(files: &mut Vec<String>, file: &str) {
     if !files.iter().any(|f| f == file) {
         files.push(file.to_string());
@@ -178,7 +204,7 @@ fn push_once(files: &mut Vec<String>, file: &str) {
 }
 
 /// `22`, `22.x`, `'22.12'` and `v22` are major 22; `lts/*` has none.
-fn major(version: &str) -> Option<u32> {
+pub(super) fn major(version: &str) -> Option<u32> {
     let version = version.trim().trim_start_matches(['v', '^', '~', '>', '=']);
     let end = version.find(|c: char| !c.is_ascii_digit()).unwrap_or(version.len());
     version[..end].parse().ok()
@@ -194,6 +220,25 @@ mod tests {
         let standard = standard();
         assert!(standard.package_manager.starts_with(&format!("pnpm@{}.", standard.pnpm_major)), "{standard:?}");
         assert!(standard.node_major >= 20, "{standard:?}");
+    }
+
+    #[test]
+    fn the_pin_is_added_as_the_file_writes_its_fields() {
+        let pretty = "{\r\n    \"name\": \"site\",\r\n    \"private\": true\r\n}\r\n";
+        assert_eq!(
+            with_package_manager(pretty, "pnpm@10.34.5").unwrap(),
+            "{\r\n    \"name\": \"site\",\r\n    \"private\": true,\r\n    \"packageManager\": \"pnpm@10.34.5\"\r\n}\r\n"
+        );
+        let one_line = "{ \"name\": \"site\" }\n";
+        assert_eq!(
+            with_package_manager(one_line, "pnpm@10.34.5").unwrap(),
+            "{ \"name\": \"site\",\n  \"packageManager\": \"pnpm@10.34.5\"\n}\n"
+        );
+        assert_eq!(
+            with_package_manager("{}", "pnpm@10.34.5").unwrap(),
+            "{\n  \"packageManager\": \"pnpm@10.34.5\"\n}"
+        );
+        assert_eq!(with_package_manager("not json", "pnpm@10.34.5"), None);
     }
 
     #[test]

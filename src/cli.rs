@@ -86,12 +86,25 @@ pub struct InitArgs {
 
 #[derive(clap::Args)]
 pub struct DoctorArgs {
-    /// The repository to examine; defaults to the one the current directory
-    /// is in
-    pub path: Option<PathBuf>,
+    /// The repositories to examine; defaults to the one the current directory
+    /// is in. More than one is reported as a table
+    #[arg(value_name = "PATH", conflicts_with = "all")]
+    pub paths: Vec<PathBuf>,
+
+    /// Examine every project in rigger's record, as a table
+    #[arg(long)]
+    pub all: bool,
+
+    /// Print one JSON document instead of the report
+    #[arg(long)]
+    pub json: bool,
+
+    /// Write the repairs the findings carry, then examine again
+    #[arg(long)]
+    pub fix: bool,
 
     /// Say why a rule exists and how to satisfy it, instead of examining
-    #[arg(long, value_name = "RULE")]
+    #[arg(long, value_name = "RULE", conflicts_with_all = ["paths", "all", "json", "fix"])]
     pub explain: Option<crate::commands::doctor::Rule>,
 }
 

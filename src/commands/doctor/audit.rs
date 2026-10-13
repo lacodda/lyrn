@@ -9,7 +9,7 @@
 use std::collections::BTreeSet;
 
 use super::workflows::{Job, Step, join_dir, normalize_dir};
-use super::{Finding, Outcome, Repo, plural};
+use super::{Finding, Outcome, Repair, Repo, is_test_material, plural};
 
 /// A lockfile kind, and how its audit is recognised.
 #[derive(Debug, Clone, Copy, PartialEq, Eq, PartialOrd, Ord)]
@@ -38,14 +38,16 @@ impl Ecosystem {
     }
 }
 
-/// Directories nothing ships from: a lockfile there belongs to a test.
-const NOT_SHIPPED: &[&str] = &["fixtures", "testdata", "__fixtures__", "node_modules"];
+/// The workflow the docs form writes for its site: what a site under docs/
+/// that nothing audits is given by `--fix`.
+const DOCS_AUDIT: &str = ".github/workflows/docs-audit.yml";
 
 pub fn check(repo: &Repo) -> Outcome {
     let lockfiles: Vec<(&str, Ecosystem)> = repo
         .files
         .iter()
-        .filter(|f| !f.split('/').any(|part| NOT_SHIPPED.contains(&part)))
+        // A lockfile in a test's material locks nothing that ships.
+        .filter(|f| !is_test_material(f))
         .filter_map(|f| Ecosystem::of(f).map(|e| (f.as_str(), e)))
         .collect();
     if lockfiles.is_empty() {
@@ -69,7 +71,15 @@ pub fn check(repo: &Repo) -> Outcome {
         } else {
             format!("a job running `{}` with `working-directory: {dir}`", ecosystem.command())
         };
-        findings.push(Finding::fail(format!("{lockfile}: no workflow audits it")).fix(fix));
+        let mut finding = Finding::fail(format!("{lockfile}: no workflow audits it")).fix(fix);
+        if *lockfile == "docs/pnpm-lock.yaml" && !repo.root.join(DOCS_AUDIT).exists() {
+            finding = finding.repair(Repair::new(
+                DOCS_AUDIT,
+                include_str!("../../templates/docs/github/docs-audit.yml.tmpl"),
+                "audits the documentation site's packages, as the docs form does",
+            ));
+        }
+        findings.push(finding);
     }
 
     Outcome::from_findings(findings, || format!("{} audited", plural(lockfiles.len(), "lockfile", "lockfiles")))

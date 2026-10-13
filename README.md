@@ -56,6 +56,9 @@ lyrn doctor: ~/demo-app, a `spa` project on standard 2026.10
 ✓ standard   all 19 files of the `spa` standard
 ✓ readme     the longest block is 18 words, in 25 lines
 ✓ mark       a mark of its own
+✓ assets     three levels in assets/, 1 copy or icon in place
+✓ language   44 text files in English, translations in their places
+✓ private    nothing from this computer in 44 text files
 ✓ actions    6 actions in 2 workflows, none retired or behind the standard
 - msrv       not a Rust project
 ✓ node       pnpm 10 and Node 22+ across 1 project
@@ -64,12 +67,14 @@ lyrn doctor: ~/demo-app, a `spa` project on standard 2026.10
 ✓ authors    1 commit, all by Kirill Lakhtachev <lahtachev@gmail.com>
 ✓ identity   commits as `Kirill Lakhtachev <lahtachev@gmail.com>`, the global identity; the global excludes file keeps assistant files out
 
-9 passed, 1 not applicable
+12 passed, 1 not applicable
+stack: node 22 · pnpm 10.34.6 · actions on the standard · updated today
 ```
 
 On an older repository the same command says what is off - a retired action,
-a lockfile nobody audits, an old alias in the history - with the fix for each,
-and `lyrn doctor --explain <rule>` says why the rule exists.
+a lockfile nobody audits, an old alias in the history - with the fix for each;
+`--fix` writes the safe ones, `--all` holds every repository you have to the
+standard in one table, and `lyrn doctor --explain <rule>` says why it exists.
 
 ## Install
 
@@ -83,7 +88,7 @@ $ npm install -g lyrn          # or: cargo install lyrn
 $ lyrn new <name> [options]      # a project in a directory of its own
 $ lyrn init [path] [options]     # the same, in a directory that already exists
 $ lyrn adopt [path]              # the standard's missing files, into an old repository
-$ lyrn doctor [path]             # what is off against the standard, and why each rule exists
+$ lyrn doctor [path...] [--fix]  # what is off against the standard, why, and the safe repairs
 $ lyrn forms                     # the forms, their add-ons, and your own templates
 $ lyrn template check [path]     # hold a template to what lyrn accepts
 ```
@@ -177,7 +182,7 @@ More forms — egui — follow in 2.x.
 v2.11.0, in daily use. All nine forms work and pass their own `lyrn doctor`,
 each generated and put through its gate on Linux, macOS and Windows on every
 push; `lyrn adopt` brings an older repository up to the standard, and
-`lyrn doctor` says what is still off and why. What landed in each version:
+`lyrn doctor --all` says what is still off across all of them. What landed in each version:
 [CHANGELOG](https://github.com/lacodda/lyrn/blob/main/CHANGELOG.md).
 
 ## Migrating from 1.x

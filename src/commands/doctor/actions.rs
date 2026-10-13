@@ -185,7 +185,7 @@ fn is(action: &str, named: &str) -> bool {
 }
 
 /// `v4`, `v4.1.2` and `4` are major 4; a branch or a commit has none.
-fn major_of(version: &str) -> Option<u32> {
+pub(super) fn major_of(version: &str) -> Option<u32> {
     let digits = version.strip_prefix('v').unwrap_or(version);
     let end = digits.find(|c: char| !c.is_ascii_digit()).unwrap_or(digits.len());
     if end == 0 || (end < digits.len() && !digits[end..].starts_with('.')) {

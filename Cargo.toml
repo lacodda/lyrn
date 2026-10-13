@@ -43,6 +43,10 @@ heck = "0.5.0"
 # them differently from the tool they were written for.
 liquid = "0.26.11"
 liquid-core = "0.26.11"
+# Decodes the images inside an .ico, so `doctor` can tell which level of the
+# mark each one is by its pixels, and so the tests can hold the placeholder
+# mark to the same rule.
+png = "0.18.1"
 # A cargo-generate placeholder may carry a `regex` its answer has to match.
 regex = "1.13.1"
 # Asks GitHub whether a template's tag passed its CI. Blocking and rustls, as
@@ -60,10 +64,6 @@ yaml-rust2 = { version = "0.13.0", default-features = false }
 
 [dev-dependencies]
 assert_cmd = "2.2.2"
-# Decodes the placeholder icon so `tests/placeholder_icon.rs` can hold it to
-# the line's level rule by its pixels. A dev-dependency only: nothing lyrn
-# ships reads an image.
-image = { version = "0.25.10", default-features = false, features = ["png"] }
 predicates = "3.1.4"
 
 # Line-table debug info keeps backtraces readable while cutting the .pdb weight

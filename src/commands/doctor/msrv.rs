@@ -10,7 +10,7 @@ use super::{Finding, Outcome, Repo};
 
 /// The manifests a repository's Rust lives in: the top, and a desktop app's
 /// shell.
-const MANIFESTS: &[&str] = &["Cargo.toml", "src-tauri/Cargo.toml"];
+pub(super) const MANIFESTS: &[&str] = &["Cargo.toml", "src-tauri/Cargo.toml"];
 
 pub fn check(repo: &Repo) -> Outcome {
     let manifests: Vec<&str> = MANIFESTS.iter().copied().filter(|m| repo.has_file(m) || repo.root.join(m).is_file()).collect();
@@ -75,7 +75,7 @@ pub fn check(repo: &Repo) -> Outcome {
 
 /// `rust-version` of a manifest, following `rust-version.workspace = true` to
 /// the workspace at the top.
-fn declared_version(repo: &Repo, manifest: &str) -> Result<Option<String>, String> {
+pub(super) fn declared_version(repo: &Repo, manifest: &str) -> Result<Option<String>, String> {
     let text = repo.read_text(manifest).ok_or_else(|| "it cannot be read".to_string())?;
     let table: toml::Table = toml::from_str(&text).map_err(|e| e.to_string())?;
     let workspace_version = || -> Option<String> {
@@ -141,7 +141,7 @@ fn toolchain_of(job: &Job) -> Toolchain {
 }
 
 /// Versions by their numbers: `1.9` is older than `1.85`.
-fn compare(a: &str, b: &str) -> std::cmp::Ordering {
+pub(super) fn compare(a: &str, b: &str) -> std::cmp::Ordering {
     let parts = |v: &str| -> Vec<u64> { v.split('.').take(2).map(|p| p.parse().unwrap_or(0)).collect() };
     parts(a).cmp(&parts(b))
 }

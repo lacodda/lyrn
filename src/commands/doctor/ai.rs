@@ -10,7 +10,7 @@
 use std::collections::BTreeSet;
 
 use super::git::{Git, Identity};
-use super::{Finding, Outcome, Repo, plural, some_of};
+use super::{Finding, Outcome, Repair, Repo, newline_of, plural, some_of};
 use crate::templates::community;
 
 pub fn check(repo: &Repo) -> Outcome {
@@ -32,7 +32,12 @@ pub fn check(repo: &Repo) -> Outcome {
         };
         findings.push(
             Finding::fail(format!("{what}: a clone on a machine without a global excludes file commits them"))
-                .fix("end .gitignore with the standard's block - every `lyrn new` project's .gitignore ends with it"),
+                .fix("end .gitignore with the standard's block - every `lyrn new` project's .gitignore ends with it")
+                .repair(Repair::new(
+                    ".gitignore",
+                    with_block(&gitignore, &missing),
+                    "ends with the standard's block of assistant files",
+                )),
         );
     }
 
@@ -88,6 +93,38 @@ pub fn check(repo: &Repo) -> Outcome {
     Outcome::from_findings(findings, || {
         "no assistant files tracked or in the history, no stamps, .gitignore keeps them out".to_string()
     })
+}
+
+/// `.gitignore` ended with the standard's block: its comment, and the
+/// patterns it does not have yet. A file shipped on purpose is let back in by
+/// a `!` line, and a pattern added after that line would shut it out again,
+/// so such lines are repeated after the block.
+fn with_block(gitignore: &str, missing: &[String]) -> String {
+    let newline = newline_of(gitignore);
+    let mut out = gitignore.to_string();
+    if !out.is_empty() && !out.ends_with('\n') {
+        out.push_str(newline);
+    }
+    if !out.is_empty() {
+        out.push_str(newline);
+    }
+    let patterns = community::assistant_patterns();
+    for line in community::ASSISTANT_BLOCK.lines() {
+        let trimmed = line.trim();
+        if trimmed.starts_with('#') || missing.iter().any(|m| m == trimmed) {
+            out.push_str(line);
+            out.push_str(newline);
+        }
+    }
+    for line in gitignore.lines() {
+        let Some(path) = line.trim().strip_prefix('!') else { continue };
+        let path = path.trim_start_matches('/');
+        if patterns.iter().any(|p| matches(p, path)) {
+            out.push_str(line.trim());
+            out.push_str(newline);
+        }
+    }
+    out
 }
 
 /// Whether the repository's own ignore rules let `path` in by name: the
@@ -192,6 +229,25 @@ mod tests {
         assert!(matches(".github/copilot-instructions.md", ".github/copilot-instructions.md"));
         assert!(!matches(".github/copilot-instructions.md", "docs/.github/copilot-instructions.md"));
         assert!(!matches("AGENTS.md", "docs/AGENTS.md.bak"));
+    }
+
+    #[test]
+    fn the_block_is_added_once_and_a_shipped_file_stays_shipped() {
+        let missing: Vec<String> = community::assistant_patterns()
+            .iter()
+            .filter(|p| **p != ".claude/")
+            .map(|p| p.to_string())
+            .collect();
+        let before = "target/\r\n.claude/\r\n!registry/files/AGENTS.md\r\n";
+        let after = with_block(before, &missing);
+        assert!(after.starts_with(before), "{after}");
+        assert_eq!(after.matches(".claude/").count(), 1, "a pattern already there is not repeated:\n{after}");
+        assert!(after.contains("\r\nCLAUDE.md\r\n"), "the file's own line endings are kept:\n{after}");
+        // The file shipped on purpose is let back in after the block shuts it out.
+        assert!(after.ends_with("\r\nopenspec/\r\n!registry/files/AGENTS.md\r\n"), "{after}");
+        // A repository without a .gitignore gets the block alone.
+        let all: Vec<String> = community::assistant_patterns().iter().map(|p| p.to_string()).collect();
+        assert_eq!(with_block("", &all), community::ASSISTANT_BLOCK.trim_start());
     }
 
     #[test]

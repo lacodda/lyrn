@@ -371,6 +371,9 @@ fn explain_says_why_and_where_to_read_more() {
         "standard",
         "readme",
         "mark",
+        "assets",
+        "language",
+        "private",
         "actions",
         "msrv",
         "node",
@@ -409,4 +412,348 @@ fn a_directory_inside_a_repository_examines_the_whole_of_it() {
 
     let (report, _) = machine.doctor(&root.join("src"));
     assert!(report.contains("Cargo.toml declares no rust-version"), "{report}");
+}
+
+/// A directory made canonical before anything is put in it, so the path a
+/// file names and the path git reports are the same spelling: no `\\?\`, no
+/// 8.3 short names on Windows, no `/private` behind `/var` on macOS.
+fn canonical_dir(dir: &tempfile::TempDir) -> PathBuf {
+    let path = fs::canonicalize(dir.path()).unwrap();
+    let text = path.display().to_string();
+    PathBuf::from(text.strip_prefix(r"\\?\").unwrap_or(&text))
+}
+
+/// A square PNG of one colour.
+fn png_of(size: u32, rgba: [u8; 4]) -> Vec<u8> {
+    let mut out = Vec::new();
+    {
+        let mut encoder = png::Encoder::new(&mut out, size, size);
+        encoder.set_color(png::ColorType::Rgba);
+        encoder.set_depth(png::BitDepth::Eight);
+        let mut writer = encoder.write_header().unwrap();
+        let data: Vec<u8> = (0..size * size).flat_map(|_| rgba).collect();
+        writer.write_image_data(&data).unwrap();
+    }
+    out
+}
+
+/// An `.ico` of these images, in this order.
+fn ico_of(images: &[(u32, Vec<u8>)]) -> Vec<u8> {
+    let mut out = vec![0, 0, 1, 0];
+    out.extend_from_slice(&(images.len() as u16).to_le_bytes());
+    let mut offset = 6 + 16 * images.len();
+    for (size, image) in images {
+        let side = if *size >= 256 { 0 } else { *size as u8 };
+        out.extend_from_slice(&[side, side, 0, 0, 1, 0, 32, 0]);
+        out.extend_from_slice(&(image.len() as u32).to_le_bytes());
+        out.extend_from_slice(&(offset as u32).to_le_bytes());
+        offset += image.len();
+    }
+    for (_, image) in images {
+        out.extend_from_slice(image);
+    }
+    out
+}
+
+/// The sizes an `.ico` lists, in its own order.
+fn ico_sizes(ico: &[u8]) -> Vec<u32> {
+    let count = u16::from_le_bytes([ico[4], ico[5]]) as usize;
+    (0..count)
+        .map(|i| if ico[6 + 16 * i] == 0 { 256 } else { u32::from(ico[6 + 16 * i]) })
+        .collect()
+}
+
+/// The line's plate, under M and L, and a product's colour, filling S.
+const PLATE: [u8; 4] = [0x1B, 0x21, 0x26, 255];
+const TILE: [u8; 4] = [0x6D, 0x7B, 0xF2, 255];
+
+/// A repository of the line's lessons about the mark: the three masters, a
+/// site's favicon a version behind, an `.ico` listed smallest first.
+fn repository_with_a_stale_mark(machine: &Machine, root: &Path) {
+    write(root, "README.md", "# demo\n\n> A demo.\n");
+    write(root, ".gitignore", "target/\n");
+    write(root, "assets/logo.svg", "<svg><!-- L --></svg>\n");
+    write(root, "assets/logo-m.svg", "<svg><!-- M --></svg>\n");
+    write(root, "assets/logo-s.svg", "<svg><!-- S --></svg>\n");
+    write(root, "docs/public/favicon.svg", "<svg><!-- last month's S --></svg>\n");
+    write(root, "docs/package.json", "{\n  \"name\": \"demo-docs\",\n  \"private\": true\n}\n");
+    write(root, "docs/pnpm-lock.yaml", "");
+    let ico = ico_of(&[
+        (16, png_of(16, TILE)),
+        (24, png_of(24, TILE)),
+        (32, png_of(32, PLATE)),
+        (48, png_of(48, PLATE)),
+        (256, png_of(256, PLATE)),
+    ]);
+    fs::write(root.join("assets/icon.ico"), ico).unwrap();
+    machine.git(root, &["init", "--quiet"]);
+    machine.commit(root, "feat: start", None);
+}
+
+#[test]
+fn many_repositories_are_a_table_and_json_is_one_document() {
+    let machine = Machine::new();
+    let dir = tempfile::tempdir().unwrap();
+    let good = dir.path().join("good");
+    machine
+        .lyrn()
+        .args([
+            "new",
+            "good",
+            "--form",
+            "cli",
+            "--yes",
+            "--no-hooks",
+            "--accent",
+            "#6D7BF2",
+            "--repo",
+            "owner/good",
+            "--path",
+        ])
+        .arg(&good)
+        .assert()
+        .success();
+    write(&good, "Cargo.lock", "");
+    machine.git(&good, &["init", "--quiet"]);
+    machine.commit(&good, "feat: start", None);
+    let bad = dir.path().join("bad");
+    fs::create_dir_all(&bad).unwrap();
+    repository_with_a_stale_mark(&machine, &bad);
+
+    let out = machine.lyrn().arg("doctor").arg(&good).arg(&bad).output().unwrap();
+    let report = String::from_utf8(out.stdout).unwrap();
+    assert!(!out.status.success(), "one of them fails:\n{report}");
+    assert!(report.starts_with("lyrn doctor: 2 repositories\n"), "{report}");
+    let header = report.lines().find(|l| l.trim_start().starts_with("standard readme")).unwrap_or_default();
+    let names: Vec<&str> = header.split_whitespace().collect();
+    assert_eq!(
+        names,
+        [
+            "standard",
+            "readme",
+            "mark",
+            "assets",
+            "language",
+            "private",
+            "actions",
+            "msrv",
+            "node",
+            "audit",
+            "ai-traces",
+            "authors",
+            "identity"
+        ]
+    );
+    let row = |name: &str| report.lines().find(|l| l.starts_with(&format!("{name} "))).unwrap_or_default().to_string();
+    assert!(!row("good").contains('✗') && !row("good").contains('!'), "{report}");
+    // `assets` is the fourth column, and the stale favicon fails it.
+    let bad_row = row("bad");
+    let marks: Vec<&str> = bad_row.split_whitespace().skip(1).collect();
+    assert_eq!(marks[3], "✗", "{report}");
+    assert!(report.contains("1 fails, 1 passes; `lyrn doctor --fix` puts 5 findings right"), "{report}");
+    assert!(
+        report
+            .lines()
+            .any(|l| l.starts_with("stack ") && l.contains("edition") && l.contains("updated")),
+        "{report}"
+    );
+    assert!(report.lines().any(|l| l.starts_with("standard ") && l.contains("weekly")), "{report}");
+
+    // The same examination as one document.
+    let out = machine.lyrn().args(["doctor", "--json"]).arg(&good).arg(&bad).output().unwrap();
+    let document: serde_json::Value = serde_json::from_slice(&out.stdout).unwrap();
+    let repositories = document["repositories"].as_array().unwrap();
+    assert_eq!(repositories.len(), 2);
+    assert_eq!(repositories[0]["name"], "good");
+    assert_eq!(repositories[0]["result"], "pass");
+    assert_eq!(repositories[1]["result"], "fail");
+    let rules = repositories[1]["rules"].as_array().unwrap();
+    assert_eq!(rules.len(), 13);
+    let assets = rules.iter().find(|r| r["rule"] == "assets").unwrap();
+    assert_eq!(assets["result"], "fail");
+    let favicon = assets["findings"]
+        .as_array()
+        .unwrap()
+        .iter()
+        .find(|f| f["what"].as_str().unwrap().contains("favicon"))
+        .unwrap();
+    assert_eq!(favicon["repair"]["path"], "docs/public/favicon.svg");
+    assert!(document["standard"]["pnpm"].as_str().unwrap().starts_with("10."), "{document}");
+
+    // One repository is the same shape: whatever reads it reads one form.
+    let out = machine.lyrn().args(["doctor", "--json"]).arg(&good).output().unwrap();
+    let document: serde_json::Value = serde_json::from_slice(&out.stdout).unwrap();
+    assert_eq!(document["repositories"].as_array().unwrap().len(), 1);
+}
+
+#[test]
+fn fix_writes_the_repairs_and_examines_again() {
+    let machine = Machine::new();
+    let dir = tempfile::tempdir().unwrap();
+    let root = dir.path();
+    repository_with_a_stale_mark(&machine, root);
+
+    let (report, _) = machine.doctor(root);
+    for expected in [
+        ".gitignore does not keep out",
+        "docs/package.json names no packageManager",
+        "docs/pnpm-lock.yaml: no workflow audits it",
+        "docs/public/favicon.svg is not assets/logo-s.svg",
+        "assets/icon.ico lists its images 16, 24, 32, 48, 256",
+        "`lyrn doctor --fix` puts 5 findings right",
+    ] {
+        assert!(report.contains(expected), "the report does not say `{expected}`:\n{report}");
+    }
+
+    let out = machine.lyrn().args(["doctor", "--fix"]).arg(root).output().unwrap();
+    let report = String::from_utf8(out.stdout).unwrap();
+    for written in [
+        "Fixed:\n",
+        "  ✓ .gitignore: ends with the standard's block of assistant files\n",
+        "  ✓ docs/package.json: pins pnpm@",
+        "  ✓ .github/workflows/docs-audit.yml: audits the documentation site's packages",
+        "  ✓ docs/public/favicon.svg: copied from assets/logo-s.svg\n",
+        "  ✓ assets/icon.ico: put its largest image first\n",
+    ] {
+        assert!(report.contains(written), "the report does not say `{written}`:\n{report}");
+    }
+    // Examined again after writing: what was put right is no longer found.
+    for gone in [
+        "does not keep out",
+        "names no packageManager",
+        "no workflow audits it",
+        "is not assets/logo-s.svg",
+        "lists its images",
+    ] {
+        assert!(!report.contains(gone), "`{gone}` is still found after --fix:\n{report}");
+    }
+
+    // And the files say so themselves.
+    let gitignore = fs::read_to_string(root.join(".gitignore")).unwrap();
+    assert!(gitignore.starts_with("target/\n") && gitignore.ends_with("openspec/\n"), "{gitignore}");
+    let package: serde_json::Value = serde_json::from_str(&fs::read_to_string(root.join("docs/package.json")).unwrap()).unwrap();
+    assert!(package["packageManager"].as_str().unwrap().starts_with("pnpm@"));
+    assert!(root.join(".github/workflows/docs-audit.yml").is_file());
+    assert_eq!(
+        fs::read(root.join("docs/public/favicon.svg")).unwrap(),
+        fs::read(root.join("assets/logo-s.svg")).unwrap()
+    );
+    assert_eq!(ico_sizes(&fs::read(root.join("assets/icon.ico")).unwrap()), [256, 48, 32, 24, 16]);
+
+    // Nothing is left for a second run to write.
+    let out = machine.lyrn().args(["doctor", "--fix"]).arg(root).output().unwrap();
+    assert!(!String::from_utf8(out.stdout).unwrap().contains("Fixed:"));
+}
+
+#[test]
+fn an_icon_cut_from_one_level_fails_at_the_sizes_it_does_not_read() {
+    let machine = Machine::new();
+    let dir = tempfile::tempdir().unwrap();
+    let root = dir.path();
+    write(root, "assets/logo.svg", "<svg><!-- L --></svg>\n");
+    write(root, "assets/logo-m.svg", "<svg><!-- M --></svg>\n");
+    write(root, "assets/logo-s.svg", "<svg><!-- S --></svg>\n");
+    // The whole container from S, the way kilna and nooma once shipped it.
+    let ico = ico_of(&[
+        (256, png_of(256, TILE)),
+        (48, png_of(48, TILE)),
+        (32, png_of(32, TILE)),
+        (24, png_of(24, TILE)),
+        (16, png_of(16, TILE)),
+    ]);
+    fs::write(root.join("assets/icon.ico"), ico).unwrap();
+    fs::write(root.join("assets/apple-touch-icon.png"), png_of(180, TILE)).unwrap();
+    machine.git(root, &["init", "--quiet"]);
+    machine.commit(root, "feat: start", None);
+
+    let (report, _) = machine.doctor(root);
+    assert!(
+        report.contains("assets/icon.ico: the 256px, 48px, 32px images are the wrong level of the mark"),
+        "{report}"
+    );
+    assert!(report.contains("assets/apple-touch-icon.png is the filled S tile at 180px"), "{report}");
+}
+
+#[test]
+fn what_ships_speaks_english_and_translations_live_in_their_places() {
+    let machine = Machine::new();
+    let dir = tempfile::tempdir().unwrap();
+    let root = dir.path();
+    write(root, "src/lib.rs", "// Этот модуль считает слова в тексте\npub fn count() {}\n");
+    write(root, "README.md", "# demo\n\n> A demo that counts words.\n\nRun the сount command.\n");
+    write(root, "docs/ru/README.md", "Это перевод документации на русский язык.\n");
+    write(
+        root,
+        "tests/data.rs",
+        "#[test]\nfn t() {\n    assert_eq!(f(\"Это строка на русском языке\"), 1);\n}\n",
+    );
+    machine.git(root, &["init", "--quiet"]);
+    machine.commit(root, "feat: start", None);
+    machine.commit(root, "исправил сборку проекта", None);
+
+    let (report, _) = machine.doctor(root);
+    for expected in [
+        "✗ language",
+        "Cyrillic prose in 1 file: src/lib.rs:1",
+        "1 word typed partly in a Cyrillic layout: `сount` (README.md:5)",
+        "1 commit's subject is not written in English",
+    ] {
+        assert!(report.contains(expected), "the report does not say `{expected}`:\n{report}");
+    }
+    assert!(!report.contains("docs/ru/README.md") && !report.contains("tests/data.rs"), "{report}");
+}
+
+#[test]
+fn nothing_from_this_computer_is_let_into_the_repository() {
+    let machine = Machine::new();
+    let dir = tempfile::tempdir().unwrap();
+    let base = canonical_dir(&dir);
+    let projects = base.join("projects");
+    let root = projects.join("demo");
+    fs::create_dir_all(projects.join("other")).unwrap();
+    let home = base.join("Users").join("adalind");
+    fs::create_dir_all(&home).unwrap();
+
+    let other = projects.join("other").join("assets").display().to_string().replace('\\', "/");
+    let nowhere = projects.join("nowhere").join("assets").display().to_string().replace('\\', "/");
+    write(
+        &root,
+        "scripts/export.mjs",
+        &format!("const ASSETS = \"{other}\"\nconst EXAMPLE = \"{nowhere}\"\n"),
+    );
+    write(
+        &root,
+        "docs/notes.md",
+        "Copied from C:\\Users\\adalind\\Desktop and /home/adalind/src.\n\nBuilt on TESTBOX-7731.\n",
+    );
+    machine.git(&root, &["init", "--quiet"]);
+    machine.commit(&root, "feat: start", None);
+
+    let run = |ci: bool| {
+        let mut cmd = machine.lyrn();
+        cmd.env("USERPROFILE", &home)
+            .env("HOME", &home)
+            .env("COMPUTERNAME", "TESTBOX-7731")
+            .env("HOSTNAME", "TESTBOX-7731");
+        if ci {
+            cmd.env("CI", "true");
+        }
+        String::from_utf8(cmd.arg("doctor").arg(&root).output().unwrap().stdout).unwrap()
+    };
+    let report = run(false);
+    for expected in [
+        "✗ private",
+        "the home of `adalind`, this computer's account, in docs/notes.md:1",
+        "naming other - in scripts/export.mjs:1",
+        "`TESTBOX-7731`, this computer's name, in docs/notes.md:3",
+    ] {
+        assert!(report.contains(expected), "the report does not say `{expected}`:\n{report}");
+    }
+    assert!(
+        !report.contains("nowhere") && !report.contains("export.mjs:2"),
+        "a made-up place is not this computer:\n{report}"
+    );
+
+    // A runner's home and name are nobody's.
+    assert!(run(true).contains("- private    a CI runner's home and name are not yours"));
 }

@@ -67,6 +67,39 @@ fn entries(ico: &[u8]) -> Vec<Entry> {
     out
 }
 
+/// A decoded PNG, eight bits a channel with alpha.
+struct Rgba {
+    width: u32,
+    height: u32,
+    data: Vec<u8>,
+}
+
+impl Rgba {
+    fn decode(png: &[u8]) -> Rgba {
+        let mut decoder = png::Decoder::new(std::io::Cursor::new(png));
+        decoder.set_transformations(png::Transformations::normalize_to_color8() | png::Transformations::ALPHA);
+        let mut reader = decoder.read_info().expect("an embedded image is not a PNG");
+        let mut data = vec![0; reader.output_buffer_size().expect("a PNG of a size that fits")];
+        let frame = reader.next_frame(&mut data).expect("a PNG that decodes");
+        assert_eq!(frame.color_type, png::ColorType::Rgba, "the PNG did not come out as RGBA");
+        data.truncate(frame.buffer_size());
+        Rgba {
+            width: frame.width,
+            height: frame.height,
+            data,
+        }
+    }
+
+    fn dimensions(&self) -> (u32, u32) {
+        (self.width, self.height)
+    }
+
+    fn get_pixel(&self, x: u32, y: u32) -> [u8; 4] {
+        let at = ((y * self.width + x) * 4) as usize;
+        self.data[at..at + 4].try_into().expect("four channels")
+    }
+}
+
 /// The line's level boundary: at 27px and below, the outline collapses into
 /// noise and the filled tile is all that survives.
 const S_CEILING: u32 = 27;
@@ -78,12 +111,11 @@ const S_CEILING: u32 = 27;
 /// is graphite, so one pixel tells them apart - which is what the eye does at
 /// a glance, and what nobody was doing.
 fn is_filled(image: &[u8], expected_size: u32) -> bool {
-    let decoded = image::load_from_memory_with_format(image, image::ImageFormat::Png).expect("an embedded image is not a PNG");
-    let rgba = decoded.to_rgba8();
+    let rgba = Rgba::decode(image);
     let (width, height) = rgba.dimensions();
     assert_eq!(width, expected_size, "a {expected_size}px entry holds a {width}px image");
 
-    let sample = rgba.get_pixel(width / 4, height / 2).0;
+    let sample = rgba.get_pixel(width / 4, height / 2);
     assert!(sample[3] > 40, "the {expected_size}px image is transparent where the tile should be");
     u32::from(sample[0]) + u32::from(sample[1]) + u32::from(sample[2]) > 180
 }
@@ -163,8 +195,7 @@ fn the_sizes_windows_asks_for_are_there() {
 #[test]
 fn the_bundled_png_is_the_plated_mark() {
     let png = placeholder_png();
-    let decoded = image::load_from_memory_with_format(&png, image::ImageFormat::Png).expect("icon.png is not a PNG");
-    let rgba = decoded.to_rgba8();
+    let rgba = Rgba::decode(&png);
     assert_eq!(rgba.dimensions(), (512, 512), "icon.png is not 512px");
     assert!(!is_filled(&png, 512), "icon.png is the filled S tile at 512px, not the plated mark");
 }
@@ -179,16 +210,15 @@ fn the_bundled_png_is_the_plated_mark() {
 #[test]
 fn the_placeholder_is_drawn_in_the_lines_colours() {
     let png = placeholder_png();
-    let decoded = image::load_from_memory_with_format(&png, image::ImageFormat::Png).expect("icon.png is not a PNG");
-    let rgba = decoded.to_rgba8();
+    let rgba = Rgba::decode(&png);
 
     // Inside the hexagon, clear of the outline and of the glyph: the plate.
-    let plate = rgba.get_pixel(128, 256).0;
+    let plate = rgba.get_pixel(128, 256);
     assert_eq!([plate[0], plate[1], plate[2]], [0x1B, 0x21, 0x26], "the plate is not the line's #1B2126");
 
     // The outline, three quarters of the mark's colour over that plate. The
     // exact row is where the centre line crosses it; see the exporter.
-    let outline = rgba.get_pixel(56, 256).0;
+    let outline = rgba.get_pixel(56, 256);
     let expected: Vec<u8> = [0x8Eu32, 0x9A, 0xA3]
         .iter()
         .zip([0x1Bu32, 0x21, 0x26])

@@ -1,0 +1,19 @@
+Every product of the line speaks English first - its README, its docs, its
+comments, its messages - and a translation lives where translations go: a
+directory or a file named for its language, as docs/ru/, locales/ru.json or
+README.ru.md, or a directory of translations, as i18n/ or locales/.
+
+Text in another script is not by itself a finding. A product that handles
+Russian has Russian in its tests and in the examples its docs show, and that
+is data. What the rule looks for is prose: four words or more in a row in
+another script, outside the places its translations go. In a test's material
+- tests/, fixtures/, a *.test.ts, a Rust file below #[cfg(test)] - only the
+comments are read.
+
+It also looks for words typed partly in one keyboard layout and partly in the
+other. "command" whose first letter is the Cyrillic one reads as a word and
+is not one: search misses it and the spell checker skips it. lyrn's own changelog carried one for
+three years.
+
+Commit subjects in another language only warn: the changelog is made of them,
+and rewriting a shared history costs every clone.

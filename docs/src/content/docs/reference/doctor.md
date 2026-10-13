@@ -4,7 +4,8 @@ description: Hold a repository to the line's standard, and say what is off, how 
 ---
 
 ```console
-$ lyrn doctor [path]
+$ lyrn doctor [path...] [--fix] [--json]
+$ lyrn doctor --all [--fix] [--json]
 $ lyrn doctor --explain <rule>
 ```
 
@@ -12,7 +13,10 @@ Examines a repository - the one the current directory is in, or the one at
 `path` - against the line's standard, and prints one line per rule. Each rule is
 a lesson the line learnt the hard way: a release that could not run, a lockfile
 nobody audited, an old alias in a public history. A finding says what is wrong
-and how to put it right; `--explain` says why the rule exists at all.
+and how to put it right; `--explain` says why the rule exists at all. More than
+one repository, or [every one you have](#every-repository), is a
+[table](#many-repositories); `--fix` [writes the repairs](#repairs) the findings
+carry; `--json` says it all [as one document](#json).
 
 ```console
 $ lyrn doctor
@@ -21,6 +25,12 @@ lyrn doctor: ~/word-count, a `cli` project on standard 2026.10
 ✓ standard   all 21 files of the `cli` standard
 ✓ readme     the longest block is 15 words, in 38 lines
 ✓ mark       a mark of its own
+✓ assets     three levels in assets/, 4 copies and icons in place
+✓ language   64 text files in English, translations in their places
+✗ private
+    ✗ the home of `ada`, this computer's account, in docs/export-assets.mjs:8
+      → a path from the repository's top, or `~` and `$HOME` where a home is meant; in an example, a made-up name
+    why: lyrn doctor --explain private
 ✗ actions
     ✗ actions/checkout@v4 in release.yml: the standard is on v7
       → move to actions/checkout@v7, as the templates lyrn writes are
@@ -31,7 +41,7 @@ lyrn doctor: ~/word-count, a `cli` project on standard 2026.10
     why: lyrn doctor --explain msrv
 ! node
     ! docs/package.json names no packageManager: CI and every machine use whatever pnpm they have
-      → add `"packageManager": "pnpm@10.34.5"`
+      → add `"packageManager": "pnpm@10.34.6"`
     why: lyrn doctor --explain node
 ✗ audit
     ✗ docs/pnpm-lock.yaml: no workflow audits it
@@ -45,8 +55,11 @@ lyrn doctor: ~/word-count, a `cli` project on standard 2026.10
     why: lyrn doctor --explain authors
 ✓ identity   commits as `Ada Lovelace <ada@example.com>`, the global identity; the global excludes file keeps assistant files out
 
-4 failed, 1 to look at, 5 passed
+5 failed, 1 to look at, 7 passed; `lyrn doctor --fix` puts 2 findings right
+stack: edition 2024 · msrv 1.99 · node 22 · pnpm 10.33.0 (the standard is on 10.34.6) · actions 1 behind · updated 9 days ago, due
 ```
+
+The last line is the repository's [stack](#the-stack) beside the standard's.
 
 ## Failures and warnings
 
@@ -93,6 +106,45 @@ The project wears a mark of its own. `lyrn.toml` records `mark = "placeholder"`
 while it still wears the line's lambda on graphite, and the doctor warns until
 it says `chosen`.
 
+### assets
+
+Each level of the mark sits where its size calls for it: L from 64px up, M from
+28 to 63, S - the filled tile - at 27 and below. The masters are
+`assets/logo.svg`, `assets/logo-m.svg` and `assets/logo-s.svg`, and a mark
+with only the first fails: one drawing at every size is the defect itself.
+Copies are held to their masters byte for byte - a site's header
+(`src/assets/logo.svg`) to L, every `favicon.svg` to S, the documentation
+site's `apple-touch-icon.png` to the one in `assets/`. Each image inside an
+`.ico` is judged by how much of it is the line's plate, `#1B2126`: M and L
+stand on it, the S tile is filled with the product's colour, so a 48px image
+with no plate in it is the S tile where the plated mark belongs. The images
+are listed largest first - Tauri takes the first one as the window's icon -
+and an `.ico` without 16, 24, 32, 48 and 256 warns. A touch icon and
+`assets/logo-512.png` are drawn large and must be plated. Templates and test
+material are left out.
+
+### language
+
+What ships is written in English; another language lives where its
+translations go - a directory or file named for the language (`docs/ru/`,
+`locales/ru.json`, `README.ru.md`) or a directory of translations (`i18n/`,
+`locales/`). Text in another script is not by itself a finding: what fails is
+prose, four words or more in a row. In code only the comments are read, and
+what a comment quotes is a citation; in Markdown, code and emphasis are shown
+rather than said; JSON, CSV and the like are values. A word typed partly in a
+Cyrillic layout - `command` whose `c` is Cyrillic - fails anywhere outside a
+test: it looks right, and search and spelling miss it. Commit subjects in
+another language warn, since only a rewrite takes them out.
+
+### private
+
+Nothing from this computer: the home of its account in any spelling
+(`C:\Users\<you>`, `/c/Users/<you>`, `/home/<you>`), a path into the directory
+the repository lives in that names something actually there - a script that
+finds its assets by its author's absolute path - and the machine's own name. A
+made-up example path names nothing on this computer and passes. On CI the rule
+does not apply.
+
 ### actions
 
 No GitHub Action GitHub has retired or archived - `create-release`,
@@ -117,7 +169,7 @@ pnpm and Node at the majors the templates use. A project with a
 `pnpm-lock.yaml` pins `packageManager` to the line's pnpm major; a workflow's
 `setup-node` runs the line's Node or later; `pnpm/action-setup` is not asked
 for an older pnpm. No pin at all, a pin ahead of the line and `setup-node`
-without a version warn.
+without a version warn; `--fix` adds the missing pin.
 
 ### audit
 
@@ -127,7 +179,9 @@ by an audit job: `cargo deny check` or `cargo-deny-action` with advisories,
 `working-directory`, a job's `defaults`, `cd`, `--dir` or `--manifest-path`. A
 documentation site, a frontend folder and a desktop app's Rust shell each bring
 a lockfile of their own, and an audit of the top of the repository reads none
-of them. Lockfiles under `fixtures/` and `testdata/` are left out.
+of them. Lockfiles in a test's material - under `tests/`, `fixtures/`,
+`testdata/` - are left out. For a site under `docs/` that nothing audits,
+`--fix` writes the docs form's `docs-audit.yml`.
 
 ### ai-traces
 
@@ -138,7 +192,8 @@ purpose, such as a briefing it hands to the projects that use it, is
 un-ignored by name after the block: `!registry/files/AGENTS.md`. An assistant
 file anywhere in the history, and a commit message carrying an assistant's
 stamp - a `Co-authored-by` trailer naming one, a "Generated with" line, a
-session link - warn: taking them out is a rewrite of history.
+session link - warn: taking them out is a rewrite of history. `--fix` ends
+`.gitignore` with the patterns of the block it lacks.
 
 ### authors
 
@@ -167,9 +222,120 @@ assistant block; it fails when there is no identity at all. `lyrn new` takes
 the author for LICENSE and the manifests from the global identity for the same
 reason. On CI this rule is not applicable.
 
+## Many repositories
+
+Name more than one, and the report is a table: a mark per rule, a row per
+repository, then the stack of each beside the standard's. `lyrn doctor <path>`
+on one of them says what is off and how to put it right.
+
+```console
+$ lyrn doctor ../word-count ../tally
+lyrn doctor: 2 repositories
+
+            standard readme mark assets language private actions msrv node audit ai-traces authors identity
+word-count  ✓        ✓      ✓    ✓      ✓        ✗       ✗       ✗    !    ✗     ✓         ✗       ✓
+tally       ✓        ✓      ✓    ✓      ✓        ✓       ✓       ✓    ✓    ✓     ✓         ✓       ✓
+
+1 fails, 1 passes; `lyrn doctor --fix` puts 2 findings right
+`lyrn doctor <path>` says what is off in one of them, how to put it right and why
+
+stack       edition  msrv  node  pnpm       actions          updated
+standard    2024           22    10.34.6                     weekly
+word-count  2024     1.99  22    10.33.0*   1 behind*        9 days ago, due
+tally       2024     1.88  22    10.34.6    on the standard  2 days ago
+* behind the standard
+```
+
+### Every repository
+
+`--all` examines every project in [rigger](https://github.com/lacodda/rigger)'s
+record - the one list of which projects are yours and where each lives - rather
+than every directory that happens to sit beside the others. A project the
+record keeps out of the line is named as not examined; a path the record has
+that is not there fails its row. Without rigger, name the repositories instead.
+
+### The stack
+
+What each repository builds on - Rust's edition, the `rust-version` it promises
+(and a toolchain `rust-toolchain.toml` pins), the oldest Node its workflows set
+up, the oldest pnpm a `packageManager` pins, the actions on a major the
+standard has moved past - and when its dependencies were last brought up to
+date. That is a `chore(deps)` commit, or the first commit of a project, which
+starts on the stack of its day. The habit is to bring the stack up to date at
+the start of a version, once a week at most, and the doctor checks it by the
+fact: when the newest version started a week or more after the last update
+and shipped without one, it says that version skipped it. The stack is not a
+rule - a repository a pnpm release behind is not broken, and `node` and
+`actions` fail on their own when it is - but `*` marks who has fallen behind.
+
+## Repairs
+
+Some findings carry their own repair: the contents a file should have. The rule
+that finds the problem computes it, so `--fix` writes exactly what the report
+promised, then examines the repository again with the written files counted
+in. The report says how many findings `--fix` would put right. Only an edit
+that cannot change what the project does qualifies, and none of them runs git:
+
+- `.gitignore` gets the patterns of the assistant block it lacks, after which
+  a file shipped on purpose is let back in again by its `!` line;
+- a `package.json` beside a pnpm lockfile gets `packageManager`, written in
+  the file's own indentation and line endings;
+- a site's copy of the mark is copied from its master;
+- an `.ico` gets its images in order, largest first, the images untouched;
+- a site under `docs/` that nothing audits gets the docs form's
+  `docs-audit.yml`.
+
+A missing file of the standard is not a repair: [`lyrn adopt`](/reference/adopt/)
+adds those, with the tree shown first, since some of them change what CI runs.
+Review what `--fix` wrote with `git diff`, and commit it.
+
+## JSON
+
+`--json` prints one document, the same shape for one repository or many:
+
+```json
+{
+  "lyrn": "2.12.0",
+  "standard": { "edition": "2024", "node": 22, "pnpm": "10.34.6", "actions": { "actions/checkout": 7 } },
+  "repositories": [
+    {
+      "name": "word-count",
+      "path": "/home/ada/word-count",
+      "result": "fail",
+      "form": "cli",
+      "standard": "2026.10",
+      "rules": [
+        { "rule": "standard", "result": "pass", "text": "all 21 files of the `cli` standard", "findings": [] },
+        {
+          "rule": "node",
+          "result": "warn",
+          "findings": [
+            {
+              "level": "warn",
+              "what": "docs/package.json names no packageManager: ...",
+              "fix": "add `\"packageManager\": \"pnpm@10.34.6\"`",
+              "repair": { "path": "docs/package.json", "what": "pins pnpm@10.34.6" }
+            }
+          ]
+        }
+      ],
+      "fixed": [],
+      "stack": { "edition": "2024", "msrv": "1.99", "node": 22, "pnpm": "10.33.0", "behind": ["pnpm", "actions"] }
+    }
+  ],
+  "skipped": []
+}
+```
+
+A repository's `result` is `pass`, `warn`, `fail`, or `missing` when its
+directory is not there; a rule's is `pass`, `skip`, `warn` or `fail`.
+
 ## Options
 
 | Option | Default | What it does |
 | --- | --- | --- |
-| `[path]` | `.` | The repository to examine; a directory inside one examines all of it |
+| `[path...]` | `.` | The repositories to examine; a directory inside one examines all of it. More than one is a table |
+| `--all` | — | Examine every project in rigger's record |
+| `--fix` | — | Write the repairs the findings carry, then examine again |
+| `--json` | — | Print one JSON document instead of the report |
 | `--explain <rule>` | — | Say why the rule exists and how to satisfy it, instead of examining |

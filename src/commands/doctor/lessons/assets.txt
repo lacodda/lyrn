@@ -1,0 +1,20 @@
+The line's mark comes in three levels, chosen by the size it is drawn at: L,
+the plated mark with its metaphor, from 64px up; M, the plated mark with its
+code alone, from 28 to 63; S, the filled tile, at 27 and below, where nothing
+finer survives. Every product of the line has put the wrong level somewhere:
+a whole .ico cut from the S tile, so the desktop showed a coloured blob; the
+S tile in a site's header; a site's copy of the mark a version behind its
+master. Each was found by someone looking at a screen, months later.
+
+The rule reads the files instead. The masters are assets/logo.svg (L),
+assets/logo-m.svg (M) and assets/logo-s.svg (S). A site's header
+(src/assets/logo.svg) must be the L master byte for byte, a favicon.svg the S
+master, and every apple-touch-icon.png the one in assets/. Each image inside
+an .ico is judged by one pixel - a quarter across, halfway down, inside the
+hexagon and clear of the code - which is the dark plate for M and L and the
+product's colour for S. The images must be listed largest first: Windows
+picks by size, but Tauri takes the first one as the window's icon, and a
+title bar stretched out of 16 pixels is how kilna shipped once.
+
+`lyrn doctor --fix` copies the masters over stale copies and reorders an .ico.
+A wrong level inside an .ico is drawn again by the exporter in docs/.

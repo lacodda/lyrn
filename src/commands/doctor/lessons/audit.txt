@@ -11,7 +11,9 @@ The rule lists every tracked Cargo.lock, pnpm-lock.yaml and package-lock.json
 and fails each one no workflow audits: `cargo deny check` or cargo-deny-action
 (with the advisories check), `cargo audit`, `pnpm audit` or `npm audit` run in
 its directory - by `working-directory`, a job's defaults, `cd`, `--dir` or
-`--manifest-path`. Lockfiles under fixtures/ and testdata/ are left out.
+`--manifest-path`. Lockfiles in a test's material - under tests/, fixtures/,
+testdata/ - are left out.
 
 A documentation site added with `lyrn new <name> --form docs` brings its own
-docs-audit.yml.
+docs-audit.yml, and `lyrn doctor --fix` writes the same file for a site under
+docs/ that has none.
