@@ -1,5 +1,18 @@
 # Changelog
 
+## 🎉 [2.13.0] - 2026-10-19
+
+### ✨ Features
+
+- Run the line's rituals as commands
+
+### 🛠️ Bug Fixes
+
+- Say so when none of a workflow's jobs was chosen
+- Describe the site in the manifest's words
+- Count every directory a matrix job audits
+- Take rustls 0.23.46 for its advisory
+
 ## 🎉 [2.12.0] - 2026-10-13
 
 ### ✨ Features
