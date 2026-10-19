@@ -27,6 +27,18 @@ pub enum Command {
     Adopt(Box<AdoptArgs>),
     /// Hold a repository to the line's standard, and say what is off and why
     Doctor(DoctorArgs),
+    /// Hold the shopfronts to each other: versions, descriptions, commands, the site's address
+    Check(CheckArgs),
+    /// Run here the CI a push of this commit would start, before pushing it
+    Ci(CiArgs),
+    /// Start a stage: what it is, what stands in its way, and a line in rigger's record
+    Stage(PathArgs),
+    /// Where the repository stands: the branch, the release, its CI, the stack, the stage
+    Status(PathArgs),
+    /// Where the version is written, and where it went: tags and registries
+    Versions(PathArgs),
+    /// When the stack was last brought up to date, and which dependencies are behind
+    Deps(PathArgs),
     /// List the forms a project can take, and your own templates
     Forms,
     /// Check a template, or write a built-in form out as one
@@ -109,6 +121,49 @@ pub struct DoctorArgs {
 }
 
 #[derive(clap::Args)]
+pub struct CheckArgs {
+    /// The repositories to check; defaults to the one the current directory
+    /// is in. More than one is reported as a table
+    #[arg(value_name = "PATH", conflicts_with = "all")]
+    pub paths: Vec<PathBuf>,
+
+    /// Check every project in rigger's record, as a table
+    #[arg(long)]
+    pub all: bool,
+
+    /// Print one JSON document instead of the report
+    #[arg(long)]
+    pub json: bool,
+
+    /// Say why a check exists and how to satisfy it, instead of checking
+    #[arg(long, value_name = "CHECK", conflicts_with_all = ["paths", "all", "json"])]
+    pub explain: Option<crate::commands::check::Shop>,
+}
+
+#[derive(clap::Args)]
+pub struct CiArgs {
+    /// Only these jobs, by their id in the workflow; defaults to every job
+    /// the push would start
+    #[arg(value_name = "JOB")]
+    pub jobs: Vec<String>,
+
+    /// The repository; defaults to the one the current directory is in
+    #[arg(long, value_name = "PATH")]
+    pub path: Option<PathBuf>,
+
+    /// Say what would run and what would not, and run nothing
+    #[arg(long)]
+    pub list: bool,
+}
+
+/// A command that reads one repository.
+#[derive(clap::Args)]
+pub struct PathArgs {
+    /// The repository; defaults to the one the current directory is in
+    pub path: Option<PathBuf>,
+}
+
+#[derive(clap::Args)]
 pub struct AdoptArgs {
     /// The repository to adopt; defaults to the current directory
     pub path: Option<PathBuf>,
@@ -181,7 +236,7 @@ pub struct ProjectArgs {
 
 /// Who a project is: the things every file of the standard is written with,
 /// whether the project is new or adopted.
-#[derive(clap::Args, Default)]
+#[derive(clap::Args, Default, Clone)]
 pub struct IdentityArgs {
     /// The product's colour: a product of the line, or a `#rrggbb` value
     #[arg(long, value_name = "COLOUR")]

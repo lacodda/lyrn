@@ -4,10 +4,13 @@ mod generate;
 mod host;
 mod model;
 mod naming;
+mod registries;
 mod render;
 mod repo;
+mod rigger;
 mod template;
 mod templates;
+mod workflows;
 
 use std::process::ExitCode;
 
@@ -29,6 +32,20 @@ fn main() -> ExitCode {
             Ok(false) => return ExitCode::FAILURE,
             Err(e) => Err(e),
         },
+        cli::Command::Check(args) => match commands::check::run(args) {
+            Ok(true) => return ExitCode::SUCCESS,
+            Ok(false) => return ExitCode::FAILURE,
+            Err(e) => Err(e),
+        },
+        cli::Command::Ci(args) => match commands::ci::run(args) {
+            Ok(true) => return ExitCode::SUCCESS,
+            Ok(false) => return ExitCode::FAILURE,
+            Err(e) => Err(e),
+        },
+        cli::Command::Stage(args) => commands::stage::run(args),
+        cli::Command::Status(args) => commands::status::run(args),
+        cli::Command::Versions(args) => commands::versions::run(args),
+        cli::Command::Deps(args) => commands::deps::run(args),
         cli::Command::Forms => {
             list_forms();
             Ok(())

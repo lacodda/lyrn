@@ -76,6 +76,11 @@ a lockfile nobody audits, an old alias in the history - with the fix for each;
 `--fix` writes the safe ones, `--all` holds every repository you have to the
 standard in one table, and `lyrn doctor --explain <rule>` says why it exists.
 
+Before a release, `lyrn check` holds the shopfronts to each other - one
+version, one description, only commands that exist - and `lyrn ci` runs the CI
+the push would start on a clean copy of the commit, so a red run is seen here
+first.
+
 ## Install
 
 ```console
@@ -89,6 +94,12 @@ $ lyrn new <name> [options]      # a project in a directory of its own
 $ lyrn init [path] [options]     # the same, in a directory that already exists
 $ lyrn adopt [path]              # the standard's missing files, into an old repository
 $ lyrn doctor [path...] [--fix]  # what is off against the standard, why, and the safe repairs
+$ lyrn check [path...]           # the shopfronts held to each other: versions, descriptions, commands
+$ lyrn ci [job...]               # the CI a push of this commit would start, run here first
+$ lyrn stage                     # start a stage: what stands in its way, and a line in rigger's record
+$ lyrn status                    # where the repository stands, on one screen
+$ lyrn versions                  # where the version is written, and where it went
+$ lyrn deps                      # how old the stack is, and which dependencies are behind
 $ lyrn forms                     # the forms, their add-ons, and your own templates
 $ lyrn template check [path]     # hold a template to what lyrn accepts
 ```

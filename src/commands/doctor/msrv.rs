@@ -5,8 +5,8 @@
 //! newer API the promise is broken and nobody notices, so the standard pairs
 //! the number with a job that reads it from the manifest and builds on it.
 
-use super::workflows::Job;
 use super::{Finding, Outcome, Repo};
+use crate::workflows::Job;
 
 /// The manifests a repository's Rust lives in: the top, and a desktop app's
 /// shell.
@@ -149,7 +149,7 @@ pub(super) fn compare(a: &str, b: &str) -> std::cmp::Ordering {
 #[cfg(test)]
 mod tests {
     use super::*;
-    use crate::commands::doctor::workflows;
+    use crate::workflows;
 
     fn job_of(yaml: &str) -> Toolchain {
         let workflow = workflows::parse("ci.yml", yaml.to_string()).unwrap();

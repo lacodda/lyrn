@@ -20,7 +20,7 @@ mod ai;
 mod assets;
 mod audit;
 mod authors;
-mod git;
+pub mod git;
 mod ico;
 mod identity;
 mod language;
@@ -28,11 +28,9 @@ mod msrv;
 mod node;
 mod private;
 mod readme;
-mod registry;
 mod report;
-mod stack;
+pub mod stack;
 mod standard;
-mod workflows;
 
 use std::cell::OnceCell;
 use std::error::Error;
@@ -41,8 +39,9 @@ use std::path::{Path, PathBuf};
 use crate::cli::DoctorArgs;
 use crate::repo::Facts;
 
-use self::git::Git;
-use self::workflows::Workflow;
+pub use self::git::Git;
+pub use self::report::stack_line;
+use crate::workflows::{self, Workflow};
 
 /// Where `--explain` sends the reader for the whole page.
 const DOCS: &str = "https://lyrn.lacodda.com/reference/doctor/";
@@ -490,7 +489,7 @@ pub fn is_test_material(path: &str) -> bool {
 }
 
 /// Every rule's outcome for one repository.
-fn check_all(repo: &Repo) -> Vec<(Rule, Outcome)> {
+pub fn check_all(repo: &Repo) -> Vec<(Rule, Outcome)> {
     Rule::ALL.iter().map(|&rule| (rule, rule.check(repo))).collect()
 }
 
@@ -500,8 +499,12 @@ pub fn run(args: DoctorArgs) -> Result<bool, Box<dyn Error>> {
         return Ok(true);
     }
 
-    let (targets, skipped) = if args.all {
-        registry::line()?
+    let (targets, skipped): (Vec<report::Target>, _) = if args.all {
+        let (repositories, skipped) = crate::rigger::line()?;
+        (
+            repositories.into_iter().map(|(name, path)| report::Target::named(&name, path)).collect(),
+            skipped,
+        )
     } else {
         let paths = if args.paths.is_empty() {
             vec![PathBuf::from(".")]

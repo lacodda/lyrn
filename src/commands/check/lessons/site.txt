@@ -1,0 +1,17 @@
+Two arrangements of a documentation site are consistent: a project site on
+`owner.github.io/name`, built with `base: '/name'`, or a domain of its own
+named in public/CNAME, built for that domain with no `base` and with links
+written from the root. The failure is a mixture of the two, and it is silent.
+
+lyrn's own site moved to its domain and kept its `base`. For a month every
+page asked for its stylesheets under /lyrn/ on a domain that serves them from
+the root: the pages built, the links resolved, and the owner saw unstyled HTML
+in a browser. After the config was mended, three links written by hand in the
+content still carried the old prefix, the front page's "Get started" among
+them.
+
+The rule reads `site` and `base` from astro.config.mjs - written in place, as a
+constant, or as the parts of a `new URL(...)` - and holds them to the CNAME,
+looks for `/name/` links left in the content of a site with a domain, and
+holds the `homepage` (and a crate's `documentation`, unless it is docs.rs) of
+the product's published manifests to wherever the site is.

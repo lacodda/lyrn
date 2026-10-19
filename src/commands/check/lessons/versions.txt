@@ -1,0 +1,19 @@
+Each registry and installer reads the version from a file of its own: the
+crate from Cargo.toml, the npm wrapper from npm/package.json, an application's
+installer from tauri.conf.json, a frontend from its package.json. Nothing
+fails when one of them keeps the old number. The npm page then advertises a
+release that was never made, and a wrapper whose `binary` pin lags downloads
+the previous program under the new version.
+
+The rule finds the product's manifests by the standard's layout rather than
+by a list, because the list is what goes stale. A manifest belongs to the
+product unless it is a test's material or an example, is private and keeps
+0.0.0 or 0.0.1 (no version of its own), or is published under a name that is
+not the product's and released on its own. Every one of them says the version
+of the top manifest. The wrapper's pin says `v` and the same number.
+
+Cargo.lock records the workspace's own packages too. A lock still holding the
+old number is refused by every `--locked` build, so it is committed with the
+manifest. And when the repository keeps a release.toml, its
+`project.manifests` lists every manifest that carries the number: `furca
+release` rewrites only the files it lists.

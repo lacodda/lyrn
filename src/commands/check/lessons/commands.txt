@@ -1,0 +1,17 @@
+A README that shows a command the program does not have is worse than one that
+shows nothing: it is confidently wrong, and it is the first thing a reader
+copies. The other direction is the line's rule that a command without a page
+does not exist.
+
+Both are read from the program itself. The rule finds the product's programs -
+a Cargo package of its own that uses clap - and runs the build in target/debug
+with `--help`, building it first when a source is newer. Every `$ <program>
+<command>` line in the README and in the pages under docs/ (decisions in
+docs/adr/ are history, and left out) has to name a command the help lists, and
+a second word a subcommand of it when the command has some.
+
+On a Starlight site, every command has a page under
+src/content/docs/reference/ named after it, or is named as `<program>
+<command>` on a page of the site - a guide that walks through it documents it.
+And `--help` itself has to answer with no environment at all: a program that
+reads its configuration before its arguments cannot say what it does.

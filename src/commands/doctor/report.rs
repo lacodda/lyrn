@@ -7,9 +7,9 @@ use std::path::{Path, PathBuf};
 use chrono::Utc;
 use serde_json::{Value, json};
 
-use super::registry::Skipped;
 use super::stack::{Stack, Standard};
 use super::{Level, Outcome, Repair, Repo, Rule, check_all};
+use crate::rigger::Skipped;
 
 /// A repository to examine, by the name a table shows it under.
 #[derive(Debug, Clone, PartialEq, Eq)]
@@ -169,7 +169,16 @@ pub fn render_one(report: &Report, standard: &Standard) -> String {
         counts.add(outcome);
     }
     out.push_str(&format!("\n{}{}\n", counts.summary(), fixable(report.repairs().count(), "")));
-    let cells = stack_cells(&report.stack, standard);
+    if let Some(line) = stack_line(&report.stack, standard) {
+        out.push_str(&format!("stack: {line}\n"));
+    }
+    out
+}
+
+/// A repository's stack in one line, each cell behind the standard saying
+/// what the standard is on; `None` when there is nothing to say.
+pub fn stack_line(stack: &Stack, standard: &Standard) -> Option<String> {
+    let cells = stack_cells(stack, standard);
     let line: Vec<String> = cells
         .iter()
         .filter(|c| c.text != "-")
@@ -189,10 +198,7 @@ pub fn render_one(report: &Report, standard: &Standard) -> String {
             }
         })
         .collect();
-    if !line.is_empty() {
-        out.push_str(&format!("stack: {}\n", line.join(" · ")));
-    }
-    out
+    (!line.is_empty()).then(|| line.join(" · "))
 }
 
 /// The first line of a report: which repository, and what lyrn takes it for.

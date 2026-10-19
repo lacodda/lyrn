@@ -244,7 +244,7 @@ pub fn verdict(check_runs: &[Value], statuses: &[Value]) -> Verdict {
 }
 
 /// Ask GitHub what the CI said about `commit`.
-fn ci(name: &str, commit: &str) -> Result<Verdict, Box<dyn Error>> {
+pub fn ci(name: &str, commit: &str) -> Result<Verdict, Box<dyn Error>> {
     let client = reqwest::blocking::Client::builder()
         .user_agent(concat!("lyrn/", env!("CARGO_PKG_VERSION")))
         .timeout(Duration::from_secs(30))

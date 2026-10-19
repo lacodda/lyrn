@@ -206,7 +206,7 @@ pub fn origin_repo(root: &Path) -> Option<String> {
 }
 
 /// `owner/name` out of a GitHub remote, over HTTPS or SSH.
-fn github_repo(url: &str) -> Option<String> {
+pub fn github_repo(url: &str) -> Option<String> {
     let rest = url
         .strip_prefix("https://github.com/")
         .or_else(|| url.strip_prefix("http://github.com/"))

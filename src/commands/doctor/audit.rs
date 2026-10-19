@@ -8,7 +8,7 @@
 
 use std::collections::BTreeSet;
 
-use super::workflows::{Job, Step, join_dir, normalize_dir};
+use crate::workflows::{Job, Step, join_dir, normalize_dir};
 use super::{Finding, Outcome, Repair, Repo, is_test_material, plural};
 
 /// A lockfile kind, and how its audit is recognised.
@@ -204,7 +204,7 @@ fn manifest_dir(base: &str, path: &str) -> Option<String> {
 #[cfg(test)]
 mod tests {
     use super::*;
-    use crate::commands::doctor::workflows;
+    use crate::workflows;
 
     fn coverage(yaml: &str) -> Vec<(Ecosystem, String)> {
         let workflow = workflows::parse("audit.yml", yaml.to_string()).unwrap();

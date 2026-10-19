@@ -1,0 +1,17 @@
+An installer is a shopfront too: the line the README tells a stranger to
+paste. Three things went wrong with the line's installers, each once.
+
+One was copied from a sibling and kept the sibling's repository. The rule
+holds every installer - tools/install.sh, tools/install.ps1 - to name the
+repository it belongs to, read from the remote or a manifest's `repository`.
+
+One asked api.github.com for the newest tag. The API answers sixty anonymous
+questions an hour per address, and an office or a CI runner shares one; the
+installer then fails for someone else's reasons. The newest tag is in the
+redirect of https://github.com/<owner>/<name>/releases/latest, which has no
+such limit.
+
+One suggested `cargo install kasl` as the way round a missing binary, while
+the crate was published as `kasl-cli`. A suggestion that fails is worse than
+none, so a `cargo install <name>` in an installer has to name a crate of the
+repository.

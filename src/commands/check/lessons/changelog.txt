@@ -1,0 +1,10 @@
+The number moves in the release commit, and the changelog's section for it
+moves in the same commit: the GitHub release page is written from it, and a
+release whose notes are missing says nothing about what it changed.
+
+The rule reads the version the manifests say and looks for its section in
+CHANGELOG.md - `## [1.2.0] - date`, `## 1.2.0`, `## [v1.2.0]`. Before the
+first release, a changelog with no version sections passes.
+
+git-cliff writes the section from the commits: `git cliff --unreleased --tag
+v<version> --prepend CHANGELOG.md`.

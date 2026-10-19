@@ -251,7 +251,7 @@ fn updated(updates: &[DateTime<FixedOffset>], tags: &[(String, DateTime<FixedOff
     let last = updates
         .iter()
         .max()
-        .map(|d| (d.format("%Y-%m-%d").to_string(), (now - d.with_timezone(&Utc)).num_days()));
+        .map(|d| (d.format("%Y-%m-%d").to_string(), (now.date_naive() - d.date_naive()).num_days()));
     let skipped_by = match tags {
         [(newest, shipped), (_, began), ..] => {
             let during = updates.iter().any(|d| d > began && d <= shipped);

@@ -1,0 +1,13 @@
+crates.io, npm, the documentation site's meta tags and the repository's own
+caption each show one sentence about the product. Rewritten in one place, it
+stays old in the rest, and nobody notices until a link is shared.
+
+The manifest says it first: the top Cargo.toml, else the crate named after
+the product, else the top package.json. Every other shopfront of the product
+itself says it in the same words - its npm wrapper, the top package.json of an
+application, the `description` of the Starlight site - give or take the full
+stop a caption leaves off. A library the repository publishes beside the
+product describes that library, and is left alone.
+
+A published package of the product with no description fails too: its
+registry page says nothing.

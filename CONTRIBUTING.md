@@ -35,7 +35,9 @@ then read the diff of `tests/trees/` before committing it.
 | Path | What lives there |
 | --- | --- |
 | `src/cli.rs` | The command surface: every flag and subcommand |
-| `src/commands/` | `new`, `init`, `adopt`, `template` |
+| `src/commands/` | Each command: `new`, `init`, `adopt`, `doctor`, `check`, `ci`, `stage`, `status`, `versions`, `deps`, `template` |
+| `src/workflows/` | GitHub workflows read as GitHub reads them: jobs, matrices, triggers, expressions |
+| `src/rigger.rs`, `src/registries.rs` | What lyrn asks rigger's record, and crates.io, npm and GitHub |
 | `src/templates/` | The built-in forms: one module and one directory of template files each |
 | `src/templates/community.rs` | What every repository a form starts carries, written once |
 | `src/templates/dowel/` | Copies taken from a published dowel-ui: primitives, accents, marks |

@@ -1,5 +1,12 @@
 pub mod adopt;
+pub mod check;
+pub mod ci;
+pub mod deps;
 pub mod doctor;
 pub mod init;
 pub mod new;
+pub mod stage;
+pub mod standing;
+pub mod status;
 pub mod template;
+pub mod versions;
