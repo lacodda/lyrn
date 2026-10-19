@@ -301,6 +301,10 @@ fn list(plan: &[Planned]) -> String {
                 out.push_str(&format!("{} - not started: it {reason}\n", planned.workflow.name()));
                 continue;
             }
+            Start::Yes if planned.rows.is_empty() => {
+                out.push_str(&format!("{} - none of its jobs was chosen\n", planned.workflow.name()));
+                continue;
+            }
             Start::Yes => out.push_str(&format!("{}\n", planned.workflow.name())),
         }
         let width = planned.rows.iter().filter(|r| !r.elsewhere).map(|r| r.title.chars().count()).max().unwrap_or(0) + 2;
@@ -314,9 +318,6 @@ fn list(plan: &[Planned]) -> String {
         }
         if let Some(line) = elsewhere(&planned.rows) {
             out.push_str(&line);
-        }
-        if planned.rows.is_empty() {
-            out.push_str("  (no job chosen)\n");
         }
     }
     out

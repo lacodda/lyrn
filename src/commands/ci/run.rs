@@ -50,6 +50,10 @@ pub fn all(context: &Context, plan: &[Planned]) -> bool {
             println!("{} - not started: it {reason}\n", planned.workflow.name());
             continue;
         }
+        if planned.rows.is_empty() {
+            println!("{} - none of its jobs was chosen\n", planned.workflow.name());
+            continue;
+        }
         println!("{}", planned.workflow.name());
         let jobs = planned.workflow.jobs();
         // A job's rows end together: one failed row fails the job for the
