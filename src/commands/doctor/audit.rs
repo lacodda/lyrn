@@ -8,8 +8,8 @@
 
 use std::collections::BTreeSet;
 
-use crate::workflows::{Job, Step, join_dir, normalize_dir};
 use super::{Finding, Outcome, Repair, Repo, is_test_material, plural};
+use crate::workflows::{Job, Step, directories, join_dir, normalize_dir};
 
 /// A lockfile kind, and how its audit is recognised.
 #[derive(Debug, Clone, Copy, PartialEq, Eq, PartialOrd, Ord)]
@@ -124,10 +124,19 @@ fn audited_by(job: &Job, step: &Step, covered: &mut BTreeSet<(Ecosystem, String)
     }
 
     let Some(script) = step.run else { return };
-    let Some(start) = normalize_dir(step.run_directory(job).unwrap_or(".")) else {
+    // A matrix directory is each directory the matrix lists: one job audits
+    // them all, and each one is covered.
+    let Some(starts) = directories(step.run_directory(job).unwrap_or("."), job) else {
         return;
     };
-    let mut here = start;
+    for start in starts {
+        audited_from(&start, script, covered);
+    }
+}
+
+/// What one script audits, started in `start`.
+fn audited_from(start: &str, script: &str, covered: &mut BTreeSet<(Ecosystem, String)>) {
+    let mut here = start.to_string();
     for command in script.lines().flat_map(|l| l.split("&&")).flat_map(|c| c.split(';')) {
         let words: Vec<&str> = command.split_whitespace().collect();
         match words.as_slice() {
@@ -235,6 +244,24 @@ mod tests {
                 (Ecosystem::Pnpm, "web".into()),
             ]
         );
+    }
+
+    /// One job auditing every project its matrix lists covers each of them.
+    #[test]
+    fn a_matrix_job_audits_every_directory_it_lists() {
+        let yaml = "jobs:
+  packages:
+    strategy:
+      matrix:
+        project: [web, docs]
+    defaults:
+      run:
+        working-directory: ${{ matrix.project }}
+    steps:
+      - run: pnpm install --frozen-lockfile
+      - run: pnpm audit
+";
+        assert_eq!(coverage(yaml), vec![(Ecosystem::Pnpm, "docs".into()), (Ecosystem::Pnpm, "web".into())]);
     }
 
     /// `cargo deny check licenses` reads no advisories, and a directory known
