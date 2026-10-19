@@ -256,12 +256,19 @@ pub fn generate_project(name: &str, template: &Template, project: &ProjectArgs, 
             if !project.define.is_empty() {
                 return Err("`--define` answers a cargo-generate template's placeholders; this is a lyrn template, which asks with its own flags".into());
             }
+            // A site added to a repository describes the product already
+            // there, in the words its manifest uses: the shopfronts say one
+            // thing, and `lyrn check` holds them to it.
+            let mut identity = project.identity.clone();
+            if native.form == Form::Docs && identity.description.is_none() {
+                identity.description = crate::repo::Facts::read(root).ok().and_then(|facts| facts.description);
+            }
             let wanted = Wanted {
                 name,
                 form: native.form,
                 host: project.host.as_deref(),
                 with: &project.with,
-                identity: &project.identity,
+                identity: &identity,
             };
             let context = build_context(&wanted, native, &template.origin, interactive)?;
             Planned {

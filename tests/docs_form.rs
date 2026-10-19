@@ -173,6 +173,22 @@ fn a_description_with_punctuation_survives_both_languages() {
     assert!(index.contains(&format!("description: {as_json}")), "{index}");
 }
 
+/// The site describes the product in the words its manifest uses, so the
+/// site's meta tags and the registry's page say one thing - which is what
+/// `lyrn check descriptions` holds them to.
+#[test]
+fn the_site_says_what_the_manifest_says() {
+    let repo = repository();
+    fs::write(
+        repo.path().join("Cargo.toml"),
+        "[package]\nname = \"my-tool\"\nversion = \"0.1.0\"\ndescription = \"Count the words in a file, fast\"\n",
+    )
+    .unwrap();
+    lyrn(repo.path()).assert().success();
+    let astro = fs::read_to_string(repo.path().join("docs/astro.config.mjs")).unwrap();
+    assert!(astro.contains("const description = \"Count the words in a file, fast\";"), "{astro}");
+}
+
 #[test]
 fn nothing_is_left_unrendered() {
     let repo = repository();
