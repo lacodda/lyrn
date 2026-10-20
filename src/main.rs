@@ -1,6 +1,7 @@
 mod cli;
 mod commands;
 mod generate;
+mod hash;
 mod host;
 mod model;
 mod naming;
@@ -8,6 +9,7 @@ mod registries;
 mod render;
 mod repo;
 mod rigger;
+mod standard;
 mod template;
 mod templates;
 mod workflows;
@@ -25,6 +27,13 @@ fn main() -> ExitCode {
         cli::Command::New(args) => commands::new::run(*args),
         cli::Command::Init(args) => commands::init::run(*args),
         cli::Command::Adopt(args) => commands::adopt::run(*args),
+        // A place left for a hand is not an error either: the files are
+        // written, and the exit code says the upgrade is not finished.
+        cli::Command::Upgrade(args) => match commands::upgrade::run(args) {
+            Ok(true) => return ExitCode::SUCCESS,
+            Ok(false) => return ExitCode::FAILURE,
+            Err(e) => Err(e),
+        },
         // A finding is an answer, not an error: the report has said what is
         // wrong, and the exit code is what a gate reads.
         cli::Command::Doctor(args) => match commands::doctor::run(args) {

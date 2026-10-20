@@ -141,6 +141,9 @@ pub fn build_context(wanted: &Wanted, native: &Native, origin: &Origin, interact
         // and `lyrn upgrade` can tell what changed since.
         .set("template_source", origin.source())
         .set("template_revision", origin.revision())
+        // And with which add-ons: the files of the standard carry sections
+        // of them, and `lyrn upgrade` renders the standard the same way.
+        .set("with_list", args.with.iter().map(|a| format!("\"{a}\"")).collect::<Vec<_>>().join(", "))
         // The repository the generated project will live in. Guessed from the
         // git identity so the installers and the update check point somewhere
         // real; `--repo` overrides it.

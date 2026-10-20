@@ -52,6 +52,8 @@ pub const VARIABLES: &[&str] = &[
     // Where the template came from and at which revision, for `lyrn.toml`.
     "template_source",
     "template_revision",
+    // The add-ons it was generated with, as the items of a TOML array.
+    "with_list",
     // The same values, as JSON strings: a description with an apostrophe
     // or a colon is valid text and broken JavaScript or YAML when pasted
     // in bare, and a JSON string is valid in both.

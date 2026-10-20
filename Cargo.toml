@@ -36,6 +36,10 @@ winresource = "0.1"
 chrono = "0.4.45"
 clap = { version = "4.6.7", features = ["derive"] }
 dialoguer = "0.12.0"
+# `lyrn upgrade` merges three versions of a file - what the standard wrote,
+# what the repository has, what the standard writes now - and shows the
+# result as a diff.
+diffy = "0.5.2"
 # Case filters for cargo-generate templates: the crate cargo-generate itself
 # uses, so `{{ project-name | pascal_case }}` comes out the same in both.
 heck = "0.5.0"

@@ -50,6 +50,12 @@ lyrn check: ~/word-count, word-count 0.2.0
 
 A failure (`✗`) makes `lyrn check` exit with 1, so it works as a gate: put it
 after the tests, which have just built the program the `commands` check reads.
+Every repository the line starts carries the gate already, as
+`.github/workflows/shopfronts.yml`: on every push - documentation alone
+included, since the shopfronts are mostly documentation - it installs the lyrn
+that wrote the workflow from its release and runs `lyrn check`. A newer lyrn
+arrives with the next version of the standard, through
+[`lyrn upgrade`](/reference/upgrade/).
 A check that does not apply - `site` in a repository with no documentation
 site - says why and counts as neither. `lyrn check` reads the repository and
 writes nothing to it.
@@ -113,7 +119,9 @@ Every `$ <program> <command>` line in the README and in the pages under
 subcommand of it when the command has some. Decisions in `docs/adr/` are
 history and are left out. The programs are the product's own Cargo packages
 that parse their arguments with clap, and the help is read from the build in
-`target/debug` - built first, with `--locked`, when a source is newer.
+`target/debug` - built first, with `--locked`, when a source is newer. A program
+that takes flags and no commands - a service - passes with nothing to page, and
+a line that gives it a command fails.
 
 On a Starlight site, every command has a page under
 `src/content/docs/reference/` named after it, or is named as `<program>

@@ -1,0 +1,39 @@
+name: Audit
+
+# What Dependabot would otherwise be for, and the half of it this project
+# keeps (docs/adr/0002-dependabot-is-off.md): published advisories against the
+# dependencies, and licenses outside the accepted list. On every push and pull
+# request, and on Monday mornings for what was published while nothing was
+# pushed - a red run with no commit behind it means the world moved, not the
+# code.
+on:
+  push:
+    branches: [main]
+  pull_request:
+  schedule:
+    - cron: '0 6 * * 1'
+  workflow_dispatch:
+
+concurrency:
+  group: ${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  # Production dependencies only: they are what the build ships. The dev
+  # toolchain's advisories reach the machine that builds, not the people who
+  # use what it built, and they are taken in the weekly update.
+  packages:
+    name: Packages
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v7
+      - uses: pnpm/action-setup@v6
+      - uses: actions/setup-node@v7
+        with:
+          node-version: 22
+          cache: pnpm
+      - run: pnpm install --frozen-lockfile
+      - name: Advisories
+        run: pnpm audit --prod
+      - name: Licenses
+        run: node tools/check-licenses.mjs

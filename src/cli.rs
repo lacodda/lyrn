@@ -25,6 +25,8 @@ pub enum Command {
     Init(Box<InitArgs>),
     /// Bring an existing repository up to the line's standard
     Adopt(Box<AdoptArgs>),
+    /// Catch a repository up with the newest version of the line's standard
+    Upgrade(UpgradeArgs),
     /// Hold a repository to the line's standard, and say what is off and why
     Doctor(DoctorArgs),
     /// Hold the shopfronts to each other: versions, descriptions, commands, the site's address
@@ -161,6 +163,20 @@ pub struct CiArgs {
 pub struct PathArgs {
     /// The repository; defaults to the one the current directory is in
     pub path: Option<PathBuf>,
+}
+
+#[derive(clap::Args)]
+pub struct UpgradeArgs {
+    /// The repository to upgrade; defaults to the current directory
+    pub path: Option<PathBuf>,
+
+    /// Show what would change, with the diffs, and write nothing
+    #[arg(long)]
+    pub dry_run: bool,
+
+    /// Write without asking first
+    #[arg(short = 'y', long = "yes")]
+    pub assume_yes: bool,
 }
 
 #[derive(clap::Args)]

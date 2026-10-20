@@ -1,0 +1,47 @@
+# {{ title }}
+
+{{ description }}
+
+A [Tauri 2](https://tauri.app) plugin for the lacodda line.
+Scaffolded with [lyrn](https://github.com/lacodda/lyrn).
+
+## Install
+
+Two halves, published together and versioned together.
+
+```console
+$ cargo add tauri-plugin-{{ name }}
+$ pnpm add tauri-plugin-{{ name }}-api
+```
+
+Register the Rust half on the builder:
+
+```rust
+tauri::Builder::default()
+    .plugin(tauri_plugin_{{ lib_name }}::init())
+    .run(tauri::generate_context!())
+    .expect("error while running the application");
+```
+
+Grant the permission set in `src-tauri/capabilities/default.json`:
+
+```json
+{ "permissions": ["{{ name }}:default"] }
+```
+
+Then call it from the webview:
+
+```ts
+import { {{ command_camel }} } from 'tauri-plugin-{{ name }}-api'
+
+const answer = await {{ command_camel }}()
+```
+
+## Contributing
+
+The gate, the layout and how commits are written are in
+[CONTRIBUTING.md](https://github.com/{{ repo }}/blob/main/CONTRIBUTING.md).
+
+## License
+
+MIT - see [LICENSE](https://github.com/{{ repo }}/blob/main/LICENSE).

@@ -59,6 +59,33 @@ jobs:
       - name: Test
         run: cargo test
 
+{{#spa}}
+  # The release binary carries the web UI built from frontend/, so the UI's
+  # gate is the binary's gate too: a lint error or a build that breaks there
+  # ships as much as one in the Rust.
+  frontend:
+    name: Frontend gate
+    runs-on: ubuntu-latest
+    defaults:
+      run:
+        working-directory: frontend
+    steps:
+      - uses: actions/checkout@v7
+      - uses: pnpm/action-setup@v6
+        with:
+          package_json_file: frontend/package.json
+      - uses: actions/setup-node@v7
+        with:
+          node-version: 22
+          cache: pnpm
+          cache-dependency-path: frontend/pnpm-lock.yaml
+      - run: pnpm install --frozen-lockfile
+      - name: Gate
+        run: pnpm lint
+      - name: Build
+        run: pnpm build
+
+{{/spa}}
   msrv:
     name: msrv
     runs-on: ubuntu-latest

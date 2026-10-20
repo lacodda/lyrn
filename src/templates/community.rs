@@ -34,6 +34,7 @@ const EVERY_FORM: &[&str] = &[
     ".github/ISSUE_TEMPLATE/config.yml",
     ".github/pull_request_template.md",
     ".github/workflows/audit.yml",
+    ".github/workflows/shopfronts.yml",
     "docs/adr/0001-record-architecture-decisions.md",
     "docs/adr/0002-dependabot-is-off.md",
     "docs/adr/README.md",
@@ -85,6 +86,7 @@ pub fn sources(form: Form) -> Vec<SourceFile> {
             include_str!("community/github/pull_request_template.md.tmpl"),
         ),
         text(".github/workflows/audit.yml", audit(form)),
+        text(".github/workflows/shopfronts.yml", shopfronts(form)),
         text(
             "docs/adr/0001-record-architecture-decisions.md",
             include_str!("community/docs-adr-0001.md.tmpl"),
@@ -179,6 +181,23 @@ fn audit(form: Form) -> &'static str {
             include_str!("community/audit/packages.yml.tmpl"),
         ),
         Form::Docs => unreachable!("the docs form adds to a repository and writes no audit"),
+    }
+}
+
+/// The shopfront gate: `lyrn check`, with the program built first where the
+/// check reads its commands from the program's `--help`.
+fn shopfronts(form: Form) -> &'static str {
+    match form {
+        Form::Cli | Form::Workspace | Form::Service => concat!(
+            include_str!("community/shopfronts/head.yml.tmpl"),
+            include_str!("community/shopfronts/rust.yml.tmpl"),
+            include_str!("community/shopfronts/check.yml.tmpl"),
+        ),
+        Form::Spa | Form::Desktop | Form::Mono | Form::Plugin | Form::TauriPlugin => concat!(
+            include_str!("community/shopfronts/head.yml.tmpl"),
+            include_str!("community/shopfronts/check.yml.tmpl"),
+        ),
+        Form::Docs => unreachable!("the docs form adds to a repository and writes no workflow of the standard"),
     }
 }
 

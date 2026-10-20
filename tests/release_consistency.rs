@@ -216,6 +216,41 @@ fn every_doctor_rule_has_a_section_on_its_page() {
     }
 }
 
+/// The page of the standard's versions says what the archive says each
+/// version changed - the words `lyrn upgrade` prints and commits - newest
+/// first, and leaves none out.
+#[test]
+fn the_standard_s_history_on_its_page_is_the_archive_s() {
+    let mut archived: Vec<(Vec<u32>, String, Vec<String>)> = fs::read_dir(repo_root().join("src/standard/archive"))
+        .unwrap()
+        .map(|entry| entry.unwrap().path())
+        .filter(|path| path.extension().is_some_and(|e| e == "toml"))
+        .map(|path| {
+            let version = path.file_stem().unwrap().to_string_lossy().into_owned();
+            let index: toml::Table = toml::from_str(&fs::read_to_string(&path).unwrap()).unwrap();
+            let changes = index["changes"].as_array().unwrap().iter().map(|c| c.as_str().unwrap().to_string()).collect();
+            (version.split('.').map(|p| p.parse().unwrap()).collect(), version, changes)
+        })
+        .collect();
+    archived.sort_by(|a, b| b.0.cmp(&a.0));
+    assert!(!archived.is_empty());
+
+    let page = read("docs/src/content/docs/concepts/the-standard-by-version.md");
+    let mut sections: Vec<(String, Vec<String>)> = Vec::new();
+    for line in page.lines() {
+        if let Some(version) = line.strip_prefix("## ") {
+            sections.push((version.to_string(), Vec::new()));
+        } else if let (Some(change), Some(section)) = (line.strip_prefix("- "), sections.last_mut()) {
+            section.1.push(change.to_string());
+        }
+    }
+    let expected: Vec<(String, Vec<String>)> = archived.into_iter().map(|(_, v, c)| (v, c)).collect();
+    assert_eq!(
+        sections, expected,
+        "docs/concepts/the-standard-by-version.md does not say what the archive does"
+    );
+}
+
 /// lyrn is installed through the same npm launcher the cli form writes, so it
 /// is that launcher, word for word: a fix made in one place - waiting out
 /// Ctrl+C instead of dying under the binary - reaches both.

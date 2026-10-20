@@ -13,7 +13,9 @@ use std::process::Command as Process;
 /// Where this repository's copy, logs and runner directories live.
 pub fn work_dir(root: &Path) -> PathBuf {
     let name = root.file_name().map_or_else(|| "repository".to_string(), |n| n.to_string_lossy().into_owned());
-    cache_root().join(format!("{name}-{:08x}", fnv(&root.display().to_string().to_lowercase()) as u32))
+    // A stable hash of the path, so the same repository finds the same copy.
+    let hash = crate::hash::fnv(root.display().to_string().to_lowercase().as_bytes());
+    cache_root().join(format!("{name}-{:08x}", hash as u32))
 }
 
 /// The user's cache directory, as each system keeps one.
@@ -29,12 +31,6 @@ fn cache_root() -> PathBuf {
             .unwrap_or_else(std::env::temp_dir)
     };
     base.join("lyrn").join("ci")
-}
-
-/// A stable hash of a path, so the same repository finds the same copy.
-fn fnv(text: &str) -> u64 {
-    text.bytes()
-        .fold(0xcbf2_9ce4_8422_2325, |hash, byte| (hash ^ u64::from(byte)).wrapping_mul(0x0100_0000_01b3))
 }
 
 /// The commit `head` checked out clean in `work`, and the path of it.

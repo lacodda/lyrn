@@ -17,3 +17,6 @@ version = "{{ lyrn_version }}"
 source = "{{ template_source }}"
 revision = "{{ template_revision }}"
 standard = "{{ standard }}"
+# The add-ons it was generated with: the standard's files carry sections of
+# them, and `lyrn upgrade` renders the standard with the same ones.
+with = [{{ with_list }}]

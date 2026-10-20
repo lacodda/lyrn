@@ -12,9 +12,33 @@ use crate::template::{self, Kind};
 use crate::templates;
 
 pub fn check(repo: &Repo) -> Outcome {
+    // A place `lyrn upgrade` left for a person, still waiting: the file is
+    // neither the repository's version nor the standard's. Looked for first,
+    // since a lyrn.toml that holds one does not parse.
+    let unresolved: Vec<String> = templates::STANDARD
+        .iter()
+        .filter(|path| repo.read_text(path).is_some_and(|text| text.lines().any(|l| l == "<<<<<<< yours")))
+        .map(|path| path.to_string())
+        .collect();
+    let mut findings = Vec::new();
+    if !unresolved.is_empty() {
+        findings.push(
+            Finding::fail(format!(
+                "{} {} a place `lyrn upgrade` left for a hand: {}",
+                plural(unresolved.len(), "file", "files"),
+                if unresolved.len() == 1 { "keeps" } else { "keep" },
+                some_of(&unresolved, 5)
+            ))
+            .fix("keep what both sides meant between `<<<<<<< yours` and `>>>>>>> standard ...`, drop the markers, commit"),
+        );
+    }
+
     let facts = match &repo.facts {
         Ok(facts) => facts,
-        Err(reason) => return Outcome::Found(vec![Finding::fail(reason.clone()).fix("fix the manifest; nothing can read it as it is")]),
+        Err(reason) => {
+            findings.push(Finding::fail(reason.clone()).fix("fix the manifest; nothing can read it as it is"));
+            return Outcome::Found(findings);
+        }
     };
     let form = match facts.form(&repo.root) {
         Ok((form, _)) if form.adoptable() => form,
@@ -35,12 +59,20 @@ pub fn check(repo: &Repo) -> Outcome {
         .filter(|f| already_there(&repo.root, Path::new(&f.path)).is_none())
         .map(|f| f.path.clone())
         .collect();
+
+    let behind = match (&facts.standard, native.manifest.standard.as_str()) {
+        (Some(theirs), ours) if !ours.is_empty() && crate::standard::order(theirs, ours) == std::cmp::Ordering::Less => Some((theirs.clone(), ours)),
+        _ => None,
+    };
+
     if missing.is_empty() {
-        let revision = match (&facts.standard, native.manifest.standard.as_str()) {
-            (Some(theirs), ours) if theirs != ours && !ours.is_empty() => format!("; lyrn.toml says {theirs}, lyrn writes {ours}"),
-            _ => String::new(),
-        };
-        return Outcome::Pass(format!("all {} files of the `{form}` standard{revision}", files.len()));
+        if let Some((theirs, ours)) = behind {
+            findings.push(
+                Finding::warn(format!("on the standard {theirs}; lyrn writes {ours}"))
+                    .fix("`lyrn upgrade` merges what changed since into the files, and commits it"),
+            );
+        }
+        return Outcome::from_findings(findings, || format!("all {} files of the `{form}` standard", files.len()));
     }
 
     let what = if facts.has_lyrn_toml {
@@ -56,9 +88,8 @@ pub fn check(repo: &Repo) -> Outcome {
             some_of(&missing, 5)
         )
     };
-    Outcome::Found(vec![
-        Finding::fail(what).fix("`lyrn adopt` adds exactly these and touches nothing that is there"),
-    ])
+    findings.push(Finding::fail(what).fix("`lyrn adopt` adds exactly these and touches nothing that is there"));
+    Outcome::Found(findings)
 }
 
 pub fn check_mark(repo: &Repo) -> Outcome {

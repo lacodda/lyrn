@@ -1,0 +1,19 @@
+# What lyrn knows this repository as, generated or adopted, and which revision
+# of the line's standard it carries. `lyrn doctor` and `lyrn upgrade` read it.
+[project]
+name = "{{ name }}"
+form = "{{ form }}"
+accent = "{{ accent }}"
+# `placeholder` while the project still wears the line's umbrella mark
+# (lambda on graphite); `chosen` once it has one of its own. `lyrn doctor`
+# warns on the former rather than guessing from the icon's bytes.
+mark = "{{ mark }}"
+
+[template]
+version = "{{ lyrn_version }}"
+# Where the files came from - `lyrn` for a built-in form, `owner/repo@tag` for
+# a template from GitHub - and at which revision: lyrn's version, or the commit
+# whose CI passed.
+source = "{{ template_source }}"
+revision = "{{ template_revision }}"
+standard = "{{ standard }}"

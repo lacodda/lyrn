@@ -6,14 +6,25 @@
 # See documentation for more information on available options.
 
 [changelog]
-# changelog header
+# changelog header: the same text as the CHANGELOG.md a project starts with,
+# which `--prepend` recognises as the header and keeps on top
 header = """
-# Changelog\n
+# Changelog
+
+All notable changes to this project are documented here. The file is
+written by [git-cliff](https://git-cliff.org) from the commits since the
+last release, which follow [Conventional Commits](https://www.conventionalcommits.org):
+
+```console
+$ git cliff --unreleased --tag vX.Y.Z --prepend CHANGELOG.md
+```
 """
-# template for the changelog body
+# template for the changelog body. A release opens with the blank line that
+# parts it from the one above rather than closing with one, so releases
+# prepended one by one stay apart and the file ends without a blank line
 # https://tera.netlify.app/docs
 body = """
-{% if version %}\
+\n{% if version %}\
     ## 🎉 [{{ version | trim_start_matches(pat="v") }}] - {{ timestamp | date(format="%Y-%m-%d") }}
 {% else %}\
     ## [unreleased]
@@ -31,7 +42,7 @@ body = """
     {% for commit in commits %}
         - {% if commit.breaking %}[**breaking**] {% endif %}{{ commit.message | upper_first }}\
     {% endfor %}
-{% endfor %}\n
+{% endfor %}
 """
 # remove the leading and trailing whitespace from the template
 trim = true
@@ -66,6 +77,8 @@ commit_parsers = [
   { message = "^chore\\(deps\\)", skip = true },
   { message = "^chore\\(pr\\)", skip = true },
   { message = "^chore\\(pull\\)", skip = true },
+  # `lyrn upgrade` commits the standard it brings as chore(standard)
+  { message = "^chore\\(standard\\)", group = "📐 Standard" },
   { message = "^chore|ci", group = "🛟 Miscellaneous Tasks" },
   { body = ".*security", group = "Security" },
   { message = "^revert", group = "Revert" },

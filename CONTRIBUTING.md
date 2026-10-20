@@ -30,12 +30,34 @@ $ LYRN_BLESS=1 cargo test --test trees
 
 then read the diff of `tests/trees/` before committing it.
 
+## The standard's versions
+
+`src/standard/archive/` keeps every version of the standard a release has
+carried: what it changed, and the template of each of its files by form.
+`lyrn upgrade` renders a repository's version from there as the ancestor of
+its merge, so a released version never changes. A change to a file of the
+standard goes into the version being built - the `standard` of every
+`template.toml` - and once that one has been released, into a new one:
+
+```console
+$ LYRN_BLESS=1 cargo test standard
+```
+
+writes the archive of the version the templates say, keeping its `changes`,
+which are written by hand: one line for each change, in the words the upgrade
+commit and [the page of versions](https://lyrn.lacodda.com/concepts/the-standard-by-version/)
+repeat. A release freezes its version: its line - version and the hash of its
+index - goes into `FROZEN` in `src/standard/mod.rs` with the release commit,
+and the test refuses any change to it from then on. Starting the next version
+without that line is refused too, with the line to add.
+
 ## Where things live
 
 | Path | What lives there |
 | --- | --- |
 | `src/cli.rs` | The command surface: every flag and subcommand |
-| `src/commands/` | Each command: `new`, `init`, `adopt`, `doctor`, `check`, `ci`, `stage`, `status`, `versions`, `deps`, `template` |
+| `src/commands/` | Each command: `new`, `init`, `adopt`, `upgrade`, `doctor`, `check`, `ci`, `stage`, `status`, `versions`, `deps`, `template` |
+| `src/standard/` | Every version of the standard: what it changed, and its templates, which `upgrade` merges from |
 | `src/workflows/` | GitHub workflows read as GitHub reads them: jobs, matrices, triggers, expressions |
 | `src/rigger.rs`, `src/registries.rs` | What lyrn asks rigger's record, and crates.io, npm and GitHub |
 | `src/templates/` | The built-in forms: one module and one directory of template files each |

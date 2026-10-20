@@ -128,7 +128,11 @@ fn records_what_it_was_generated_from() {
     assert!(stamp.contains("name = \"demo-app\""));
     assert!(stamp.contains("form = \"spa\""));
     assert!(stamp.contains(&format!("version = \"{}\"", env!("CARGO_PKG_VERSION"))));
-    assert!(stamp.contains("standard = \"2026.10\""));
+    // The standard the templates write, read from them rather than repeated.
+    let manifest: toml::Table = toml::from_str(include_str!("../src/templates/spa/template.toml")).unwrap();
+    let standard = manifest["standard"].as_str().unwrap();
+    assert!(stamp.contains(&format!("standard = \"{standard}\"")), "{stamp}");
+    assert!(stamp.contains("with = []"), "{stamp}");
 }
 
 #[test]

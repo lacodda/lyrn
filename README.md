@@ -51,15 +51,16 @@ request.
 
 ```console
 $ lyrn doctor
-lyrn doctor: ~/demo-app, a `spa` project on standard 2026.10
+lyrn doctor: ~/demo-app, a `spa` project on standard 2026.11
 
-✓ standard   all 19 files of the `spa` standard
+✓ standard   all 20 files of the `spa` standard
 ✓ readme     the longest block is 18 words, in 25 lines
+✓ changelog  no release yet
 ✓ mark       a mark of its own
 ✓ assets     three levels in assets/, 1 copy or icon in place
-✓ language   44 text files in English, translations in their places
-✓ private    nothing from this computer in 44 text files
-✓ actions    6 actions in 2 workflows, none retired or behind the standard
+✓ language   45 text files in English, translations in their places
+✓ private    nothing from this computer in 45 text files
+✓ actions    7 actions in 3 workflows, none retired or behind the standard
 - msrv       not a Rust project
 ✓ node       pnpm 10 and Node 22+ across 1 project
 ✓ audit      1 lockfile audited
@@ -67,7 +68,7 @@ lyrn doctor: ~/demo-app, a `spa` project on standard 2026.10
 ✓ authors    1 commit, all by Kirill Lakhtachev <lahtachev@gmail.com>
 ✓ identity   commits as `Kirill Lakhtachev <lahtachev@gmail.com>`, the global identity; the global excludes file keeps assistant files out
 
-12 passed, 1 not applicable
+13 passed, 1 not applicable
 stack: node 22 · pnpm 10.34.6 · actions on the standard · updated today
 ```
 
@@ -79,7 +80,8 @@ standard in one table, and `lyrn doctor --explain <rule>` says why it exists.
 Before a release, `lyrn check` holds the shopfronts to each other - one
 version, one description, only commands that exist - and `lyrn ci` runs the CI
 the push would start on a clean copy of the commit, so a red run is seen here
-first.
+first. When the standard moves on, `lyrn upgrade` merges what changed into the
+repository's files and commits it as one change.
 
 ## Install
 
@@ -93,6 +95,7 @@ $ npm install -g lyrn          # or: cargo install lyrn
 $ lyrn new <name> [options]      # a project in a directory of its own
 $ lyrn init [path] [options]     # the same, in a directory that already exists
 $ lyrn adopt [path]              # the standard's missing files, into an old repository
+$ lyrn upgrade [path]            # the newest standard, merged into the files and committed
 $ lyrn doctor [path...] [--fix]  # what is off against the standard, why, and the safe repairs
 $ lyrn check [path...]           # the shopfronts held to each other: versions, descriptions, commands
 $ lyrn ci [job...]               # the CI a push of this commit would start, run here first

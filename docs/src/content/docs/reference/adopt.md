@@ -19,11 +19,12 @@ standard every repository carries whatever its code does:
 | `.editorconfig`, `.gitattributes`, `.gitignore` | How files are written and kept |
 | `.github/workflows/ci.yml` | The gate the form runs: lint, types, tests, build |
 | `.github/workflows/audit.yml` | Published advisories and licenses, on every push and every Monday |
+| `.github/workflows/shopfronts.yml` | [`lyrn check`](/reference/check/) on every push: the README, the manifests and the site agree |
 | `.github/ISSUE_TEMPLATE/`, `.github/pull_request_template.md` | Reports and changes arrive with what is needed to act on them |
 | `SECURITY.md`, `CODE_OF_CONDUCT.md` | Where a vulnerability is reported, and how people treat each other |
 | `docs/adr/0001-record-architecture-decisions.md`, `0002-dependabot-is-off.md`, `README.md` | The decision log, started |
 | `rustfmt.toml`, `deny.toml` | The line's formatting, and what the audit holds crates to - for the Rust forms |
-| `lyrn.toml` | What the project is, for `doctor` and `upgrade` to read |
+| `lyrn.toml` | What the project is, and the [version of the standard](/concepts/the-standard-by-version/) it carries, for `doctor` and [`upgrade`](/reference/upgrade/) to read |
 
 The release contour - release and publish workflows, the npm wrapper, the
 installers - is part of the standard too, but its files only work together and
@@ -63,7 +64,7 @@ The tree shown before writing says which files are kept and why:
 
 ```console
 $ lyrn adopt --dry-run
-Would add 18 files to `.` as a `cli` project; 3 of its standard are already there:
+Would add 19 files to `.` as a `cli` project; 3 of its standard are already there:
 
   ├── .github/
   │   ├── ISSUE_TEMPLATE/
@@ -72,7 +73,8 @@ Would add 18 files to `.` as a `cli` project; 3 of its standard are already ther
   │   │   └── feature_request.yml
   │   ├── workflows/
   │   │   ├── audit.yml
-  │   │   └── ci.yml
+  │   │   ├── ci.yml
+  │   │   └── shopfronts.yml
   │   └── pull_request_template.md
   ├── docs/
   │   └── adr/

@@ -1,0 +1,58 @@
+# {{ title }}
+
+{{ description }}
+
+Built on the lacodda line's stack for command-line tools: Rust, clap, anyhow -
+with the logic in a library crate anyone can depend on.
+Scaffolded with [lyrn](https://github.com/lacodda/lyrn).
+
+## Install
+
+```console
+$ cargo install {{ name }}
+```
+
+Or without a package manager:
+
+```console
+$ curl -fsSL https://raw.githubusercontent.com/{{ repo }}/main/tools/install.sh | sh
+```
+
+```powershell
+irm https://raw.githubusercontent.com/{{ repo }}/main/tools/install.ps1 | iex
+```
+
+## A day in the life
+
+```console
+$ {{ name }} hello
+Hello, world!
+```
+
+## Using the library
+
+The tool is a thin shell over `{{ name }}-core`, which is published on its own:
+
+```console
+$ cargo add {{ name }}-core
+```
+
+```rust
+use {{ lib_name }}_core::greet;
+
+fn main() -> Result<(), {{ lib_name }}_core::Error> {
+    println!("{}", greet("world")?);
+    Ok(())
+}
+```
+
+The reference is on [docs.rs](https://docs.rs/{{ name }}-core).
+
+## Contributing
+
+The gate, the layout and how commits are written are in
+[CONTRIBUTING.md](https://github.com/{{ repo }}/blob/main/CONTRIBUTING.md).
+
+## License
+
+MIT - see [LICENSE](https://github.com/{{ repo }}/blob/main/LICENSE).

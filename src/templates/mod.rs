@@ -69,6 +69,7 @@ pub const STANDARD: &[&str] = &[
     ".gitignore",
     ".github/workflows/ci.yml",
     ".github/workflows/audit.yml",
+    ".github/workflows/shopfronts.yml",
     ".github/ISSUE_TEMPLATE/bug_report.yml",
     ".github/ISSUE_TEMPLATE/feature_request.yml",
     ".github/ISSUE_TEMPLATE/config.yml",

@@ -1,0 +1,62 @@
+name: CI
+
+on:
+  push:
+    branches: [main]
+    paths-ignore: ['docs/**']
+  pull_request:
+    paths-ignore: ['docs/**']
+
+env:
+  CARGO_TERM_COLOR: always
+
+jobs:
+  check:
+    name: ${{ matrix.os }}
+    runs-on: ${{ matrix.os }}
+    strategy:
+      fail-fast: false
+      matrix:
+        os: [ubuntu-latest, windows-latest, macos-latest]
+    steps:
+      - uses: actions/checkout@v7
+      - uses: dtolnay/rust-toolchain@stable
+        with:
+          components: rustfmt, clippy
+      - uses: Swatinem/rust-cache@v2
+      - name: Format
+        run: cargo fmt --check
+      # `--workspace` throughout: without it cargo only looks at the default
+      # members, and a library crate can rot untested next to a green build.
+      - name: Lint
+        run: cargo clippy --workspace --all-targets -- -D warnings
+      - name: Test
+        run: cargo test --workspace
+      # The doctests in the library are its examples, and an example that no
+      # longer compiles is documentation that lies.
+      - name: Doctests
+        run: cargo test --workspace --doc
+      - name: Build
+        run: cargo build --workspace --release
+
+  # rust-version is a promise to anyone running `cargo install`. Without a job
+  # that actually builds on it, the number silently rots the first time a new
+  # API is used - so read it from the manifest and hold it to it.
+  #
+  # `max` over every package, not `.packages[0]`: cargo does not promise the
+  # order, and picking the first crate would test whichever one it happened to
+  # list - green on the wrong half of the repository.
+  msrv:
+    name: msrv
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v7
+      - name: Read rust-version from the manifest
+        id: msrv
+        run: echo "version=$(cargo metadata --no-deps --format-version 1 | jq -r '[.packages[].rust_version] | max')" >> "$GITHUB_OUTPUT"
+      - uses: dtolnay/rust-toolchain@master
+        with:
+          toolchain: ${{ steps.msrv.outputs.version }}
+      - uses: Swatinem/rust-cache@v2
+      - name: Build on the declared MSRV
+        run: cargo check --workspace --all-targets

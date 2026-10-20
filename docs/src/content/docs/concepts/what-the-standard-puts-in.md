@@ -11,18 +11,19 @@ is there because leaving it out costs more later.
 | File | Why it is there |
 | --- | --- |
 | `.github/workflows/ci.yml` | The gate, running exactly what `pnpm lint` runs locally |
-| `cliff.toml`, `CHANGELOG.md` | The changelog is generated from the history, so the history has to be worth generating from |
+| `cliff.toml`, `CHANGELOG.md` | The changelog is generated from the history, a release at a time with `git cliff --prepend`, so the history has to be worth generating from |
 | `docs/adr/` | Decisions outlive the conversation that produced them |
 | `.editorconfig` | Indentation stops being a matter of whose editor opened the file |
 | `.gitattributes` | `eol=lf`, so a tool that rewrites a file to CRLF cannot hide the real change in the diff |
 | `components.json` | `shadcn add` knows where to copy a dowel primitive |
-| `lyrn.toml` | What this was generated from, and whether it has a mark yet, for [`lyrn doctor`](/reference/doctor/) and `upgrade` later |
+| `lyrn.toml` | What this was generated from, the [version of the standard](/concepts/the-standard-by-version/) it carries and whether it has a mark yet, for [`lyrn doctor`](/reference/doctor/) and [`lyrn upgrade`](/reference/upgrade/) |
 | `CONTRIBUTING.md` | The gate, where things live, how commits are written - so the README can stay a shopfront |
 | `llms.txt` | The same map for an agent; assistants' own instruction files stay on the machine, out of git |
 | `SECURITY.md` | A vulnerability is reported privately, not in a public issue |
 | `CODE_OF_CONDUCT.md` | Contributor Covenant 3.0, with reports going privately to the maintainers |
 | `.github/ISSUE_TEMPLATE/`, `pull_request_template.md` | A report arrives with the version, the platform and a way to reproduce it |
 | `.github/workflows/audit.yml` | Published advisories and licenses, on every push and every Monday |
+| `.github/workflows/shopfronts.yml` | [`lyrn check`](/reference/check/) on every push, documentation alone included: the README, the manifests, the changelog and the site say the same thing |
 | `deny.toml` | What the audit holds Rust crates to; npm packages get `tools/check-licenses.mjs` |
 | `assets/` | The mark's three masters - the line's umbrella mark until the product has its own |
 

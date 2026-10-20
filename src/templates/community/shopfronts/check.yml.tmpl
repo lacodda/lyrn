@@ -1,0 +1,9 @@
+      # The lyrn that wrote this workflow, from its release: a newer one comes
+      # with the next version of the line's standard, by `lyrn upgrade`, not on
+      # its own one morning with rules nobody here has read yet.
+      - name: Install lyrn
+        run: |
+          curl -fsSL https://raw.githubusercontent.com/lacodda/lyrn/v{{ lyrn_version }}/tools/install.sh | LYRN_VERSION=v{{ lyrn_version }} sh
+          echo "$HOME/.local/bin" >> "$GITHUB_PATH"
+      - name: Check the shopfronts
+        run: lyrn check

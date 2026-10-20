@@ -9,4 +9,5 @@ pub mod stage;
 pub mod standing;
 pub mod status;
 pub mod template;
+pub mod upgrade;
 pub mod versions;

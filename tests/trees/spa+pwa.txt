@@ -1,4 +1,4 @@
-Would create 51 files in `demo-tool`:
+Would create 52 files in `demo-tool`:
 
   ├── .github/
   │   ├── ISSUE_TEMPLATE/
@@ -7,7 +7,8 @@ Would create 51 files in `demo-tool`:
   │   │   └── feature_request.yml
   │   ├── workflows/
   │   │   ├── audit.yml
-  │   │   └── ci.yml
+  │   │   ├── ci.yml
+  │   │   └── shopfronts.yml
   │   └── pull_request_template.md
   ├── assets/
   │   ├── logo-m.svg
