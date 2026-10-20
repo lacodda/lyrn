@@ -237,6 +237,23 @@ jobs:
           cargo fmt --check
           cargo clippy --all-targets -- -D warnings
           cargo test
+      # With the web UI the binary carries frontend/dist, and the generated CI
+      # gates the UI in a job of its own: the same three commands here.
+      - uses: pnpm/action-setup@v6
+        if: contains(matrix.addons, 'spa')
+        with:
+          version: 10
+      - uses: actions/setup-node@v7
+        if: contains(matrix.addons, 'spa')
+        with:
+          node-version: 22
+      - name: Run the web UI's gate
+        if: contains(matrix.addons, 'spa')
+        working-directory: ${{ runner.temp }}/demo-svc/frontend
+        run: |
+          pnpm install --no-frozen-lockfile
+          pnpm lint
+          pnpm build
 
   # The workspace form is the cli form in two crates, so the gate is the cli
   # gate with `--workspace` - plus the two things only a workspace can get
