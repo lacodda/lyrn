@@ -139,7 +139,7 @@ mod tests {
     /// then on refuses any change to it. A repository stamped with a version has
     /// that version's files; a version that changed afterwards would hand the
     /// merge an ancestor the repository never had.
-    const FROZEN: &[(&str, &str)] = &[("2026.10", "d8876be1441d5162")];
+    const FROZEN: &[(&str, &str)] = &[("2026.10", "d8876be1441d5162"), ("2026.11", "989f06e993e280cc")];
 
     /// The standard the built-in forms write, by form: path, then template.
     fn written_now() -> (BTreeMap<String, BTreeMap<String, String>>, Vec<String>) {

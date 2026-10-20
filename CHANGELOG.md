@@ -8,6 +8,33 @@ last release, which follow [Conventional Commits](https://www.conventionalcommit
 $ git cliff --unreleased --tag vX.Y.Z --prepend CHANGELOG.md
 ```
 
+## 🎉 [2.14.0] - 2026-10-19
+
+### ✨ Features
+
+- Write the standard's changes in the commit as short lines
+- Keep a changelog's releases under the standard's header
+- Catch a repository up with the line's standard
+- Hold the changelog's releases apart, and pnpm to its lockfile
+- Stand in for the lyrn a workflow installs
+
+### 🎛️ Refactor
+
+- Keep one copy of each file every form writes
+
+### 📐 Standard
+
+- Take the line's standard 2026.11
+
+### 🛟 Miscellaneous Tasks
+
+- Hold lyrn's shopfronts with the lyrn being pushed
+- Gate the web UI of the service form
+
+### 🛠️ Bug Fixes
+
+- Pass a program that takes flags and no commands
+
 ## 🎉 [2.13.0] - 2026-10-19
 
 ### ✨ Features

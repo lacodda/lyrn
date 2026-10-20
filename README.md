@@ -193,10 +193,11 @@ More forms — egui — follow in 2.x.
 
 ## Status
 
-v2.13.0, in daily use. All nine forms work and pass their own `lyrn doctor`,
+v2.14.0, in daily use. All nine forms work and pass their own `lyrn doctor`,
 each generated and put through its gate on Linux, macOS and Windows on every
-push; `lyrn adopt` brings an older repository up to the standard, and
-`lyrn doctor --all` says what is still off across all of them. What landed in each version:
+push; `lyrn adopt` brings an older repository up to the standard, `lyrn upgrade`
+carries one to its newest version, and `lyrn doctor --all` says what is still
+off across all of them. What landed in each version:
 [CHANGELOG](https://github.com/lacodda/lyrn/blob/main/CHANGELOG.md).
 
 ## Migrating from 1.x
