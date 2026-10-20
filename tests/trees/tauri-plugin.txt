@@ -1,4 +1,4 @@
-Would create 40 files in `demo-tool`:
+Would create 41 files in `demo-tool`:
 
   ├── .github/
   │   ├── ISSUE_TEMPLATE/
@@ -48,5 +48,6 @@ Would create 40 files in `demo-tool`:
   ├── llms.txt
   ├── lyrn.toml
   ├── package.json
+  ├── pnpm-workspace.yaml
   ├── rustfmt.toml
   └── tsconfig.json

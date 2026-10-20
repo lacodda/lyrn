@@ -20,10 +20,11 @@ carry; `--json` says it all [as one document](#json).
 
 ```console
 $ lyrn doctor
-lyrn doctor: ~/word-count, a `cli` project on standard 2026.10
+lyrn doctor: ~/word-count, a `cli` project on standard 2026.11
 
-✓ standard   all 21 files of the `cli` standard
+✓ standard   all 22 files of the `cli` standard
 ✓ readme     the longest block is 15 words, in 38 lines
+✓ changelog  4 releases apart from what is above
 ✓ mark       a mark of its own
 ✓ assets     three levels in assets/, 4 copies and icons in place
 ✓ language   64 text files in English, translations in their places
@@ -55,7 +56,7 @@ lyrn doctor: ~/word-count, a `cli` project on standard 2026.10
     why: lyrn doctor --explain authors
 ✓ identity   commits as `Ada Lovelace <ada@example.com>`, the global identity; the global excludes file keeps assistant files out
 
-5 failed, 1 to look at, 7 passed; `lyrn doctor --fix` puts 2 findings right
+5 failed, 1 to look at, 8 passed; `lyrn doctor --fix` puts 2 findings right
 stack: edition 2024 · msrv 1.99 · node 22 · pnpm 10.33.0 (the standard is on 10.34.6) · actions 1 behind · updated 9 days ago, due
 ```
 
@@ -83,10 +84,26 @@ to that.
 Every file of the standard for the repository's form is there: licence,
 changelog and `cliff.toml`, editor and git settings, the CI gate and the audit,
 the security policy and code of conduct, issue and pull request templates, the
-first ADRs, and `lyrn.toml`. The list is exactly the one
-[`lyrn adopt`](/reference/adopt/) writes, with the same rule for a file kept
-under another name, so running `lyrn adopt` satisfies it. The form comes from
-`lyrn.toml`, or is read from the repository the way `adopt` reads it.
+first ADRs, the shopfront workflow, and `lyrn.toml`. The list is exactly the
+one [`lyrn adopt`](/reference/adopt/) writes, with the same rule for a file
+kept under another name, so running `lyrn adopt` satisfies it. The form comes
+from `lyrn.toml`, or is read from the repository the way `adopt` reads it.
+
+A file still holding a place [`lyrn upgrade`](/reference/upgrade/) left for a
+person - the `<<<<<<< yours` markers - fails, lyrn.toml included, which then
+does not parse. A repository on an older
+[version of the standard](/concepts/the-standard-by-version/) than lyrn writes
+warns, with `lyrn upgrade` as the way forward.
+
+### changelog
+
+Every release in `CHANGELOG.md` starts after a blank line. git-cliff writes the
+changelog one release at a time, and a body template that ends without a blank
+line under `trim = true` glues each release to the last line of the one before;
+the file then reads as one long list. A release heading - `## [1.2.0] - ...` -
+right after a line that is not blank fails. `--fix` puts the blank lines back;
+the cause is in `cliff.toml`, whose body should open with an empty line as the
+standard's does.
 
 ### readme
 
@@ -171,6 +188,12 @@ pnpm and Node at the majors the templates use. A project with a
 for an older pnpm. No pin at all, a pin ahead of the line and `setup-node`
 without a version warn; `--fix` adds the missing pin.
 
+Every pnpm project also holds `node_modules` to its lockfile before a script
+runs: `verifyDepsBeforeRun: install` in its `pnpm-workspace.yaml` (or
+`verify-deps-before-run=install` in `.npmrc`). Without it a gate run after a
+pull checks the packages installed last month, not the ones the lockfile - and
+the release - names. `--fix` adds the setting, as the templates write it.
+
 ### audit
 
 Every tracked `Cargo.lock`, `pnpm-lock.yaml` and `package-lock.json` is read
@@ -232,9 +255,9 @@ on one of them says what is off and how to put it right.
 $ lyrn doctor ../word-count ../tally
 lyrn doctor: 2 repositories
 
-            standard readme mark assets language private actions msrv node audit ai-traces authors identity
-word-count  ✓        ✓      ✓    ✓      ✓        ✗       ✗       ✗    !    ✗     ✓         ✗       ✓
-tally       ✓        ✓      ✓    ✓      ✓        ✓       ✓       ✓    ✓    ✓     ✓         ✓       ✓
+            standard readme changelog mark assets language private actions msrv node audit ai-traces authors identity
+word-count  ✓        ✓      ✓         ✓    ✓      ✓        ✗       ✗       ✗    !    ✗     ✓         ✗       ✓
+tally       ✓        ✓      ✓         ✓    ✓      ✓        ✓       ✓       ✓    ✓    ✓     ✓         ✓       ✓
 
 1 fails, 1 passes; `lyrn doctor --fix` puts 2 findings right
 `lyrn doctor <path>` says what is off in one of them, how to put it right and why

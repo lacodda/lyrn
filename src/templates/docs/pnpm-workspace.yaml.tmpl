@@ -1,5 +1,11 @@
 # The site is a project of its own, even inside a repository that is a pnpm
 # workspace already: this file is where pnpm stops looking upward.
+
+# Before a script runs, pnpm holds node_modules to the lockfile and installs
+# what has fallen behind it: a gate run against older packages than the lock
+# names passes for something other than what ships.
+verifyDepsBeforeRun: install
+
 # pnpm 11 is broken on Windows; the line stays on 10.
 onlyBuiltDependencies:
   - esbuild

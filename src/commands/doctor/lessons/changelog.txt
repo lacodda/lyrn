@@ -1,0 +1,15 @@
+The changelog is written by git-cliff, one release at a time, on top of what is
+already there. Its body template decides whether a release ends - or begins -
+with a blank line, and under `trim = true` a body that ends with
+`{% endfor %}\` leaves none: each new release is glued to the last line of the
+one before it, and the file reads as one long list.
+
+The line found it in two repositories at once, which meant a shared habit
+rather than one slip, and in one of them it had been so for eighty releases.
+Nobody reads the raw file closely enough to see it; everybody reads the result.
+
+The rule fails a release heading - `## [1.2.0] - ...` - that follows a line
+which is not blank. `--fix` puts the blank lines back. The cause stays in
+cliff.toml until it is changed there: open the body with an empty line, as the
+line's standard cliff.toml does, and each release brings the blank line that
+parts it from whatever is above it.

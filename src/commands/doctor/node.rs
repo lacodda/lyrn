@@ -107,6 +107,27 @@ pub fn check(repo: &Repo) -> Outcome {
         }
     }
 
+    // A gate run against node_modules older than the lockfile checks a
+    // different program from the one that ships.
+    for lockfile in &lockfiles {
+        let dir = lockfile.strip_suffix("pnpm-lock.yaml").unwrap_or_default();
+        let settings = format!("{dir}pnpm-workspace.yaml");
+        let workspace = repo.read_text(&settings);
+        let npmrc = repo.read_text(&format!("{dir}.npmrc"));
+        if verifies_before_run(workspace.as_deref(), npmrc.as_deref()) {
+            continue;
+        }
+        findings.push(
+            Finding::fail(format!("{settings} lets a script run against node_modules older than {lockfile}"))
+                .fix("`verifyDepsBeforeRun: install`: pnpm then installs what fell behind the lockfile before any `pnpm run`")
+                .repair(Repair::new(
+                    settings,
+                    with_verify(workspace.as_deref().unwrap_or_default()),
+                    "has pnpm install what fell behind the lockfile before a script runs",
+                )),
+        );
+    }
+
     // One finding per version, naming the files it is in.
     let mut old_node: BTreeMap<String, Vec<String>> = BTreeMap::new();
     let mut old_pnpm: BTreeMap<String, Vec<String>> = BTreeMap::new();
@@ -197,6 +218,37 @@ fn with_package_manager(text: &str, package_manager: &str) -> Option<String> {
     (json.get("packageManager")?.as_str()? == package_manager).then_some(pinned)
 }
 
+/// The setting, with the reason the standard's templates give it.
+const VERIFY: &str = "# Before a script runs, pnpm holds node_modules to the lockfile and installs
+# what has fallen behind it: a gate run against older packages than the lock
+# names passes for something other than what ships.
+verifyDepsBeforeRun: install
+";
+
+/// Whether pnpm checks node_modules against the lockfile before a script,
+/// and stops or installs when they differ: in pnpm-workspace.yaml, where the
+/// line keeps pnpm's settings, or in .npmrc, where pnpm 10 also reads them.
+fn verifies_before_run(workspace: Option<&str>, npmrc: Option<&str>) -> bool {
+    let yaml = Regex::new(r#"(?m)^verifyDepsBeforeRun:\s*['"]?(install|error)['"]?\s*(#.*)?$"#).expect("a valid pattern");
+    let ini = Regex::new(r"(?m)^\s*verify-deps-before-run\s*=\s*(install|error)\s*$").expect("a valid pattern");
+    workspace.is_some_and(|t| yaml.is_match(t)) || npmrc.is_some_and(|t| ini.is_match(t))
+}
+
+/// pnpm-workspace.yaml with the setting: a value that is there and says
+/// something else is replaced, otherwise the standard's lines go at the end.
+fn with_verify(text: &str) -> String {
+    let newline = newline_of(text);
+    let existing = Regex::new(r"(?m)^verifyDepsBeforeRun:.*$").expect("a valid pattern");
+    if existing.is_match(text) {
+        return existing.replace(text, "verifyDepsBeforeRun: install").into_owned();
+    }
+    let block = VERIFY.replace('\n', newline);
+    match text.trim_end() {
+        "" => block,
+        kept => format!("{kept}{newline}{newline}{block}"),
+    }
+}
+
 fn push_once(files: &mut Vec<String>, file: &str) {
     if !files.iter().any(|f| f == file) {
         files.push(file.to_string());
@@ -239,6 +291,40 @@ mod tests {
             "{\n  \"packageManager\": \"pnpm@10.34.5\"\n}"
         );
         assert_eq!(with_package_manager("not json", "pnpm@10.34.5"), None);
+    }
+
+    /// The repair writes what the templates write, so a repaired project and
+    /// a generated one cannot drift apart.
+    #[test]
+    fn the_setting_is_the_one_the_templates_write() {
+        for form in [Form::Spa, Form::Mono, Form::Docs, Form::TauriPlugin] {
+            let settings = templates::sources_for(form)
+                .into_iter()
+                .find(|s| s.path.ends_with("pnpm-workspace.yaml"))
+                .unwrap();
+            let Contents::Text(text) = settings.contents else { panic!() };
+            assert!(text.contains(VERIFY), "{form}'s pnpm-workspace.yaml does not say it as the rule repairs it");
+            assert!(verifies_before_run(Some(text), None), "{form}");
+        }
+    }
+
+    #[test]
+    fn the_setting_is_added_or_corrected() {
+        assert_eq!(with_verify(""), VERIFY);
+        assert_eq!(
+            with_verify("onlyBuiltDependencies:\n  - esbuild\n"),
+            format!("onlyBuiltDependencies:\n  - esbuild\n\n{VERIFY}")
+        );
+        assert_eq!(with_verify("verifyDepsBeforeRun: false\nx: 1\n"), "verifyDepsBeforeRun: install\nx: 1\n");
+        let crlf = with_verify("x: 1\r\n");
+        assert!(
+            crlf.ends_with("verifyDepsBeforeRun: install\r\n") && !crlf.replace("\r\n", "").contains('\n'),
+            "{crlf:?}"
+        );
+        assert!(verifies_before_run(Some(&with_verify("x: 1\n")), None));
+        assert!(verifies_before_run(None, Some("verify-deps-before-run=install\n")));
+        assert!(!verifies_before_run(Some("verifyDepsBeforeRun: warn\n"), None));
+        assert!(!verifies_before_run(None, None));
     }
 
     #[test]

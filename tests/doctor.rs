@@ -478,6 +478,13 @@ fn repository_with_a_stale_mark(machine: &Machine, root: &Path) {
     write(root, "docs/public/favicon.svg", "<svg><!-- last month's S --></svg>\n");
     write(root, "docs/package.json", "{\n  \"name\": \"demo-docs\",\n  \"private\": true\n}\n");
     write(root, "docs/pnpm-lock.yaml", "");
+    // Two releases glued together, as a body template that ends without a
+    // blank line writes them.
+    write(
+        root,
+        "CHANGELOG.md",
+        "# Changelog\n\n## [0.2.0] - 2026-10-02\n\n- Two\n## [0.1.0] - 2026-10-01\n\n- One\n",
+    );
     let ico = ico_of(&[
         (16, png_of(16, TILE)),
         (24, png_of(24, TILE)),
@@ -531,6 +538,7 @@ fn many_repositories_are_a_table_and_json_is_one_document() {
         [
             "standard",
             "readme",
+            "changelog",
             "mark",
             "assets",
             "language",
@@ -546,11 +554,11 @@ fn many_repositories_are_a_table_and_json_is_one_document() {
     );
     let row = |name: &str| report.lines().find(|l| l.starts_with(&format!("{name} "))).unwrap_or_default().to_string();
     assert!(!row("good").contains('✗') && !row("good").contains('!'), "{report}");
-    // `assets` is the fourth column, and the stale favicon fails it.
+    // `assets` is the fifth column, and the stale favicon fails it.
     let bad_row = row("bad");
     let marks: Vec<&str> = bad_row.split_whitespace().skip(1).collect();
-    assert_eq!(marks[3], "✗", "{report}");
-    assert!(report.contains("1 fails, 1 passes; `lyrn doctor --fix` puts 5 findings right"), "{report}");
+    assert_eq!(marks[4], "✗", "{report}");
+    assert!(report.contains("1 fails, 1 passes; `lyrn doctor --fix` puts 7 findings right"), "{report}");
     assert!(
         report
             .lines()
@@ -568,7 +576,7 @@ fn many_repositories_are_a_table_and_json_is_one_document() {
     assert_eq!(repositories[0]["result"], "pass");
     assert_eq!(repositories[1]["result"], "fail");
     let rules = repositories[1]["rules"].as_array().unwrap();
-    assert_eq!(rules.len(), 13);
+    assert_eq!(rules.len(), 14);
     let assets = rules.iter().find(|r| r["rule"] == "assets").unwrap();
     assert_eq!(assets["result"], "fail");
     let favicon = assets["findings"]
@@ -600,7 +608,9 @@ fn fix_writes_the_repairs_and_examines_again() {
         "docs/pnpm-lock.yaml: no workflow audits it",
         "docs/public/favicon.svg is not assets/logo-s.svg",
         "assets/icon.ico lists its images 16, 24, 32, 48, 256",
-        "`lyrn doctor --fix` puts 5 findings right",
+        "docs/pnpm-workspace.yaml lets a script run against node_modules older than docs/pnpm-lock.yaml",
+        "CHANGELOG.md: 1 release starts straight after the line above - the first, `## [0.1.0] - 2026-10-01`, at line 6",
+        "`lyrn doctor --fix` puts 7 findings right",
     ] {
         assert!(report.contains(expected), "the report does not say `{expected}`:\n{report}");
     }
@@ -614,6 +624,8 @@ fn fix_writes_the_repairs_and_examines_again() {
         "  ✓ .github/workflows/docs-audit.yml: audits the documentation site's packages",
         "  ✓ docs/public/favicon.svg: copied from assets/logo-s.svg\n",
         "  ✓ assets/icon.ico: put its largest image first\n",
+        "  ✓ docs/pnpm-workspace.yaml: has pnpm install what fell behind the lockfile before a script runs\n",
+        "  ✓ CHANGELOG.md: puts a blank line before every release\n",
     ] {
         assert!(report.contains(written), "the report does not say `{written}`:\n{report}");
     }
@@ -624,6 +636,8 @@ fn fix_writes_the_repairs_and_examines_again() {
         "no workflow audits it",
         "is not assets/logo-s.svg",
         "lists its images",
+        "lets a script run against",
+        "straight after the line above",
     ] {
         assert!(!report.contains(gone), "`{gone}` is still found after --fix:\n{report}");
     }
@@ -639,6 +653,15 @@ fn fix_writes_the_repairs_and_examines_again() {
         fs::read(root.join("assets/logo-s.svg")).unwrap()
     );
     assert_eq!(ico_sizes(&fs::read(root.join("assets/icon.ico")).unwrap()), [256, 48, 32, 24, 16]);
+    assert!(
+        fs::read_to_string(root.join("docs/pnpm-workspace.yaml"))
+            .unwrap()
+            .contains("\nverifyDepsBeforeRun: install\n")
+    );
+    assert_eq!(
+        fs::read_to_string(root.join("CHANGELOG.md")).unwrap(),
+        "# Changelog\n\n## [0.2.0] - 2026-10-02\n\n- Two\n\n## [0.1.0] - 2026-10-01\n\n- One\n"
+    );
 
     // Nothing is left for a second run to write.
     let out = machine.lyrn().args(["doctor", "--fix"]).arg(root).output().unwrap();

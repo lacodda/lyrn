@@ -20,6 +20,7 @@ mod ai;
 mod assets;
 mod audit;
 mod authors;
+mod changelog;
 pub mod git;
 mod ico;
 mod identity;
@@ -51,6 +52,7 @@ const DOCS: &str = "https://lyrn.lacodda.com/reference/doctor/";
 pub enum Rule {
     Standard,
     Readme,
+    Changelog,
     Mark,
     Assets,
     Language,
@@ -70,6 +72,7 @@ impl Rule {
     pub const ALL: &'static [Rule] = &[
         Rule::Standard,
         Rule::Readme,
+        Rule::Changelog,
         Rule::Mark,
         Rule::Assets,
         Rule::Language,
@@ -87,6 +90,7 @@ impl Rule {
         match self {
             Rule::Standard => "standard",
             Rule::Readme => "readme",
+            Rule::Changelog => "changelog",
             Rule::Mark => "mark",
             Rule::Assets => "assets",
             Rule::Language => "language",
@@ -106,6 +110,7 @@ impl Rule {
         match self {
             Rule::Standard => "Every file of the standard for the repository's form is there",
             Rule::Readme => "The README is a shopfront: short blocks, no manual, one title",
+            Rule::Changelog => "Every release in the changelog starts after a blank line",
             Rule::Mark => "The project wears a mark of its own, not the line's placeholder",
             Rule::Assets => "Each level of the mark sits where its size calls for it, and an .ico lists its largest image first",
             Rule::Language => "What ships is written in English; another language lives where its translations go",
@@ -125,6 +130,7 @@ impl Rule {
         match self {
             Rule::Standard => include_str!("lessons/standard.txt"),
             Rule::Readme => include_str!("lessons/readme.txt"),
+            Rule::Changelog => include_str!("lessons/changelog.txt"),
             Rule::Mark => include_str!("lessons/mark.txt"),
             Rule::Assets => include_str!("lessons/assets.txt"),
             Rule::Language => include_str!("lessons/language.txt"),
@@ -143,6 +149,7 @@ impl Rule {
         match self {
             Rule::Standard => standard::check(repo),
             Rule::Readme => readme::check(repo),
+            Rule::Changelog => changelog::check(repo),
             Rule::Mark => standard::check_mark(repo),
             Rule::Assets => assets::check(repo),
             Rule::Language => language::check(repo),

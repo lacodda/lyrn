@@ -85,6 +85,12 @@ pub fn sources() -> Vec<SourceFile> {
             addon: None,
         },
         SourceFile {
+            path: "pnpm-workspace.yaml",
+            contents: Contents::Text(include_str!("tauri-plugin/pnpm-workspace.yaml.tmpl")),
+            executable: false,
+            addon: None,
+        },
+        SourceFile {
             path: "tsconfig.json",
             contents: Contents::Text(include_str!("tauri-plugin/tsconfig.json.tmpl")),
             executable: false,
