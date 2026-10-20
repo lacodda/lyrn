@@ -90,7 +90,8 @@ pub fn sources() -> Vec<SourceFile> {
         },
         SourceFile {
             path: "lyrn.toml",
-            contents: Contents::Text(include_str!("plugin/lyrn.toml.tmpl")),
+            // The line's lyrn.toml, and what only a plugin has to say.
+            contents: Contents::Text(concat!(include_str!("community/lyrn.toml.tmpl"), include_str!("plugin/lyrn-plugin.toml.tmpl"))),
             executable: false,
             addon: None,
         },

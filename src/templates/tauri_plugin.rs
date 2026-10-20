@@ -128,7 +128,7 @@ pub fn sources() -> Vec<SourceFile> {
         },
         SourceFile {
             path: "lyrn.toml",
-            contents: Contents::Text(include_str!("tauri-plugin/lyrn.toml.tmpl")),
+            contents: Contents::Text(include_str!("community/lyrn.toml.tmpl")),
             executable: false,
             addon: None,
         },

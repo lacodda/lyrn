@@ -133,19 +133,19 @@ pub fn sources() -> Vec<SourceFile> {
         },
         SourceFile {
             path: "LICENSE",
-            contents: Contents::Text(include_str!("service/LICENSE.tmpl")),
+            contents: Contents::Text(include_str!("community/LICENSE.tmpl")),
             executable: false,
             addon: None,
         },
         SourceFile {
             path: "CHANGELOG.md",
-            contents: Contents::Text(include_str!("service/CHANGELOG.md.tmpl")),
+            contents: Contents::Text(include_str!("community/CHANGELOG.md.tmpl")),
             executable: false,
             addon: None,
         },
         SourceFile {
             path: "cliff.toml",
-            contents: Contents::Text(include_str!("service/cliff.toml.tmpl")),
+            contents: Contents::Text(include_str!("community/cliff.toml.tmpl")),
             executable: false,
             addon: None,
         },
@@ -157,13 +157,13 @@ pub fn sources() -> Vec<SourceFile> {
         },
         SourceFile {
             path: ".editorconfig",
-            contents: Contents::Text(include_str!("service/editorconfig.tmpl")),
+            contents: Contents::Text(include_str!("community/editorconfig.tmpl")),
             executable: false,
             addon: None,
         },
         SourceFile {
             path: ".gitattributes",
-            contents: Contents::Text(include_str!("service/gitattributes.tmpl")),
+            contents: Contents::Text(include_str!("community/gitattributes.tmpl")),
             executable: false,
             addon: None,
         },
@@ -175,7 +175,7 @@ pub fn sources() -> Vec<SourceFile> {
         },
         SourceFile {
             path: "lyrn.toml",
-            contents: Contents::Text(include_str!("service/lyrn.toml.tmpl")),
+            contents: Contents::Text(include_str!("community/lyrn.toml.tmpl")),
             executable: false,
             addon: None,
         },
