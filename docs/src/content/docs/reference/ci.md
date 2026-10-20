@@ -129,6 +129,12 @@ for what it does rather than run:
 | `actions/cache`, `Swatinem/rust-cache` | Nothing: the copy keeps its build |
 | anything else | Not run - only GitHub runs it |
 
+One script is read rather than run as well: the step of the
+[shopfront workflow](/reference/check/) that installs lyrn from its release.
+The lyrn running the workflow is a lyrn, so its directory goes in front of
+`PATH` for the steps after it, and the run says when it is not the version the
+step pins.
+
 ## What never runs here
 
 A step whose script publishes past this machine - `cargo publish`,

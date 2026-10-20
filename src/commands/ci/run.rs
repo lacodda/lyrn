@@ -557,6 +557,32 @@ fn screen(script: &str) -> Option<&'static str> {
     }
 }
 
+/// Whether a script installs lyrn from its release, as the line's shopfront
+/// workflow does - and the version it pins, if it pins one.
+fn installs_lyrn(script: &str) -> Option<Option<String>> {
+    let installer = Regex::new(r"lacodda/lyrn/[^\s/]+/tools/install\.(?:sh|ps1)").expect("a valid pattern");
+    if !installer.is_match(script) {
+        return None;
+    }
+    let pinned = Regex::new(r"LYRN_VERSION\s*=\s*['\x22]?v?([0-9][0-9A-Za-z.\-]*)").expect("a valid pattern");
+    Some(pinned.captures(script).map(|c| c[1].to_string()))
+}
+
+/// The lyrn running this is a lyrn, and its directory goes in front of PATH
+/// the way the installer's would: the steps after it run this one rather
+/// than a download that, on Windows, the shell installer refuses anyway.
+fn stand_in_for_lyrn(state: &mut State, pinned: Option<&str>) -> Outcome {
+    let here = env!("CARGO_PKG_VERSION");
+    match std::env::current_exe().ok().and_then(|exe| exe.parent().map(Path::to_path_buf)) {
+        Some(dir) => state.path.insert(0, dir.display().to_string()),
+        None => return Outcome::Unsure("installs lyrn, and the lyrn running this cannot say where it is".to_string()),
+    }
+    match pinned {
+        Some(version) if version != here => Outcome::Note(format!("installs lyrn {version}; the steps after it run this one, {here}")),
+        _ => Outcome::Read(format!("installs lyrn {here}, which is the one running this")),
+    }
+}
+
 #[allow(clippy::too_many_arguments)]
 fn script_step(
     context: &Context,
@@ -578,6 +604,9 @@ fn script_step(
     };
     if let Some(reason) = screen(&body) {
         return Outcome::Skip(reason.to_string());
+    }
+    if let Some(pinned) = installs_lyrn(&body) {
+        return stand_in_for_lyrn(state, pinned.as_deref());
     }
     let named = step.doc["shell"].as_str().or(job.shell);
     let shell = Shell::of(named, os);
@@ -885,6 +914,35 @@ mod tests {
         assert!(screen("sudo apt-get update && sudo apt-get install -y x").is_some());
         assert!(screen("cargo test\ncargo package --package demo-core").is_none());
         assert!(screen("cargo fmt --check").is_none());
+    }
+
+    /// The shopfront workflow installs lyrn from a release; here the lyrn
+    /// running the workflow stands in for it, and says when it is not the
+    /// version pinned.
+    #[test]
+    fn the_lyrn_installer_is_known_and_its_pin_read() {
+        let script = "curl -fsSL https://raw.githubusercontent.com/lacodda/lyrn/v2.14.0/tools/install.sh | LYRN_VERSION=v2.14.0 sh\necho \"$HOME/.local/bin\" >> \"$GITHUB_PATH\"";
+        assert_eq!(installs_lyrn(script), Some(Some("2.14.0".to_string())));
+        assert_eq!(
+            installs_lyrn("irm https://raw.githubusercontent.com/lacodda/lyrn/main/tools/install.ps1 | iex"),
+            Some(None)
+        );
+        assert_eq!(installs_lyrn("curl -fsSL https://example.com/install.sh | sh"), None);
+
+        let mut state = State {
+            env: Vec::new(),
+            path: Vec::new(),
+            steps: Vec::new(),
+            toolchain_file: false,
+        };
+        let said = match stand_in_for_lyrn(&mut state, Some("0.0.1")) {
+            Outcome::Note(t) => t,
+            _ => panic!("another version than the one running is worth a look"),
+        };
+        assert!(said.contains("0.0.1") && said.contains(env!("CARGO_PKG_VERSION")), "{said}");
+        let exe_dir = std::env::current_exe().unwrap().parent().unwrap().display().to_string();
+        assert_eq!(state.path.first(), Some(&exe_dir), "the steps after it do not find this lyrn first");
+        assert!(matches!(stand_in_for_lyrn(&mut state, Some(env!("CARGO_PKG_VERSION"))), Outcome::Read(_)));
     }
 
     #[test]

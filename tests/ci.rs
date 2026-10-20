@@ -171,6 +171,42 @@ fn a_missing_program_blocks_the_job_rather_than_failing_it() {
     assert!(!report.contains("✓ Build"), "{report}");
 }
 
+/// The shopfront workflow installs lyrn from a release. Here the lyrn running
+/// the workflow stands in for it - the shell installer refuses Windows, and a
+/// download would check another lyrn than the one asked - and the steps after
+/// it find this one first.
+#[test]
+fn the_lyrn_a_workflow_installs_is_this_one() {
+    let workflow = "on: push\njobs:\n  shopfronts:\n    runs-on: ubuntu-latest\n    steps:\n      - name: Install lyrn\n        run: |\n          curl -fsSL https://raw.githubusercontent.com/lacodda/lyrn/v0.0.1/tools/install.sh | LYRN_VERSION=v0.0.1 sh\n          echo \"$HOME/.local/bin\" >> \"$GITHUB_PATH\"\n      - name: The lyrn found is this one\n        shell: bash\n        run: lyrn --version | grep -q \"^lyrn $EXPECTED$\"\n        env:\n          EXPECTED: @HERE@\n"
+        .replace("@HERE@", env!("CARGO_PKG_VERSION"));
+    let repo = repository(&[("shopfronts.yml", &workflow)]);
+    let cache = tempfile::tempdir().unwrap();
+    // No other lyrn to be found: not one installed, not the one cargo puts
+    // the test's way.
+    let program = format!("lyrn{}", std::env::consts::EXE_SUFFIX);
+    let path = std::env::split_paths(&std::env::var_os("PATH").unwrap())
+        .filter(|dir| !dir.join(&program).exists())
+        .collect::<Vec<_>>();
+    let out = common::lyrn()
+        .arg("ci")
+        .arg("--path")
+        .arg(repo.path())
+        .env("PATH", std::env::join_paths(path).unwrap())
+        .env("LOCALAPPDATA", cache.path())
+        .env("XDG_CACHE_HOME", cache.path())
+        .env("HOME", cache.path())
+        .env_remove("CI")
+        .output()
+        .unwrap();
+    let report = format!("{}{}", String::from_utf8_lossy(&out.stdout), String::from_utf8_lossy(&out.stderr));
+    assert!(out.status.success(), "{report}");
+    assert!(
+        report.contains(&format!("installs lyrn 0.0.1; the steps after it run this one, {}", env!("CARGO_PKG_VERSION"))),
+        "{report}"
+    );
+    assert!(report.contains("✓ The lyrn found is this one"), "{report}");
+}
+
 #[test]
 fn list_says_what_a_push_would_start_and_runs_nothing() {
     let release = "on:\n  push:\n    tags: ['v*']\njobs:\n  build:\n    runs-on: ubuntu-latest\n    steps:\n      - run: exit 1\n";
