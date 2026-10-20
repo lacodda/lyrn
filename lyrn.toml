@@ -10,10 +10,13 @@ accent = "#6D7BF2"
 mark = "chosen"
 
 [template]
-version = "2.10.0"
+version = "2.14.0"
 # Where the files came from - `lyrn` for a built-in form, `owner/repo@tag` for
 # a template from GitHub - and at which revision: lyrn's version, or the commit
 # whose CI passed.
 source = "lyrn"
-revision = "2.10.0"
-standard = "2026.10"
+revision = "2.14.0"
+standard = "2026.11"
+# The add-ons it was generated with: the standard's files carry sections of
+# them, and `lyrn upgrade` renders the standard with the same ones.
+with = []
