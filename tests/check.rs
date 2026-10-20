@@ -127,6 +127,35 @@ fn shopfronts_that_agree_pass() {
     assert!(report.contains("4 places say 1.2.0"), "{report}");
 }
 
+/// A program run with flags alone - a service - has no command to page, and
+/// a README that gives it one names something it does not have. The
+/// stand-in is this test's own harness: a real program whose help lists
+/// options and no commands.
+#[test]
+fn a_program_of_flags_alone_is_given_no_command() {
+    let repo = repository();
+    let root = repo.path();
+    let program = root.join("target/debug").join(format!("{NAME}{}", std::env::consts::EXE_SUFFIX));
+    fs::copy(std::env::current_exe().unwrap(), &program).unwrap();
+    fs::File::options().write(true).open(&program).unwrap().set_modified(SystemTime::now()).unwrap();
+
+    let (report, passed) = check(root);
+    assert!(!passed, "{report}");
+    assert!(report.contains(&format!("shows `{NAME} new`, which `{NAME} --help` does not list")), "{report}");
+
+    let readme = fs::read_to_string(root.join("README.md")).unwrap();
+    let flags_only: String = readme
+        .lines()
+        .filter(|l| !l.starts_with(&format!("$ {NAME} ")))
+        .map(|l| format!("{l}\n"))
+        .collect();
+    fs::write(root.join("README.md"), flags_only).unwrap();
+    fs::remove_file(root.join("docs/src/content/docs/reference/cli.md")).unwrap();
+    let (report, passed) = check(root);
+    assert!(passed, "{report}");
+    assert!(report.contains(&format!("✓ commands      `{NAME}` takes flags, not commands")), "{report}");
+}
+
 /// Each lesson the line learnt, repeated once: the check that holds it fails,
 /// with the finding that names it, and the others stay green.
 #[test]

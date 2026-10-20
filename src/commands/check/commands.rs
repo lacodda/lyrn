@@ -27,6 +27,7 @@ pub fn check(repo: &Repo, product: &Product) -> Outcome {
     let mut shown_count = 0;
     let mut paged_count = 0;
     let mut site_note = String::new();
+    let mut flags_only: Vec<&str> = Vec::new();
     for (manifest, bin) in programs {
         let program = match binary(repo, manifest, bin) {
             Ok(path) => path,
@@ -38,9 +39,12 @@ pub fn check(repo: &Repo, product: &Product) -> Outcome {
         let mut help = Help::new(&program);
         let top = match help.commands(&[]) {
             Ok(Some(commands)) => commands,
+            // A program run with flags alone, as a service is: there is no
+            // command to page, and a README line naming one names something
+            // the program does not have.
             Ok(None) => {
-                findings.push(Finding::warn(format!("`{bin} --help` lists no commands")));
-                continue;
+                flags_only.push(bin);
+                Vec::new()
             }
             Err(reason) => {
                 findings.push(
@@ -74,6 +78,11 @@ pub fn check(repo: &Repo, product: &Product) -> Outcome {
             }
         }
 
+        // Nothing to page: a reference of commands it does not have would be
+        // the error.
+        if flags_only.contains(&bin) {
+            continue;
+        }
         match Site::read(repo) {
             None => site_note = ", no documentation site to page them".to_string(),
             Some(site) => {
@@ -115,6 +124,9 @@ pub fn check(repo: &Repo, product: &Product) -> Outcome {
         }
     }
     Outcome::from_findings(findings, || {
+        if shown_count == 0 && !flags_only.is_empty() {
+            return format!("`{}` takes flags, not commands, and nothing written gives it one", flags_only.join("`, `"));
+        }
         let pages = if site_note.is_empty() {
             format!(", {} with a page", plural(paged_count, "command", "commands"))
         } else {
