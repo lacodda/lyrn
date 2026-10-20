@@ -27,6 +27,7 @@ use std::path::{Path, PathBuf};
 use std::process::Command as Process;
 
 use crate::cli::{IdentityArgs, UpgradeArgs};
+use crate::commands::doctor::changelog::is_release;
 use crate::commands::new::{Wanted, build_context};
 use crate::generate::{self, Plan};
 use crate::host;
@@ -352,10 +353,20 @@ fn plan(root: &Path, old: &Plan, new: &Plan, from: &str, to: &str) -> Result<Vec
         let (base, theirs) = (text(old, &path), text(new, &path));
         match (base, ours, theirs) {
             (_, None, None) => {}
-            (_, None, Some(theirs)) => match already_there(root, &path) {
-                Some(note) => steps.push(step(Action::Keep(note), "", None)),
+            (base, None, Some(theirs)) => match already_there(root, &path) {
+                // Kept under another name, or a decision log of its own: worth
+                // a word only when the standard changed what it keeps instead.
+                Some(note) if base.as_deref() != Some(theirs.as_str()) => steps.push(step(Action::Keep(note), "", None)),
+                Some(_) => {}
                 None => steps.push(step(Action::Add, "", Some(theirs))),
             },
+            (_, Some(ours), Some(theirs)) if path == Path::new(CHANGELOG) => {
+                let after = under_the_standard_s_header(&ours, &theirs);
+                if after != ours {
+                    let action = if ours.lines().any(is_release) { Action::Merge } else { Action::Update };
+                    steps.push(step(action, &ours, Some(after)));
+                }
+            }
             (Some(base), Some(ours), None) => {
                 if ours == base {
                     steps.push(step(Action::Remove, &ours, None));
@@ -388,6 +399,28 @@ fn plan(root: &Path, old: &Plan, new: &Plan, from: &str, to: &str) -> Result<Vec
         }
     }
     Ok(steps)
+}
+
+/// The changelog: its header is the standard's, its releases the
+/// repository's.
+const CHANGELOG: &str = "CHANGELOG.md";
+
+/// The repository's releases under the standard's header.
+///
+/// The header is the text git-cliff writes above the releases, and
+/// `--prepend` keeps it on top only while it is exactly the header cliff.toml
+/// names - so it belongs to the standard, and there is nothing in it to
+/// merge. A repository whose changelog was once written with `--output` lost
+/// the header the standard gave it, and a merge would read that as an edit.
+fn under_the_standard_s_header(ours: &str, header: &str) -> String {
+    let mut at = 0;
+    for line in ours.split_inclusive('\n') {
+        if is_release(line.trim_end_matches(['\n', '\r'])) {
+            return format!("{}\n\n{}", header.trim_end_matches('\n'), &ours[at..]);
+        }
+        at += line.len();
+    }
+    header.to_string()
 }
 
 /// A three-way merge, and how many places in it were left for a person.
@@ -607,10 +640,11 @@ mod tests {
         let to = standard::current();
         let (dir, old, new) = on_the_oldest(Form::Cli);
         let root = dir.path();
+        // The changelog's header is the standard's, and is held on its own.
         let changed: Vec<PathBuf> = plan(root, &old, &new, OLDEST, &to)
             .unwrap()
             .into_iter()
-            .filter(|s| s.action == Action::Update)
+            .filter(|s| s.action == Action::Update && s.path != Path::new(CHANGELOG))
             .map(|s| s.path)
             .collect();
         assert!(!changed.is_empty(), "the standard changed nothing the cli form writes");
@@ -637,6 +671,27 @@ mod tests {
         }
     }
 
+    /// A changelog written once with `--output` lost the header the standard
+    /// gave it; its releases are the repository's and stay, under the header
+    /// the standard writes now, with nothing for a person to resolve.
+    #[test]
+    fn the_changelog_keeps_its_releases_under_the_standard_s_header() {
+        let to = standard::current();
+        let (dir, old, new) = on_the_oldest(Form::Cli);
+        let root = dir.path();
+        let releases = "## 🎉 [0.2.0] - 2026-10-12\n\n### ✨ Features\n\n- Two\n\n## 🎉 [0.1.0] - 2026-10-01\n\n- One\n";
+        std::fs::write(root.join(CHANGELOG), format!("# Changelog\n\n{releases}")).unwrap();
+
+        let step = plan(root, &old, &new, OLDEST, &to)
+            .unwrap()
+            .into_iter()
+            .find(|s| s.path == Path::new(CHANGELOG))
+            .unwrap();
+        assert_eq!(step.action, Action::Merge);
+        let header = text(new.files.iter().find(|f| f.path == Path::new(CHANGELOG)).unwrap());
+        assert_eq!(step.after.unwrap(), format!("{}\n\n{releases}", header.trim_end()));
+    }
+
     /// Where the repository changed the very lines the standard changed, the
     /// file is marked for a person and the step says how many places.
     #[test]
@@ -647,7 +702,7 @@ mod tests {
         let path = plan(root, &old, &new, OLDEST, &to)
             .unwrap()
             .into_iter()
-            .find(|s| s.action == Action::Update)
+            .find(|s| s.action == Action::Update && s.path != Path::new(CHANGELOG))
             .map(|s| s.path)
             .unwrap();
         let base = text(old.files.iter().find(|f| f.path == path).unwrap());
@@ -715,6 +770,12 @@ mod tests {
         std::fs::write(root.join("LICENSE.md"), "MIT\n").unwrap();
         let steps = plan(root, &planned(&[("LICENSE", "MIT\n")]), &planned(&[("LICENSE", "MIT, 2026\n")]), "a", "b").unwrap();
         assert!(matches!(&steps[0].action, Action::Keep(why) if why.contains("LICENSE.md")));
+        // A file the standard did not change is no news, under any name.
+        assert!(
+            plan(root, &planned(&[("LICENSE", "MIT\n")]), &planned(&[("LICENSE", "MIT\n")]), "a", "b")
+                .unwrap()
+                .is_empty()
+        );
     }
 
     #[test]

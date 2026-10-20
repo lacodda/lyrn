@@ -39,7 +39,7 @@ pub fn check(repo: &Repo) -> Outcome {
 }
 
 /// A release heading: `## [1.2.0] - ...`, `## 🎉 [1.2.0]`, `## [unreleased]`.
-fn is_release(line: &str) -> bool {
+pub fn is_release(line: &str) -> bool {
     line.strip_prefix("## ").is_some_and(|rest| rest.contains('['))
 }
 

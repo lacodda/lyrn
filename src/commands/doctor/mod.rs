@@ -20,7 +20,7 @@ mod ai;
 mod assets;
 mod audit;
 mod authors;
-mod changelog;
+pub mod changelog;
 pub mod git;
 mod ico;
 mod identity;

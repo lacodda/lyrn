@@ -53,7 +53,12 @@ standard did not change, whatever the repository says in it.
 | `kept` | The repository keeps the file under another name (`LICENSE.md`), its own decision log in `docs/adr/`, or a file the standard dropped and the repository changed |
 
 The README is never merged: it is the product's words, and the standard's
-README was only ever their first draft. A file checked out with `\r\n` line
+README was only ever their first draft. The changelog is not merged either,
+but split: its releases are the repository's and stay as they are, and the
+header above them - the text `cliff.toml` writes there - is the standard's,
+since `git cliff --prepend` keeps it on top only while the two are the same. A
+changelog once written with `--output` lost its header, and gets the
+standard's back over all its releases. A file checked out with `\r\n` line
 ends is merged on its lines and written back with them.
 
 ## Where both changed the same lines
