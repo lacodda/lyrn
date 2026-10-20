@@ -19,12 +19,7 @@ jobs:
       # builds the program.
       - uses: dtolnay/rust-toolchain@stable
       - uses: Swatinem/rust-cache@v2
-      # The lyrn that wrote this workflow, from its release: a newer one comes
-      # with the next version of the line's standard, by `lyrn upgrade`, not on
-      # its own one morning with rules nobody here has read yet.
-      - name: Install lyrn
-        run: |
-          curl -fsSL https://raw.githubusercontent.com/lacodda/lyrn/v2.14.0/tools/install.sh | LYRN_VERSION=v2.14.0 sh
-          echo "$HOME/.local/bin" >> "$GITHUB_PATH"
+      # lyrn is held by the lyrn being pushed, not by a release: the version
+      # the standard installs elsewhere is not out until this commit's tag.
       - name: Check the shopfronts
-        run: lyrn check
+        run: cargo run --quiet --locked -- check
