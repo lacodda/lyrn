@@ -482,10 +482,29 @@ fn message_body(from: &str, crossed: &[Revision]) -> String {
     for revision in crossed {
         body.push_str(&format!("\n{}:\n", revision.version));
         for change in &revision.changes {
-            body.push_str(&format!("- {change}\n"));
+            body.push_str(&wrapped(change, 72));
         }
     }
     body
+}
+
+/// A change as a list item of a commit message: lines of at most `width`
+/// columns, as git log and every terminal show them best.
+fn wrapped(change: &str, width: usize) -> String {
+    let mut out = String::new();
+    let mut line = String::from("-");
+    for word in change.split_whitespace() {
+        if line.chars().count() + 1 + word.chars().count() > width && line.trim() != "-" {
+            out.push_str(&line);
+            out.push('\n');
+            line = String::from(" ");
+        }
+        line.push(' ');
+        line.push_str(word);
+    }
+    out.push_str(&line);
+    out.push('\n');
+    out
 }
 
 fn inside_a_work_tree(root: &Path) -> bool {
@@ -776,6 +795,16 @@ mod tests {
                 .unwrap()
                 .is_empty()
         );
+    }
+
+    #[test]
+    fn a_change_is_a_list_item_of_short_lines() {
+        let change = "cliff.toml keeps the changelog's explanation in its header, so `git cliff --prepend` writes each release under it";
+        let item = wrapped(change, 72);
+        assert!(item.starts_with("- cliff.toml") && item.ends_with("under it\n"), "{item}");
+        assert!(item.lines().all(|l| l.chars().count() <= 72), "{item}");
+        assert!(item.lines().skip(1).all(|l| l.starts_with("  ") && !l.starts_with("   ")), "{item}");
+        assert_eq!(item.split_whitespace().filter(|w| *w != "-").collect::<Vec<_>>().join(" "), change);
     }
 
     #[test]
