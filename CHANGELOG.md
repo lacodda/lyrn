@@ -8,6 +8,27 @@ last release, which follow [Conventional Commits](https://www.conventionalcommit
 $ git cliff --unreleased --tag vX.Y.Z --prepend CHANGELOG.md
 ```
 
+## 🎉 [2.15.0] - 2026-10-26
+
+### ✨ Features
+
+- Hold a new mark to the line's with `lyrn brand pick`
+- Measure the oldest Rust the code builds on with `lyrn msrv`
+- Draw the mark's rasters from its masters with `lyrn assets`
+- Ask setup-node for the newest Node of its major
+
+### 📐 Standard
+
+- Take the line's standard 2026.11.1
+
+### 🛠️ Bug Fixes
+
+- Draw the icons a build reads, and no others
+
+### 🧪 Testing
+
+- Hold the stand-in program where the fixture puts it
+
 ## 🎉 [2.14.0] - 2026-10-19
 
 ### ✨ Features

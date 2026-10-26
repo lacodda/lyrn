@@ -26,7 +26,7 @@ made, and made the same way for every product on the line.
 
 ```console
 $ lyrn new demo-app --accent kilna --yes
-Created 44 files in `demo-app`.
+Created 45 files in `demo-app`.
 Installing dependencies... done
 Starting the repository... done
 Staging the first commit... done
@@ -41,7 +41,7 @@ Next:
 $ cd demo-app && pnpm lint
 > eslint . && tsc --noEmit && pnpm registry && pnpm test
 
-registry: 1 copy matches dowel-ui 0.36.0
+registry: 1 copy matches dowel-ui 0.40.0
  Test Files  2 passed (2)
       Tests  3 passed (3)
 ```
@@ -51,7 +51,7 @@ request.
 
 ```console
 $ lyrn doctor
-lyrn doctor: ~/demo-app, a `spa` project on standard 2026.11
+lyrn doctor: ~/demo-app, a `spa` project on standard 2026.11.1
 
 ✓ standard   all 20 files of the `spa` standard
 ✓ readme     the longest block is 18 words, in 25 lines
@@ -69,7 +69,7 @@ lyrn doctor: ~/demo-app, a `spa` project on standard 2026.11
 ✓ identity   commits as `Kirill Lakhtachev <lahtachev@gmail.com>`, the global identity; the global excludes file keeps assistant files out
 
 13 passed, 1 not applicable
-stack: node 22 · pnpm 10.34.6 · actions on the standard · updated today
+stack: node 22 · pnpm 10.34.7 · actions on the standard · updated today
 ```
 
 On an older repository the same command says what is off - a retired action,
@@ -196,11 +196,9 @@ More forms — egui — follow in 2.x.
 
 ## Status
 
-v2.14.0, in daily use. All nine forms work and pass their own `lyrn doctor`,
-each generated and put through its gate on Linux, macOS and Windows on every
-push; `lyrn adopt` brings an older repository up to the standard, `lyrn upgrade`
-carries one to its newest version, and `lyrn doctor --all` says what is still
-off across all of them. What landed in each version:
+v2.15.0, in daily use. All nine forms pass their own `lyrn doctor` and their
+gate on Linux, macOS and Windows on every push; `lyrn adopt` and `lyrn upgrade`
+bring older repositories to the newest standard. What landed in each version:
 [CHANGELOG](https://github.com/lacodda/lyrn/blob/main/CHANGELOG.md).
 
 ## Migrating from 1.x
