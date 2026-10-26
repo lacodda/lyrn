@@ -17,7 +17,6 @@ use crate::cli::AssetsArgs;
 use crate::commands::check::product::Product;
 use crate::commands::doctor::{Repo, is_test_material};
 use crate::mark::{Level, Mark, Masters};
-use crate::model::Form;
 
 /// Where the masters live in every repository of the line.
 pub const L: &str = "assets/logo.svg";
@@ -79,8 +78,7 @@ pub fn run(args: AssetsArgs) -> Result<(), Box<dyn Error>> {
     }
 
     let mark = read_mark(&repo.root)?;
-    let form = facts.form(&repo.root).ok().map(|(form, _)| form);
-    for output in outputs(&repo, &mark, form, &name) {
+    for output in outputs(&repo, &mark) {
         put(output)?;
     }
 
@@ -182,11 +180,11 @@ pub fn read_mark(root: &Path) -> Result<Mark, Box<dyn Error>> {
 }
 
 /// Everything drawn from the mark, and where: the canonical set in `assets/`,
-/// the icons the form's build reads, and every copy the repository already
+/// the icons the repository's builds read, and every copy it already
 /// keeps - an `.ico`, a favicon, a site's header, a touch icon, the icons a
 /// web app's manifest lists. A copy is kept where it is rather than created
 /// where nothing reads it.
-pub fn outputs(repo: &Repo, mark: &Mark, form: Option<Form>, name: &str) -> Vec<Output> {
+pub fn outputs(repo: &Repo, mark: &Mark) -> Vec<Output> {
     let mut out: BTreeMap<String, Output> = BTreeMap::new();
     let mut add = |path: String, bytes: Vec<u8>, what: String| {
         out.entry(path.clone()).or_insert(Output { path, bytes, what });
@@ -203,19 +201,18 @@ pub fn outputs(repo: &Repo, mark: &Mark, form: Option<Form>, name: &str) -> Vec<
         add(SOCIAL.into(), preview, "the banner's artwork on the plate, 1280x640".into());
     }
 
-    // What the form's build reads its icons from.
-    let has_dir = |dir: &str| repo.root.join(dir).is_dir();
-    match form {
-        Some(Form::Cli) => add("assets/icon.ico".into(), mark.ico(), ico_what.clone()),
-        // `cargo install` builds the published crate, which carries only what
-        // is under its own directory.
-        Some(Form::Workspace) if has_dir(&format!("crates/{name}")) => add(format!("crates/{name}/assets/icon.ico"), mark.ico(), ico_what.clone()),
-        Some(Form::Desktop) if has_dir("src-tauri") => {
-            add("src-tauri/icons/icon.ico".into(), mark.ico(), ico_what.clone());
-            // Tauri bundles this one for every platform but Windows.
-            add("src-tauri/icons/icon.png".into(), mark.png(512), "L at 512px, the bundle's icon".into());
+    // What a build reads: every `.ico` a build script embeds, and every icon
+    // a Tauri app's bundle lists. Written whether or not it is there yet - a
+    // build that reads a missing icon fails - and nowhere else: an icon no
+    // build reads is a copy that drifts from the masters unnoticed.
+    for path in build_icons(repo) {
+        add(path, mark.ico(), ico_what.clone());
+    }
+    for (path, size) in tauri_icons(repo) {
+        match size {
+            None => add(path, mark.ico(), ico_what.clone()),
+            Some(size) => add(path, mark.png(size), format!("{} at {size}px, the bundle's icon", level_name(size))),
         }
-        _ => {}
     }
 
     // The copies the repository keeps.
@@ -233,7 +230,7 @@ pub fn outputs(repo: &Repo, mark: &Mark, form: Option<Form>, name: &str) -> Vec<
             add(path.clone(), mark.l.source().to_vec(), "a copy of the L master: a site's header".into());
         } else if file == "apple-touch-icon.png" {
             add(path.clone(), mark.png(180), "L at 180px".into());
-        } else if path.starts_with("src-tauri/icons/") && file.ends_with(".png") {
+        } else if (path.starts_with("src-tauri/icons/") || path.contains("/src-tauri/icons/")) && file.ends_with(".png") {
             if let Some(size) = square_png(&repo.root.join(path)) {
                 add(path.clone(), mark.png(size), format!("{} at {size}px", level_name(size)));
             }
@@ -244,6 +241,90 @@ pub fn outputs(repo: &Repo, mark: &Mark, form: Option<Form>, name: &str) -> Vec<
         }
     }
     out.into_values().collect()
+}
+
+/// The `.ico` files the repository's build scripts embed: every string in a
+/// `build.rs` that names one, taken from the script's crate, as cargo runs
+/// it - `"assets/icon.ico"` beside the crate, or `"../../assets/icon.ico"`
+/// at the top of a workspace.
+fn build_icons(repo: &Repo) -> Vec<String> {
+    let mut out = Vec::new();
+    for script in repo.files_named("build.rs").filter(|p| !is_test_material(p) && !in_a_template(p)) {
+        let Some(text) = repo.read_text(script) else { continue };
+        let dir = script.rsplit_once('/').map(|(d, _)| d).unwrap_or("");
+        for named in icons_named_in(&text) {
+            if let Some(path) = resolve(dir, &named)
+                && !out.contains(&path)
+            {
+                out.push(path);
+            }
+        }
+    }
+    out
+}
+
+/// The `.ico` paths a script's strings name. A path has no spaces: a string
+/// with them is a message about the icon -
+/// `expect("the mark is missing from assets/icon.ico")` - not its place.
+fn icons_named_in(text: &str) -> Vec<String> {
+    let named = regex::Regex::new(r#""([^"\s]*\.ico)""#).expect("a valid pattern");
+    named.captures_iter(text).map(|c| c[1].to_string()).collect()
+}
+
+/// The icons a Tauri app's bundle lists, with the size each PNG is drawn at:
+/// from its name - `32x32.png`, `128x128@2x.png` - else from the file, else
+/// 512. `None` is an `.ico`; Apple's `.icns` is not drawn here.
+fn tauri_icons(repo: &Repo) -> Vec<(String, Option<u32>)> {
+    let mut out = Vec::new();
+    for config in repo.files_named("tauri.conf.json").filter(|p| !is_test_material(p) && !in_a_template(p)) {
+        let Some(json) = repo.read_text(config).and_then(|t| serde_json::from_str::<serde_json::Value>(&t).ok()) else {
+            continue;
+        };
+        let dir = config.rsplit_once('/').map(|(d, _)| d).unwrap_or("");
+        let icons = json.pointer("/bundle/icon").and_then(|i| i.as_array()).cloned().unwrap_or_default();
+        for icon in icons.iter().filter_map(|i| i.as_str()) {
+            let Some(path) = resolve(dir, icon) else { continue };
+            let lower = path.to_ascii_lowercase();
+            if lower.ends_with(".ico") {
+                out.push((path, None));
+            } else if lower.ends_with(".png") {
+                let size = size_in_name(&path).or_else(|| square_png(&repo.root.join(&path))).unwrap_or(512);
+                out.push((path, Some(size)));
+            }
+        }
+    }
+    out
+}
+
+/// `32x32.png` is 32, `128x128@2x.png` is 256.
+fn size_in_name(path: &str) -> Option<u32> {
+    let name = path.rsplit('/').next()?.strip_suffix(".png")?;
+    let (side, scale) = match name.split_once('@') {
+        Some((side, scale)) => (side, scale.strip_suffix('x')?.parse::<u32>().ok()?),
+        None => (name, 1),
+    };
+    let (width, height) = side.split_once('x')?;
+    let width: u32 = width.parse().ok()?;
+    (height.parse::<u32>().ok()? == width).then_some(width * scale)
+}
+
+/// A path written relative to `dir`, as a path of the repository; `None` when
+/// it leaves the repository or is absolute.
+fn resolve(dir: &str, relative: &str) -> Option<String> {
+    if relative.starts_with('/') || relative.contains(':') || relative.contains("${") || relative.contains('{') {
+        return None;
+    }
+    let mut parts: Vec<&str> = dir.split('/').filter(|p| !p.is_empty()).collect();
+    for part in relative.split(['/', '\\']) {
+        match part {
+            "" | "." => {}
+            ".." => {
+                parts.pop()?;
+            }
+            other => parts.push(other),
+        }
+    }
+    Some(parts.join("/"))
 }
 
 fn level_name(size: u32) -> &'static str {
@@ -291,4 +372,38 @@ fn manifest_icons(repo: &Repo, manifest: &str) -> Vec<(String, u32)> {
             Some((if dir.is_empty() { src.to_string() } else { format!("{dir}/{src}") }, size))
         })
         .collect()
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    #[test]
+    fn a_path_is_read_from_where_the_build_runs() {
+        assert_eq!(resolve("", "assets/icon.ico").as_deref(), Some("assets/icon.ico"));
+        assert_eq!(resolve("crates/cli", "assets/icon.ico").as_deref(), Some("crates/cli/assets/icon.ico"));
+        assert_eq!(resolve("crates/nooma", "../../assets/icon.ico").as_deref(), Some("assets/icon.ico"));
+        assert_eq!(resolve("src-tauri", "./icons/icon.ico").as_deref(), Some("src-tauri/icons/icon.ico"));
+        assert_eq!(resolve("", "../elsewhere/icon.ico"), None, "outside the repository");
+        assert_eq!(resolve("", "C:/icons/icon.ico"), None);
+        assert_eq!(resolve("", "{dir}/icon.ico"), None, "a path built at run time");
+    }
+
+    #[test]
+    fn a_build_script_names_its_icon_and_a_message_does_not() {
+        let script = r#"
+            const ICON: &str = "assets/icon.ico";
+            let icon = Path::new(env!("CARGO_MANIFEST_DIR")).join("../../assets/icon.ico");
+            std::fs::metadata(&icon).expect("the line mark is missing from assets/icon.ico");
+        "#;
+        assert_eq!(icons_named_in(script), ["assets/icon.ico", "../../assets/icon.ico"]);
+    }
+
+    #[test]
+    fn a_tauri_icon_is_drawn_at_the_size_its_name_says() {
+        assert_eq!(size_in_name("src-tauri/icons/32x32.png"), Some(32));
+        assert_eq!(size_in_name("src-tauri/icons/128x128@2x.png"), Some(256));
+        assert_eq!(size_in_name("src-tauri/icons/icon.png"), None);
+        assert_eq!(size_in_name("src-tauri/icons/Square30x30Logo.png"), None);
+    }
 }

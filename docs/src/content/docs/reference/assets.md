@@ -41,14 +41,16 @@ assets/social-preview.png changed: upload it by hand at https://github.com/lacod
 | `assets/apple-touch-icon.png` | L at 180px |
 | `assets/logo-512.png` | L at 512px |
 | `assets/social-preview.png` | the banner, 1280x640 |
-| the `.ico` the form's build reads | 256, 128 and 64 from L, 48 and 32 from M, 24 and 16 from S, the largest first |
-| `src-tauri/icons/icon.png` (desktop) | L at 512px |
+| every `.ico` a build reads | 256, 128 and 64 from L, 48 and 32 from M, 24 and 16 from S, the largest first |
+| every PNG a Tauri app's bundle lists | the level of its size: `32x32.png` is M, `128x128@2x.png` is L at 256 |
 
-The `.ico` goes where the form's build reads it: `assets/icon.ico` for a cli,
-`crates/<name>/assets/icon.ico` for a workspace - a published crate carries
-only what is under its own directory - and `src-tauri/icons/icon.ico` for a
-desktop app. The largest image comes first: Windows picks by size and ignores
-the order, but Tauri takes the first image as the window's icon.
+An icon goes where a build reads it: every string in a `build.rs` that names
+an `.ico` - `"assets/icon.ico"` beside the crate, `"../../assets/icon.ico"` at
+the top of a workspace - and every icon in a `tauri.conf.json`'s
+`bundle.icon`. It is written even where it is missing, since a build that reads
+a missing icon fails, and nowhere else. The largest image of an `.ico` comes
+first: Windows picks by size and ignores the order, but Tauri takes the first
+image as the window's icon.
 
 Beyond that canon, every copy the repository already keeps is drawn again where
 it is: any other `.ico`, a site's header (`src/assets/logo.svg`, the L master)
