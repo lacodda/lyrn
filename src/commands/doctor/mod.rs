@@ -24,7 +24,7 @@ pub mod changelog;
 pub mod git;
 mod identity;
 mod language;
-mod msrv;
+pub mod msrv;
 mod node;
 mod private;
 mod readme;

@@ -28,7 +28,7 @@ pub fn check(repo: &Repo) -> Outcome {
                 // members inherit `[workspace.package]`, read above.
                 findings.push(
                     Finding::fail(format!("{manifest} declares no rust-version"))
-                        .fix("measure the oldest toolchain that builds it and write it as `rust-version`"),
+                        .fix("`lyrn msrv` measures the oldest toolchain that builds it and writes it as `rust-version`"),
                 )
             }
             Err(reason) => findings.push(Finding::fail(format!("{manifest} does not parse: {reason}"))),
@@ -75,7 +75,7 @@ pub fn check(repo: &Repo) -> Outcome {
 
 /// `rust-version` of a manifest, following `rust-version.workspace = true` to
 /// the workspace at the top.
-pub(super) fn declared_version(repo: &Repo, manifest: &str) -> Result<Option<String>, String> {
+pub fn declared_version(repo: &Repo, manifest: &str) -> Result<Option<String>, String> {
     let text = repo.read_text(manifest).ok_or_else(|| "it cannot be read".to_string())?;
     let table: toml::Table = toml::from_str(&text).map_err(|e| e.to_string())?;
     let workspace_version = || -> Option<String> {

@@ -104,6 +104,7 @@ $ lyrn stage                     # start a stage: what stands in its way, and a 
 $ lyrn status                    # where the repository stands, on one screen
 $ lyrn versions                  # where the version is written, and where it went
 $ lyrn deps                      # how old the stack is, and which dependencies are behind
+$ lyrn msrv                      # the oldest Rust the code builds on, measured and written
 $ lyrn forms                     # the forms, their add-ons, and your own templates
 $ lyrn template check [path]     # hold a template to what lyrn accepts
 ```

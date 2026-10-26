@@ -5,6 +5,7 @@ pub mod ci;
 pub mod deps;
 pub mod doctor;
 pub mod init;
+pub mod msrv;
 pub mod new;
 pub mod stage;
 pub mod standing;

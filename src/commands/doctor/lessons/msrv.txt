@@ -12,3 +12,7 @@ The rule fails a Rust manifest (Cargo.toml, src-tauri/Cargo.toml) with no
 rust-version, a declared version no job builds on, and a job that builds on a
 different number or on a channel such as `stable`. It warns when the job
 repeats the number by hand. The job `lyrn new` writes is the model.
+
+`lyrn msrv` finds the number: it starts at the floor the edition and the
+dependencies set, builds on each toolchain as the job does, and writes the
+oldest that passes.

@@ -183,6 +183,7 @@ fails, since GitHub runs none of it.
 desktop app), and a CI job named `msrv` builds on it - reading the number from
 the manifest, as the job `lyrn new` writes does. A job that builds on another
 number or on `stable` fails; one that repeats the right number by hand warns.
+[`lyrn msrv`](/reference/msrv/) measures the number and writes it.
 
 ### node
 

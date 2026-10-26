@@ -43,6 +43,8 @@ pub enum Command {
     Versions(PathArgs),
     /// When the stack was last brought up to date, and which dependencies are behind
     Deps(PathArgs),
+    /// Measure the oldest Rust the code builds on, and write it as rust-version
+    Msrv(PathArgs),
     /// List the forms a project can take, and your own templates
     Forms,
     /// Check a template, or write a built-in form out as one

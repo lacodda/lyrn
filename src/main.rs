@@ -57,6 +57,7 @@ fn main() -> ExitCode {
         cli::Command::Status(args) => commands::status::run(args),
         cli::Command::Versions(args) => commands::versions::run(args),
         cli::Command::Deps(args) => commands::deps::run(args),
+        cli::Command::Msrv(args) => commands::msrv::run(args),
         cli::Command::Forms => {
             list_forms();
             Ok(())
