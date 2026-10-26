@@ -719,6 +719,26 @@ fn an_icon_cut_from_one_level_fails_at_the_sizes_it_does_not_read() {
         "{report}"
     );
     assert!(report.contains("assets/apple-touch-icon.png is the filled S tile at 180px"), "{report}");
+    // Masters that draw nothing leave nothing to draw again from.
+    assert!(!report.contains("drawn again"), "{report}");
+
+    // With masters that draw, --fix draws both again, each size from its level.
+    let own = Path::new(env!("CARGO_MANIFEST_DIR")).join("assets");
+    for master in ["logo.svg", "logo-m.svg", "logo-s.svg"] {
+        fs::copy(own.join(master), root.join("assets").join(master)).unwrap();
+    }
+    machine.commit(root, "feat: the mark", None);
+    let out = machine.lyrn().args(["doctor", "--fix"]).arg(root).output().unwrap();
+    let report = String::from_utf8(out.stdout).unwrap();
+    for written in [
+        "  ✓ assets/icon.ico: drawn again from the masters, every size from its level\n",
+        "  ✓ assets/apple-touch-icon.png: drawn again from L at 180px\n",
+    ] {
+        assert!(report.contains(written), "the report does not say `{written}`:\n{report}");
+    }
+    assert!(!report.contains("wrong level"), "{report}");
+    assert!(!report.contains("filled S tile"), "{report}");
+    assert_eq!(ico_sizes(&fs::read(root.join("assets/icon.ico")).unwrap()), [256, 128, 64, 48, 32, 24, 16]);
 }
 
 #[test]

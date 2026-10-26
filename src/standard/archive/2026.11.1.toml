@@ -8,7 +8,7 @@
 
 changes = [
     "Every workflow that sets up Node asks for the newest release of its major (`check-latest: true`): the one the runner has cached lags the floor Astro and Vite raise in patch releases, and Astro 7.4.2 refused the Node 22.23.3 GitHub's runners had.",
-    "In the files a project starts with rather than the standard's: the docs form's workflows ask for the newest Node too, and `lyrn doctor --fix` adds the line to the others.",
+    "In the files a project starts with rather than the standard's: the docs form's workflows ask for the newest Node too, and `lyrn doctor --fix` adds the line to the others; the docs form no longer brings `export-assets.mjs`, since `lyrn assets` draws the mark.",
 ]
 
 # Files written as they are, with no placeholder substituted.

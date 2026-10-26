@@ -95,8 +95,7 @@ pub fn sources(form: Form) -> Vec<SourceFile> {
         text("docs/adr/README.md", adr_index(form)),
         // The masters of the mark: the line's umbrella mark at its three
         // levels, until the product has one of its own. Copies of dowel-ui's,
-        // like the spa's favicon; the docs form's exporter draws every raster
-        // from these.
+        // like the spa's favicon; `lyrn assets` draws every raster from these.
         text("assets/logo.svg", include_str!("dowel/marks/lacodda-L.svg")),
         text("assets/logo-m.svg", include_str!("dowel/marks/lacodda-M.svg")),
         text("assets/logo-s.svg", include_str!("dowel/marks/lacodda-S.svg")),

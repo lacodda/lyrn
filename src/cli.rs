@@ -31,6 +31,8 @@ pub enum Command {
     Doctor(DoctorArgs),
     /// Hold the shopfronts to each other: versions, descriptions, commands, the site's address
     Check(CheckArgs),
+    /// Lay the mark out by the line's canon and draw every raster of it from its masters
+    Assets(AssetsArgs),
     /// Run here the CI a push of this commit would start, before pushing it
     Ci(CiArgs),
     /// Start a stage: what it is, what stands in its way, and a line in rigger's record
@@ -140,6 +142,21 @@ pub struct CheckArgs {
     /// Say why a check exists and how to satisfy it, instead of checking
     #[arg(long, value_name = "CHECK", conflicts_with_all = ["paths", "all", "json"])]
     pub explain: Option<crate::commands::check::Shop>,
+}
+
+#[derive(clap::Args)]
+pub struct AssetsArgs {
+    /// The repository; defaults to the one the current directory is in
+    pub path: Option<PathBuf>,
+
+    /// Take the masters in first from the mark's generator: a directory of
+    /// `<mark>-L.svg`, `-M.svg`, `-S.svg` and `-banner.svg`
+    #[arg(long, value_name = "DIR")]
+    pub from: Option<PathBuf>,
+
+    /// The mark's name in that directory; defaults to the project's
+    #[arg(long, value_name = "NAME", requires = "from")]
+    pub mark: Option<String>,
 }
 
 #[derive(clap::Args)]

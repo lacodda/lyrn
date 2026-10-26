@@ -138,7 +138,11 @@ with no plate in it is the S tile where the plated mark belongs. The images
 are listed largest first - Tauri takes the first one as the window's icon -
 and an `.ico` without 16, 24, 32, 48 and 256 warns. A touch icon and
 `assets/logo-512.png` are drawn large and must be plated. Templates and test
-material are left out.
+material are left out. `--fix` copies the masters over stale copies, reorders
+an `.ico`, and draws a wrong `.ico` or touch icon again from the masters with
+the code of [`lyrn assets`](/reference/assets/). An exporter of the
+repository's own, `export-assets.mjs`, warns: it is a second drawing of the
+rule, and the line's own got it wrong in nine products of fifteen.
 
 ### language
 

@@ -1,7 +1,7 @@
 //! The placeholder mark the `desktop` form ships, held to the line's rules.
 //!
-//! The icon is bytes in the repository, produced by
-//! `tools/render-placeholder-icon.py`. Bytes do not check themselves, and the
+//! The icon is bytes in the repository: the umbrella mark as `lyrn assets`
+//! draws it, which `src/mark` holds them to. Bytes do not check themselves, and the
 //! line has already shipped this exact class of defect twice: kilna put a flat
 //! coloured lozenge on the desktop because the whole `.ico` was built from the
 //! S tile, and its titlebar was stretched out of a 16px image because the
@@ -9,7 +9,7 @@
 //! at a screen, months later.
 //!
 //! So the rules are held here, against the actual pixels, rather than trusted
-//! to the script that wrote them. The script could be rewritten, or the file
+//! to the code that drew them. The code could be rewritten, or the file
 //! replaced by hand; what matters is what the file says.
 
 use std::path::PathBuf;
@@ -163,7 +163,7 @@ fn every_size_carries_the_level_that_reads_at_it() {
 /// `entries()[0]` verbatim as the window icon, and a titlebar stretched out of
 /// a 16px image is how kilna v0.32.1 shipped. Cheap to hold, expensive to
 /// notice - and Pillow's own ICO writer sorts ascending no matter what order
-/// it is handed, which is how the first draft of the exporter got this wrong.
+/// it is handed, which is how the first Python drawing of it got this wrong.
 #[test]
 fn the_largest_image_comes_first() {
     let ico = placeholder_ico();
@@ -217,7 +217,7 @@ fn the_placeholder_is_drawn_in_the_lines_colours() {
     assert_eq!([plate[0], plate[1], plate[2]], [0x1B, 0x21, 0x26], "the plate is not the line's #1B2126");
 
     // The outline, three quarters of the mark's colour over that plate. The
-    // exact row is where the centre line crosses it; see the exporter.
+    // exact row is where the centre line crosses it, in the master's geometry.
     let outline = rgba.get_pixel(56, 256);
     let expected: Vec<u8> = [0x8Eu32, 0x9A, 0xA3]
         .iter()

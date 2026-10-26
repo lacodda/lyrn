@@ -63,11 +63,11 @@ without that line is refused too, with the line to add.
 | `src/templates/` | The built-in forms: one module and one directory of template files each |
 | `src/templates/community.rs` | What every repository a form starts carries, written once |
 | `src/templates/dowel/` | Copies taken from a published dowel-ui: primitives, accents, marks |
+| `src/mark/` | The mark drawn: levels, the `.ico`, the social preview, and the font it is set in |
 | `src/template/` | Templates from outside: a directory, a GitHub tag, cargo-generate |
 | `src/generate.rs`, `src/render.rs` | From a template and a context to files on disk |
 | `tests/` | The binary run as a user runs it, and the trees |
 | `tools/vendor-dowel.mjs` | Takes the dowel copies from a published dowel-ui |
-| `tools/render-placeholder-icon.py` | Draws the placeholder icons the forms ship |
 | `docs/` | The documentation site; decisions in `docs/adr/` |
 
 A form is a directory of files plus a list in its module saying which file

@@ -188,11 +188,10 @@ inside the `.ico`**, not to the file as a whole: the filled tile at 27px and
 below, where an outline would collapse into noise, and the outlined mark on a
 dark plate above that.
 
-Once the mark exists, its three levels replace the masters in `assets/`, and
-`pnpm export-assets` in the documentation site
-([`--form docs`](#the-mark)) draws the icons from them; then set
+Once the mark exists, [`lyrn assets --from <dir>`](/reference/assets/) takes
+its masters into `assets/`, draws the icons from them and sets
 `mark = "chosen"`. Not `pnpm tauri icon`, which cuts every size from one
-picture. Two things the exporter keeps that a single picture cannot:
+picture. Two things `lyrn assets` keeps that a single picture cannot:
 
 - **The largest image comes first.** Windows picks by nearest size and ignores
   order, but `tauri-codegen` takes the first entry verbatim for the window, so
@@ -450,7 +449,7 @@ Added 21 files in `.`.
 | Pages | A front page, Getting Started, a guide and a reference page to replace |
 | For agents | `llms.txt`, `llms-full.txt` and a `.md` twin of every page |
 | Checks | The site's address, and every internal link against it |
-| The mark | `export-assets.mjs`, drawing every icon from the masters in `assets/` |
+| The mark | The site's header, favicon and touch icon, which `lyrn assets` draws again from the masters |
 | Publishing | `.github/workflows/docs.yml`, to GitHub Pages |
 | Audit | `.github/workflows/docs-audit.yml`: every package of the site against the advisories |
 
@@ -498,12 +497,12 @@ starts with one, in a CSS parser it only ever feeds its own files.
 
 ### The mark
 
-`pnpm export-assets` draws every raster of the mark from its three masters in
-`assets/` - `logo.svg` (L), `logo-m.svg` (M), `logo-s.svg` (S) - by the line's
-rule: a size takes the level that reads at it, S at 27px and under, M up to
-63px, L above, and the rule applies to each image inside the `.ico`, largest
-first. It writes the site's header (L) and favicon (S), the touch icon, the
-canonical rasters in `assets/`, and the icons the repository's build reads,
+[`lyrn assets`](/reference/assets/) draws every raster of the mark from its
+masters in `assets/` - `logo.svg` (L), `logo-m.svg` (M), `logo-s.svg` (S) - by
+the line's rule: a size takes the level that reads at it, S at 27px and under,
+M up to 63px, L above, and the rule applies to each image inside the `.ico`,
+largest first. It writes the site's header (L) and favicon (S), the touch icon,
+the canonical rasters in `assets/`, and the icons the repository's build reads,
 wherever its form keeps them - `lyrn.toml` says which form that is:
 
 | Form | Icons the build reads |

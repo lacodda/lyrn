@@ -601,16 +601,16 @@ jobs:
       - name: Audit the site
         working-directory: ${{ runner.temp }}/demo-tool/docs
         run: pnpm audit
-      # The exporter draws every icon from the masters by the level rule. What
-      # it promises, checked from outside: the cli's .ico where build.rs reads
-      # it, largest image first, every entry a whole PNG; the site's header and
-      # favicon byte for byte the L and S masters.
+      # `lyrn assets` draws every icon from the masters by the level rule.
+      # What it promises, checked from outside: the cli's .ico where build.rs
+      # reads it, largest image first, every entry a whole PNG; the site's
+      # header and favicon byte for byte the L and S masters.
       - name: Draw the icons from the masters
         shell: bash
         working-directory: ${{ runner.temp }}/demo-tool
         run: |
           set -eu
-          (cd docs && pnpm export-assets)
+          "$GITHUB_WORKSPACE/target/release/lyrn" assets
           node -e '
             const b = require("fs").readFileSync("assets/icon.ico")
             const sizes = []

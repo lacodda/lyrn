@@ -1,4 +1,4 @@
-Would add 21 files in `.`:
+Would add 20 files in `.`:
 
   ├── .github/
   │   └── workflows/
@@ -30,7 +30,6 @@ Would add 21 files in `.`:
       │   └── content.config.ts
       ├── .gitignore
       ├── astro.config.mjs
-      ├── export-assets.mjs
       ├── package.json
       ├── pnpm-workspace.yaml
       └── tsconfig.json

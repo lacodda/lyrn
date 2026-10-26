@@ -33,7 +33,7 @@ const PRIMITIVES = ['button', 'field', 'input', 'panel', 'alert']
 /** The mark a project starts with: the line's umbrella mark, at all three
  * levels, until the product has one of its own. S is the favicon - the level
  * for 27px and under - and the three together are the masters in `assets/`
- * that `docs/export-assets.mjs` draws every icon from. */
+ * that `lyrn assets` draws every icon from. */
 const MARKS = ['lacodda-L.svg', 'lacodda-M.svg', 'lacodda-S.svg']
 
 const version = process.argv[2] ?? readFileSync(join(DOWEL, 'VERSION'), 'utf8').trim()

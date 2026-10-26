@@ -88,8 +88,8 @@ pub fn sources() -> Vec<SourceFile> {
             addon: None,
         },
         // The line's umbrella mark until the product has one of its own: the
-        // same image the desktop form ships, drawn level by level by
-        // `tools/render-placeholder-icon.py`. `build.rs` embeds it.
+        // same image the desktop form ships, the umbrella mark as
+        // `lyrn assets` draws it. `build.rs` embeds it.
         SourceFile {
             path: "assets/icon.ico",
             contents: Contents::Binary(include_bytes!("desktop/icons/icon.ico")),

@@ -30,5 +30,5 @@ A CI job builds on exactly that version, so the number cannot quietly rot.
 
 The mark in `assets/` is the line's umbrella mark - lambda on graphite - until
 the product has one of its own; `lyrn.toml` says `mark = "placeholder"`
-meanwhile. The `.ico` is drawn from the masters by `docs/export-assets.mjs`,
-which comes with the documentation site (`lyrn new {{ name }} --form docs`).
+meanwhile. `lyrn assets --from <directory>` takes a mark of its own in, and
+`lyrn assets` draws the `.ico` and every other raster from the masters.

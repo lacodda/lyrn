@@ -65,10 +65,10 @@ pub fn sources() -> Vec<SourceFile> {
         text("docs/src/integrations/address.mjs", include_str!("docs/integrations/address.mjs")),
         text("docs/src/integrations/llms.mjs", include_str!("docs/integrations/llms.mjs")),
         text("docs/src/styles/brand.css", include_str!("docs/brand.css.tmpl")),
-        // The mark, as the exporter lays it out: the header takes level L, the
-        // favicon level S, the touch icon L again at 180px. The line's
-        // umbrella mark until the product has its own; `pnpm export-assets`
-        // redraws all three from the masters in `assets/`.
+        // The mark, as `lyrn assets` lays it out: the header takes level L,
+        // the favicon level S, the touch icon L again at 180px. The line's
+        // umbrella mark until the product has its own; `lyrn assets` redraws
+        // all three from the masters in `assets/`.
         text("docs/src/assets/logo.svg", include_str!("dowel/marks/lacodda-L.svg")),
         text("docs/public/favicon.svg", include_str!("dowel/marks/lacodda-S.svg")),
         SourceFile {
@@ -77,7 +77,6 @@ pub fn sources() -> Vec<SourceFile> {
             executable: false,
             addon: None,
         },
-        text("docs/export-assets.mjs", include_str!("docs/export-assets.mjs.tmpl")),
         text(".github/workflows/docs.yml", include_str!("docs/github/docs.yml.tmpl")),
         // The site's packages are audited by a workflow of their own: the form adds
         // to a repository and leaves the audit it already runs as it was.

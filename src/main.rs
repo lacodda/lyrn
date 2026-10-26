@@ -3,6 +3,7 @@ mod commands;
 mod generate;
 mod hash;
 mod host;
+mod mark;
 mod model;
 mod naming;
 mod registries;
@@ -51,6 +52,7 @@ fn main() -> ExitCode {
             Ok(false) => return ExitCode::FAILURE,
             Err(e) => Err(e),
         },
+        cli::Command::Assets(args) => commands::assets::run(args),
         cli::Command::Stage(args) => commands::stage::run(args),
         cli::Command::Status(args) => commands::status::run(args),
         cli::Command::Versions(args) => commands::versions::run(args),

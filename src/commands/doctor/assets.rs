@@ -10,8 +10,9 @@
 //! files: the copies against their masters byte for byte, and each image of
 //! an `.ico` by the one pixel that tells the filled tile from the plate.
 
-use super::ico::{self, Probe};
 use super::{Finding, Outcome, Repair, Repo, is_test_material, plural, some_of};
+use crate::commands::assets::read_mark;
+use crate::mark::ico::{self, Probe};
 
 const L: &str = "assets/logo.svg";
 const M: &str = "assets/logo-m.svg";
@@ -40,9 +41,25 @@ pub fn check(repo: &Repo) -> Outcome {
     let mut findings = Vec::new();
     let mut looked_at = 0;
 
+    // An exporter of the repository's own is a second drawing of the level
+    // rule, and nine products of fifteen got theirs wrong somewhere.
+    for script in repo
+        .files
+        .iter()
+        .filter(|f| f.ends_with("export-assets.mjs") && !is_test_material(f) && !in_a_template(f))
+    {
+        findings.push(
+            Finding::warn(format!("{script} draws the mark by a rule of its own"))
+                .fix("delete it - `lyrn assets` draws every raster from the masters, by the line's rule"),
+        );
+    }
+
     // The three masters. Without them the levels are one drawing at every
     // size, which is the defect itself.
     let levels = has_mark && repo.has_file(M) && repo.has_file(S);
+    // The masters drawn, for the repairs that draw an image again; masters
+    // that do not draw leave those findings without one.
+    let mark = if levels { read_mark(&repo.root).ok() } else { None };
     if has_mark && !levels {
         let missing: Vec<String> = [M, S].iter().filter(|m| !repo.has_file(m)).map(|m| m.to_string()).collect();
         findings.push(
@@ -65,7 +82,7 @@ pub fn check(repo: &Repo) -> Outcome {
             }
             findings.push(
                 Finding::fail(format!("{path} is not {master}: {}", what_it_shows(path)))
-                    .fix(format!("copy {master} over it - the exporter in docs/ writes every copy from the masters"))
+                    .fix(format!("copy {master} over it - `lyrn assets` writes every copy from the masters"))
                     .repair(Repair::new(path.clone(), ours, format!("copied from {master}"))),
             );
         }
@@ -95,10 +112,12 @@ pub fn check(repo: &Repo) -> Outcome {
         }
         let missing: Vec<String> = ICO_SIZES.iter().filter(|s| !sizes.contains(s)).map(|s| format!("{s}px")).collect();
         if !missing.is_empty() {
-            findings.push(
-                Finding::warn(format!("{path} has no {}: Windows scales the nearest image instead", some_of(&missing, 5)))
-                    .fix("export 16, 24, 32, 48, 64, 128 and 256"),
-            );
+            let mut finding = Finding::warn(format!("{path} has no {}: Windows scales the nearest image instead", some_of(&missing, 5)))
+                .fix("`lyrn assets` draws 16, 24, 32, 48, 64, 128 and 256");
+            if let Some(mark) = &mark {
+                finding = finding.repair(Repair::new(*path, mark.ico(), "drawn again from the masters, every size from its level"));
+            }
+            findings.push(finding);
         }
         if levels {
             let wrong: Vec<String> = entries
@@ -112,12 +131,14 @@ pub fn check(repo: &Repo) -> Outcome {
                 } else {
                     format!("the {} images are", some_of(&wrong, 4))
                 };
-                findings.push(
-                    Finding::fail(format!(
-                        "{path}: {which} the wrong level of the mark - S at 27px and below, the plated M and L above"
-                    ))
-                    .fix("draw each size from the level its size calls for - `levelFor(size)` in the exporter"),
-                );
+                let mut finding = Finding::fail(format!(
+                    "{path}: {which} the wrong level of the mark - S at 27px and below, the plated M and L above"
+                ))
+                .fix("`lyrn assets` draws each size from the level its size calls for");
+                if let Some(mark) = &mark {
+                    finding = finding.repair(Repair::new(*path, mark.ico(), "drawn again from the masters, every size from its level"));
+                }
+                findings.push(finding);
             }
         }
     }
@@ -137,7 +158,12 @@ pub fn check(repo: &Repo) -> Outcome {
             };
             looked_at += 1;
             if ico::probe(&bytes) == Probe::Filled {
-                findings.push(Finding::fail(format!("{path} is the filled S tile at {size}px, where the plated L reads")).fix("draw it from assets/logo.svg"));
+                let mut finding = Finding::fail(format!("{path} is the filled S tile at {size}px, where the plated L reads"))
+                    .fix("`lyrn assets` draws it from assets/logo.svg");
+                if let Some(mark) = &mark {
+                    finding = finding.repair(Repair::new(path, mark.png(size), format!("drawn again from L at {size}px")));
+                }
+                findings.push(finding);
             }
         }
     }

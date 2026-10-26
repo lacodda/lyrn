@@ -22,7 +22,6 @@ mod audit;
 mod authors;
 pub mod changelog;
 pub mod git;
-mod ico;
 mod identity;
 mod language;
 mod msrv;

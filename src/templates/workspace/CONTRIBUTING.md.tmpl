@@ -39,5 +39,5 @@ the published crate, and a crate carries only what is under its own directory:
 an icon reached through `../../assets` builds here and is missing from
 crates.io. The mark itself is the line's umbrella mark - lambda on graphite -
 until the product has one of its own; `lyrn.toml` says `mark = "placeholder"`
-meanwhile. The `.ico` is drawn from the masters by `docs/export-assets.mjs`,
-which comes with the documentation site (`lyrn new {{ name }} --form docs`).
+meanwhile. `lyrn assets --from <directory>` takes a mark of its own in, and
+`lyrn assets` draws the `.ico` and every other raster from the masters.

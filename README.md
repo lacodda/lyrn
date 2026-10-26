@@ -98,6 +98,7 @@ $ lyrn adopt [path]              # the standard's missing files, into an old rep
 $ lyrn upgrade [path]            # the newest standard, merged into the files and committed
 $ lyrn doctor [path...] [--fix]  # what is off against the standard, why, and the safe repairs
 $ lyrn check [path...]           # the shopfronts held to each other: versions, descriptions, commands
+$ lyrn assets [--from <dir>]     # the mark laid out by the canon, every raster drawn from its masters
 $ lyrn ci [job...]               # the CI a push of this commit would start, run here first
 $ lyrn stage                     # start a stage: what stands in its way, and a line in rigger's record
 $ lyrn status                    # where the repository stands, on one screen

@@ -16,5 +16,8 @@ product's colour for S. The images must be listed largest first: Windows
 picks by size, but Tauri takes the first one as the window's icon, and a
 title bar stretched out of 16 pixels is how kilna shipped once.
 
-`lyrn doctor --fix` copies the masters over stale copies and reorders an .ico.
-A wrong level inside an .ico is drawn again by the exporter in docs/.
+`lyrn assets` draws every one of these from the masters, by the rule, and
+`lyrn doctor --fix` copies the masters over stale copies, reorders an .ico and
+draws a wrong level again with the same code. An exporter of the repository's
+own - docs/export-assets.mjs, as the line once wrote them - is a second
+drawing of the rule and warns: nine products of fifteen got theirs wrong.

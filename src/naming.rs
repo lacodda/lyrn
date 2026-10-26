@@ -26,9 +26,9 @@ pub fn line_accents() -> impl Iterator<Item = (&'static str, &'static str)> {
 /// only has to part from the near-black plate behind it, which it does at
 /// 5.65:1. Two roles, two values, one meaning. Measured before splitting them.
 ///
-/// The tile's colour lives in `tools/render-placeholder-icon.py`, where it is
-/// drawn, and is held there by `tests/placeholder_icon.rs`; a second copy here
-/// would only be one more thing to fall out of step.
+/// The tile's colour lives in the umbrella mark's masters, vendored from
+/// dowel-ui, and is held in the drawn icons by `tests/placeholder_icon.rs`; a
+/// second copy here would only be one more thing to fall out of step.
 pub const PLACEHOLDER_ACCENT: &str = "#6E7079";
 
 /// Why a name cannot be used.

@@ -39,6 +39,9 @@ jobs:
           $name = "lyrn-${{ github.ref_name }}-${{ matrix.target }}"
           New-Item -ItemType Directory $name | Out-Null
           Copy-Item "target/${{ matrix.target }}/release/lyrn.exe", "LICENSE", "README.md" $name
+          # The binary carries Cascadia Code to draw the mark with; the OFL
+          # asks that its licence travel with every copy.
+          Copy-Item "src/mark/font/LICENSE" "$name/LICENSE-CascadiaCode"
           Compress-Archive -Path $name -DestinationPath "$name.zip"
       - name: Package (Unix)
         if: runner.os != 'Windows'
@@ -47,6 +50,7 @@ jobs:
           name="lyrn-${{ github.ref_name }}-${{ matrix.target }}"
           mkdir "$name"
           cp "target/${{ matrix.target }}/release/lyrn" LICENSE README.md "$name"
+          cp src/mark/font/LICENSE "$name/LICENSE-CascadiaCode"
           tar czf "$name.tar.gz" "$name"
       - uses: actions/upload-artifact@v7
         with:

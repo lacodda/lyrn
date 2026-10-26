@@ -5,9 +5,9 @@
 the product has a mark of its own; `lyrn.toml` says `mark = "placeholder"`
 meanwhile, and `assets/` holds the same mark as three master SVGs.
 
-A mark of its own replaces those three masters, and `docs/export-assets.mjs`
-draws every icon from them - it comes with the documentation site
-(`lyrn new {{ name }} --form docs`). Not `pnpm tauri icon`: it cuts every size
+A mark of its own replaces those three masters - `lyrn assets --from
+<directory>` takes them in - and `lyrn assets` draws every icon from them.
+Not `pnpm tauri icon`: it cuts every size
 from one picture, and the line's rule is that a size takes the level of the
 mark that reads at it - S at 27px and under, M up to 63px, L above. In the
 `.ico` the **largest image comes first**: Tauri takes the first entry for the

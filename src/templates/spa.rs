@@ -166,7 +166,7 @@ pub fn sources() -> Vec<SourceFile> {
             executable: false,
             addon: Some(Addon::Pwa),
         },
-        // Drawn by `tools/render-placeholder-icon.py`, at the level their size
+        // The umbrella mark as `lyrn assets` draws it, at the level their size
         // calls for - all plated, all above the S ceiling - and held to it by
         // `tests/placeholder_icon.rs`. The 512px one is the desktop form's.
         SourceFile {

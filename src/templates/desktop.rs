@@ -136,8 +136,9 @@ pub fn sources() -> Vec<SourceFile> {
         // lambda on graphite, which reads as "a lacodda project whose own mark
         // is not drawn yet" rather than as Tauri's anonymous `??`.
         //
-        // Drawn by `tools/render-placeholder-icon.py`, and held to the line's
-        // level rule per image inside the container by `tests/placeholder_icon.rs`:
+        // The umbrella mark as `lyrn assets` draws it - `src/mark` holds the
+        // bytes to that drawing - and held to the line's level rule per image
+        // inside the container by `tests/placeholder_icon.rs`:
         // the filled tile at 27px and below, the plated mark above it, largest
         // image first. `lyrn.toml` records `mark = "placeholder"` so the doctor
         // can say so without reading these bytes.

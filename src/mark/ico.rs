@@ -1,10 +1,11 @@
-//! An `.ico` read as what it is: a directory of images, each a whole PNG or a
-//! bitmap, and the one pixel that tells the line's filled tile from its
-//! plated mark.
+//! An `.ico` read and written as what it is: a directory of images, each a
+//! whole PNG or a bitmap, and the share of plate that tells the line's filled
+//! tile from its plated mark.
 //!
 //! Spelled out rather than taken from a crate: the container is sixteen bytes
-//! per image, and a reader that quietly sorted what it returned would hide
-//! exactly the order this module exists to check.
+//! per image, and a reader or a writer that quietly sorted the images would
+//! hide or undo exactly the order this module exists to keep. Pillow's writer
+//! does: it puts the smallest first whatever order it is given.
 
 /// One image of the container, as its directory describes it.
 #[derive(Debug, Clone, PartialEq, Eq)]
@@ -62,6 +63,28 @@ pub fn largest_first(ico: &[u8], entries: &[Entry]) -> Vec<u8> {
     }
     for entry in &sorted {
         out.extend_from_slice(entry.bytes(ico));
+    }
+    out
+}
+
+/// An `.ico` of these PNG images, in this order: a six-byte header, sixteen
+/// bytes of directory per image, then the images whole. Callers put the
+/// largest first; nothing here sorts, so the order written is the order
+/// asked for.
+pub fn write(images: &[(u32, Vec<u8>)]) -> Vec<u8> {
+    let mut out = vec![0, 0, 1, 0];
+    out.extend_from_slice(&(images.len() as u16).to_le_bytes());
+    let mut offset = 6 + 16 * images.len();
+    for (size, image) in images {
+        // The field is one byte: 0 stands for 256.
+        let side = if *size >= 256 { 0 } else { *size as u8 };
+        out.extend_from_slice(&[side, side, 0, 0, 1, 0, 32, 0]);
+        out.extend_from_slice(&(image.len() as u32).to_le_bytes());
+        out.extend_from_slice(&(offset as u32).to_le_bytes());
+        offset += image.len();
+    }
+    for (_, image) in images {
+        out.extend_from_slice(image);
     }
     out
 }
@@ -179,22 +202,8 @@ pub mod tests {
         out
     }
 
-    /// An `.ico` of these images, in this order.
     pub fn ico_of(images: &[(u32, Vec<u8>)]) -> Vec<u8> {
-        let mut out = vec![0, 0, 1, 0];
-        out.extend_from_slice(&(images.len() as u16).to_le_bytes());
-        let mut offset = 6 + 16 * images.len();
-        for (size, image) in images {
-            let side = if *size >= 256 { 0 } else { *size as u8 };
-            out.extend_from_slice(&[side, side, 0, 0, 1, 0, 32, 0]);
-            out.extend_from_slice(&(image.len() as u32).to_le_bytes());
-            out.extend_from_slice(&(offset as u32).to_le_bytes());
-            offset += image.len();
-        }
-        for (_, image) in images {
-            out.extend_from_slice(image);
-        }
-        out
+        write(images)
     }
 
     pub const PLATE_PIXEL: [u8; 4] = [0x1B, 0x21, 0x26, 255];
