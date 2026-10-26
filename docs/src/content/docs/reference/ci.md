@@ -49,7 +49,7 @@ ci.yml
 docs.yml
   build - a Linux job, run here on Windows
     · actions/checkout@v7 - the commit is checked out clean
-    ! pnpm/action-setup@v6 - pnpm 10.34.6 here; the job sets up the newest 10, which may be newer
+    ! pnpm/action-setup@v6 - pnpm 10.34.7 here; the job sets up the newest 10, which may be newer
     ! actions/setup-node@v7 - Node v22.18.0 here; the job sets up the newest 22, which may be newer
     ✓ Install  2s
     ✗ Build  1s

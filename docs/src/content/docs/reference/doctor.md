@@ -42,7 +42,7 @@ lyrn doctor: ~/word-count, a `cli` project on standard 2026.11
     why: lyrn doctor --explain msrv
 ! node
     ! docs/package.json names no packageManager: CI and every machine use whatever pnpm they have
-      → add `"packageManager": "pnpm@10.34.6"`
+      → add `"packageManager": "pnpm@10.34.7"`
     why: lyrn doctor --explain node
 ✗ audit
     ✗ docs/pnpm-lock.yaml: no workflow audits it
@@ -57,7 +57,7 @@ lyrn doctor: ~/word-count, a `cli` project on standard 2026.11
 ✓ identity   commits as `Ada Lovelace <ada@example.com>`, the global identity; the global excludes file keeps assistant files out
 
 5 failed, 1 to look at, 8 passed; `lyrn doctor --fix` puts 2 findings right
-stack: edition 2024 · msrv 1.99 · node 22 · pnpm 10.33.0 (the standard is on 10.34.6) · actions 1 behind · updated 9 days ago, due
+stack: edition 2024 · msrv 1.99 · node 22 · pnpm 10.33.0 (the standard is on 10.34.7) · actions 1 behind · updated 9 days ago, due
 ```
 
 The last line is the repository's [stack](#the-stack) beside the standard's.
@@ -263,9 +263,9 @@ tally       ✓        ✓      ✓         ✓    ✓      ✓        ✓      
 `lyrn doctor <path>` says what is off in one of them, how to put it right and why
 
 stack       edition  msrv  node  pnpm       actions          updated
-standard    2024           22    10.34.6                     weekly
+standard    2024           22    10.34.7                     weekly
 word-count  2024     1.99  22    10.33.0*   1 behind*        9 days ago, due
-tally       2024     1.88  22    10.34.6    on the standard  2 days ago
+tally       2024     1.88  22    10.34.7    on the standard  2 days ago
 * behind the standard
 ```
 
@@ -319,7 +319,7 @@ Review what `--fix` wrote with `git diff`, and commit it.
 ```json
 {
   "lyrn": "2.12.0",
-  "standard": { "edition": "2024", "node": 22, "pnpm": "10.34.6", "actions": { "actions/checkout": 7 } },
+  "standard": { "edition": "2024", "node": 22, "pnpm": "10.34.7", "actions": { "actions/checkout": 7 } },
   "repositories": [
     {
       "name": "word-count",
@@ -336,8 +336,8 @@ Review what `--fix` wrote with `git diff`, and commit it.
             {
               "level": "warn",
               "what": "docs/package.json names no packageManager: ...",
-              "fix": "add `\"packageManager\": \"pnpm@10.34.6\"`",
-              "repair": { "path": "docs/package.json", "what": "pins pnpm@10.34.6" }
+              "fix": "add `\"packageManager\": \"pnpm@10.34.7\"`",
+              "repair": { "path": "docs/package.json", "what": "pins pnpm@10.34.7" }
             }
           ]
         }

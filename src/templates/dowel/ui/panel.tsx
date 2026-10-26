@@ -14,7 +14,7 @@ import { cn } from 'dowel-ui'
  * It is `lg` here, and `SectionLabel` is included because a panel almost
  * always has one and every product wrote its own.
  */
-export const panelVariants = cva('bg-raise', {
+export const panelVariants = cva('bg-raise print:break-inside-avoid', {
   variants: {
     variant: {
       /* The default: a surface that sits on the page. */

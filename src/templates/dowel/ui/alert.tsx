@@ -25,7 +25,7 @@ import { cn } from 'dowel-ui'
  */
 
 export const alertVariants = cva(
-  ['flex gap-2.5 rounded-md border p-3 text-sm', '[&_svg]:mt-0.5 [&_svg:not([class*=size-])]:size-4 [&_svg]:shrink-0'],
+  ['flex gap-2.5 rounded-md border p-3 text-sm print:break-inside-avoid', '[&_svg]:mt-0.5 [&_svg:not([class*=size-])]:size-4 [&_svg]:shrink-0'],
   {
     variants: {
       tone: {

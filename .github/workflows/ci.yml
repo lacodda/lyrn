@@ -80,6 +80,7 @@ jobs:
       - uses: actions/setup-node@v7
         with:
           node-version: 22
+          check-latest: true
       - name: Build lyrn
         run: cargo build --release
       - name: Generate a project
@@ -163,6 +164,7 @@ jobs:
       - uses: actions/setup-node@v7
         with:
           node-version: 22
+          check-latest: true
       - name: Build lyrn
         run: cargo build --release
       - name: Generate a project
@@ -247,6 +249,7 @@ jobs:
         if: contains(matrix.addons, 'spa')
         with:
           node-version: 22
+          check-latest: true
       - name: Run the web UI's gate
         if: contains(matrix.addons, 'spa')
         working-directory: ${{ runner.temp }}/demo-svc/frontend
@@ -322,6 +325,7 @@ jobs:
       - uses: actions/setup-node@v7
         with:
           node-version: 22
+          check-latest: true
       - name: Build lyrn
         run: cargo build --release
       - name: Generate a project
@@ -442,6 +446,7 @@ jobs:
       - uses: actions/setup-node@v7
         with:
           node-version: 22
+          check-latest: true
       - name: Install Linux build deps (webview)
         run: |
           sudo apt-get update
@@ -521,6 +526,7 @@ jobs:
       - uses: actions/setup-node@v7
         with:
           node-version: 22
+          check-latest: true
       - uses: taiki-e/install-action@v2
         with:
           tool: cargo-deny
@@ -570,6 +576,7 @@ jobs:
       - uses: actions/setup-node@v7
         with:
           node-version: 22
+          check-latest: true
       - name: Build lyrn
         run: cargo build --release
       - name: Generate a repository, then add docs to it

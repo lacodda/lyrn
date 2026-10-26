@@ -28,6 +28,12 @@ import { cn } from 'dowel-ui'
  * loses that name the moment someone types, and a placeholder is not a label
  * to anything that reads the page aloud; `labelHidden` takes it off the
  * screen and leaves it in the accessibility tree.
+ *
+ * A Switch or a Checkbox is drawn `beside` its name rather than under it,
+ * inside the label, as on every settings screen there is: a press on the words
+ * flips it. The other controls of the set - a box, a Select, a NumberField, a
+ * DatePicker - sit under the caption, and the ones built on Base UI find the
+ * field they sit in and take its wiring themselves.
  */
 
 export interface FieldProps {
@@ -58,6 +64,9 @@ export interface FieldProps {
    * this field by name. */
   name?: string
   disabled?: boolean
+  /** The control beside its name, inside the label, rather than under a
+   * caption: for a Switch or a Checkbox. */
+  beside?: boolean
 }
 
 export function Field({
@@ -70,8 +79,14 @@ export function Field({
   required = false,
   name,
   disabled = false,
+  beside = false,
 }: FieldProps) {
   const invalid = error !== undefined && error !== null && error !== false
+  const mark = required && (
+    <span aria-hidden className="ml-0.5 text-bad">
+      *
+    </span>
+  )
 
   return (
     <Base.Root
@@ -82,21 +97,34 @@ export function Field({
       invalid={invalid || undefined}
       className={cn('flex flex-col gap-1.5', className)}
     >
-      <Base.Label
-        className={cn(
-          'caption',
-          // Off the screen, still in the accessibility tree. Not
-          // `display: none`, which would take it out of both.
-          labelHidden && 'sr-only',
-        )}
-      >
-        {label}
-        {required && (
-          <span aria-hidden className="ml-0.5 text-bad">
-            *
+      {beside ? (
+        // The control inside its label: Base UI names it by the label's id,
+        // and the whole row is what a pointer aims at.
+        <Base.Label
+          className={cn(
+            'flex w-fit cursor-pointer items-center gap-2.5 text-sm text-text',
+            'has-[[data-disabled]]:cursor-not-allowed has-[[data-disabled]]:opacity-50',
+          )}
+        >
+          {children}
+          <span className={cn(labelHidden && 'sr-only')}>
+            {label}
+            {mark}
           </span>
-        )}
-      </Base.Label>
+        </Base.Label>
+      ) : (
+        <Base.Label
+          className={cn(
+            'caption',
+            // Off the screen, still in the accessibility tree. Not
+            // `display: none`, which would take it out of both.
+            labelHidden && 'sr-only',
+          )}
+        >
+          {label}
+          {mark}
+        </Base.Label>
+      )}
 
       {/* The control is handed to Base UI rather than merely nested inside
         * it. This is the whole component: a plain child renders a label whose
@@ -104,7 +132,7 @@ export function Field({
         * names nothing - which is exactly the bug this exists to prevent, and
         * it is invisible in a screenshot. `render` gives the child the id,
         * `aria-labelledby` and `aria-describedby` instead. */}
-      <Base.Control render={children} />
+      {beside ? null : <Base.Control render={children} />}
 
       {/* The error wins the one line under the control. `match` is not used:
         * the string is already the decision - this renders whatever it was

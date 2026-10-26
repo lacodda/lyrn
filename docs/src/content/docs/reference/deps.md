@@ -18,7 +18,7 @@ $ lyrn deps
 lyrn deps: ~/lyrn
 
 stack     updated 6 days ago, on 2026-10-13 - holds until 2026-10-20
-on        edition 2024 · msrv 1.88 · node 22 · pnpm 10.34.6 · actions on the standard
+on        edition 2024 · msrv 1.88 · node 22 · pnpm 10.34.7 · actions on the standard
 rust      stable 1.99.1, the newest
 
 Cargo.toml - crates.io
