@@ -53,6 +53,12 @@ fn main() -> ExitCode {
             Err(e) => Err(e),
         },
         cli::Command::Assets(args) => commands::assets::run(args),
+        // A taken code or colour is an answer too: the exit code says it.
+        cli::Command::Brand(cli::BrandCommand::Pick(args)) => match commands::brand::pick(args) {
+            Ok(true) => return ExitCode::SUCCESS,
+            Ok(false) => return ExitCode::FAILURE,
+            Err(e) => Err(e),
+        },
         cli::Command::Stage(args) => commands::stage::run(args),
         cli::Command::Status(args) => commands::status::run(args),
         cli::Command::Versions(args) => commands::versions::run(args),

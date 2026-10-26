@@ -99,6 +99,7 @@ $ lyrn upgrade [path]            # the newest standard, merged into the files an
 $ lyrn doctor [path...] [--fix]  # what is off against the standard, why, and the safe repairs
 $ lyrn check [path...]           # the shopfronts held to each other: versions, descriptions, commands
 $ lyrn assets [--from <dir>]     # the mark laid out by the canon, every raster drawn from its masters
+$ lyrn brand pick [name]         # a new mark's code and colour, held to the line's marks
 $ lyrn ci [job...]               # the CI a push of this commit would start, run here first
 $ lyrn stage                     # start a stage: what stands in its way, and a line in rigger's record
 $ lyrn status                    # where the repository stands, on one screen

@@ -33,6 +33,9 @@ pub enum Command {
     Check(CheckArgs),
     /// Lay the mark out by the line's canon and draw every raster of it from its masters
     Assets(AssetsArgs),
+    /// A new product's mark, held to the line's: its code, its colour, and the two together
+    #[command(subcommand)]
+    Brand(BrandCommand),
     /// Run here the CI a push of this commit would start, before pushing it
     Ci(CiArgs),
     /// Start a stage: what it is, what stands in its way, and a line in rigger's record
@@ -144,6 +147,30 @@ pub struct CheckArgs {
     /// Say why a check exists and how to satisfy it, instead of checking
     #[arg(long, value_name = "CHECK", conflicts_with_all = ["paths", "all", "json"])]
     pub explain: Option<crate::commands::check::Shop>,
+}
+
+#[derive(Subcommand)]
+pub enum BrandCommand {
+    /// Codes for a product's name, and a code and colour held to the line's marks
+    Pick(BrandPickArgs),
+}
+
+#[derive(clap::Args)]
+pub struct BrandPickArgs {
+    /// The product's name; defaults to the project the current directory is in
+    pub name: Option<String>,
+
+    /// The two-letter code to hold to the line, instead of listing candidates
+    #[arg(long, value_name = "CODE")]
+    pub code: Option<String>,
+
+    /// The mark's colour, or the first of a pair, as `#rrggbb`
+    #[arg(long, value_name = "HEX", alias = "color")]
+    pub colour: Option<String>,
+
+    /// The second colour of a pair, where the gradient runs to
+    #[arg(long, value_name = "HEX")]
+    pub to: Option<String>,
 }
 
 #[derive(clap::Args)]

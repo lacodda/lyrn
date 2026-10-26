@@ -53,11 +53,15 @@ try {
   })
   const tarball = readdirSync(scratch).find((name) => name.endsWith('.tgz'))
   if (!tarball) throw new Error(`npm pack left no tarball in ${scratch}`)
+  // Every product's S master, for the registry of marks: listed first and
+  // then named, since GNU tar and Windows' bsdtar disagree about patterns.
+  const listing = execFileSync('tar', ['-tzf', tarball], { cwd: scratch, encoding: 'utf8' })
+  const tiles = listing.split(/\r?\n/).filter((path) => /^package\/dist\/marks\/[a-z0-9-]+-S\.svg$/.test(path))
+  if (tiles.length === 0) throw new Error(`dowel-ui ${version} carries no marks in dist/marks`)
   // A relative archive name and `-C`: Windows' bsdtar reads `C:\...` as a
   // remote host, and GNU tar does the same with any colon in the path.
-  execFileSync('tar', ['-xzf', tarball, 'package/dist/registry.json', ...MARKS.map((mark) => `package/dist/marks/${mark}`)], {
-    cwd: scratch,
-  })
+  const wanted = new Set(['package/dist/registry.json', ...MARKS.map((mark) => `package/dist/marks/${mark}`), ...tiles])
+  execFileSync('tar', ['-xzf', tarball, ...wanted], { cwd: scratch })
 
   const registry = JSON.parse(readFileSync(join(scratch, 'package/dist/registry.json'), 'utf8'))
   const byName = new Map(registry.items.map((item) => [item.name, item]))
@@ -94,6 +98,32 @@ try {
   accents.sort()
   writeFileSync(join(DOWEL, 'accents.tsv'), `${accents.join('\n')}\n`)
   console.log(`accents: ${accents.length} products`)
+
+  // The registry of marks `lyrn brand pick` holds a new mark against: each
+  // product's code and colour - or pair of colours, in the order the
+  // gradient runs - read from the S master, which draws exactly those. A
+  // product's first colour is its accent, and the two lists are held to that.
+  const accentOf = new Map(accents.map((line) => line.split('\t')))
+  const marks = []
+  for (const tile of tiles) {
+    const product = tile.match(/\/([a-z0-9-]+)-S\.svg$/)[1]
+    const svg = readFileSync(join(scratch, tile), 'utf8')
+    const code = svg.match(/<text[^>]*>([^<]+)<\/text>/)?.[1]
+    const stops = [...svg.matchAll(/stop-color="(#[0-9a-fA-F]{6})"/g)].map((m) => m[1].toUpperCase())
+    const fill = svg.match(/<polygon[^>]*fill="(#[0-9a-fA-F]{6})"/)?.[1]?.toUpperCase()
+    const colours = stops.length > 0 ? stops : fill ? [fill] : []
+    if (!code || colours.length === 0 || colours.length > 2) {
+      throw new Error(`${tile}: cannot read a code and one or two colours from it`)
+    }
+    const accent = accentOf.get(product)
+    if (accent && accent !== colours[0]) {
+      throw new Error(`${product}: the accent is ${accent}, and its mark starts with ${colours[0]}`)
+    }
+    marks.push([product, code, ...colours].join('\t'))
+  }
+  marks.sort()
+  writeFileSync(join(DOWEL, 'marks.tsv'), `${marks.join('\n')}\n`)
+  console.log(`marks: ${marks.length} in the registry`)
 
   mkdirSync(join(DOWEL, 'marks'), { recursive: true })
   for (const mark of MARKS) {

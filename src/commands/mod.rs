@@ -1,5 +1,6 @@
 pub mod adopt;
 pub mod assets;
+pub mod brand;
 pub mod check;
 pub mod ci;
 pub mod deps;
