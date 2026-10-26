@@ -104,7 +104,9 @@ fn check(root: &Path) -> (String, bool) {
     // another test's fork still holds it open fails with "Text file busy".
     // That flake, and only it, is tried again.
     for _ in 0..5 {
-        let out = common::lyrn().arg("check").arg(root).output().unwrap();
+        // The stand-in sits in the fixture's own `target/`; a target directory
+        // set for the whole machine would send the check looking elsewhere.
+        let out = common::lyrn().arg("check").arg(root).env_remove("CARGO_TARGET_DIR").output().unwrap();
         let report = String::from_utf8(out.stdout).unwrap();
         if report.contains("Text file busy") {
             std::thread::sleep(std::time::Duration::from_millis(200));
