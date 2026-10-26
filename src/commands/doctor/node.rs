@@ -186,6 +186,30 @@ pub fn check(repo: &Repo) -> Outcome {
         );
     }
 
+    // A major alone is whatever release of it the runner has cached, and the
+    // cache lags the floor tools raise in patch releases: Astro 7.4.2 asked
+    // for Node 22.23.4 while GitHub's runners had 22.23.3.
+    for workflow in &repo.workflows {
+        let lagging = workflow.jobs().iter().flat_map(|j| j.steps.iter()).any(|s| {
+            s.uses.is_some_and(|u| u.starts_with("actions/setup-node@"))
+                && s.input("node-version").is_some_and(|v| is_a_range(&v))
+                && s.input("check-latest").as_deref() != Some("true")
+        });
+        if !lagging {
+            continue;
+        }
+        let mut finding = Finding::fail(format!(
+            "{} sets up a Node major without check-latest: the job runs on the release the runner cached, which lags what Astro and Vite ask for",
+            workflow.name()
+        ))
+        .fix("`check-latest: true` beside `node-version`");
+        let repaired = with_check_latest(&workflow.text);
+        if repaired != workflow.text {
+            finding = finding.repair(Repair::new(workflow.file.clone(), repaired, "asks setup-node for the newest Node of its major"));
+        }
+        findings.push(finding);
+    }
+
     Outcome::from_findings(findings, || {
         format!(
             "pnpm {} and Node {}+ across {}",
@@ -247,6 +271,71 @@ fn with_verify(text: &str) -> String {
         "" => block,
         kept => format!("{kept}{newline}{newline}{block}"),
     }
+}
+
+/// Whether a `node-version` names a range the runner's cache can answer with
+/// an old release - `22`, `22.x`, `22.23`, `>=22` - rather than one release.
+fn is_a_range(version: &str) -> bool {
+    let version = version.trim().trim_matches(['"', '\'']).trim_start_matches('v');
+    if version.starts_with(['^', '~', '>', '<', '=']) || version.starts_with("lts") {
+        return true;
+    }
+    let parts: Vec<&str> = version.split('.').collect();
+    parts.len() < 3 || parts.iter().any(|p| matches!(*p, "x" | "X" | "*"))
+}
+
+/// A workflow with `check-latest: true` beside every `node-version` that
+/// names a range: an existing `check-latest` is set to true, otherwise the
+/// line goes right under `node-version`, at its indentation.
+fn with_check_latest(text: &str) -> String {
+    let newline = newline_of(text);
+    let version = Regex::new(r"^(\s+)node-version:\s*([^#\s]+)").expect("a valid pattern");
+    let lines: Vec<&str> = text.split_inclusive('\n').collect();
+    let mut out = String::with_capacity(text.len() + 64);
+    let mut i = 0;
+    while i < lines.len() {
+        let line = lines[i];
+        out.push_str(line);
+        i += 1;
+        let Some(c) = version.captures(line.trim_end_matches(['\r', '\n'])) else {
+            continue;
+        };
+        if !is_a_range(&c[2]) {
+            continue;
+        }
+        let indent = c[1].to_string();
+        // The rest of the `with:` mapping: the lines at the same indentation
+        // that follow, until one is shallower or starts another item.
+        let mut set = false;
+        let mut j = i;
+        while j < lines.len() {
+            let sibling = lines[j].trim_end_matches(['\r', '\n']);
+            let depth = sibling.len() - sibling.trim_start().len();
+            if sibling.trim().is_empty() || depth < indent.len() || (depth == indent.len() && sibling.trim_start().starts_with('-')) {
+                break;
+            }
+            if depth == indent.len() && sibling.trim_start().starts_with("check-latest:") {
+                set = true;
+                break;
+            }
+            j += 1;
+        }
+        if set {
+            // Copy the siblings up to it, then write it as true.
+            for sibling in &lines[i..j] {
+                out.push_str(sibling);
+            }
+            let ending = if lines[j].ends_with('\n') { newline } else { "" };
+            out.push_str(&format!("{indent}check-latest: true{ending}"));
+            i = j + 1;
+        } else {
+            if !line.ends_with('\n') {
+                out.push_str(newline);
+            }
+            out.push_str(&format!("{indent}check-latest: true{newline}"));
+        }
+    }
+    out
 }
 
 fn push_once(files: &mut Vec<String>, file: &str) {
@@ -325,6 +414,50 @@ mod tests {
         assert!(verifies_before_run(None, Some("verify-deps-before-run=install\n")));
         assert!(!verifies_before_run(Some("verifyDepsBeforeRun: warn\n"), None));
         assert!(!verifies_before_run(None, None));
+    }
+
+    #[test]
+    fn a_major_is_a_range_and_a_release_is_not() {
+        for range in ["22", "'22'", "22.x", "v22", "22.23", ">=22", "lts/*", "22.*"] {
+            assert!(is_a_range(range), "{range}");
+        }
+        for release in ["22.23.4", "'22.23.4'", "v22.23.4"] {
+            assert!(!is_a_range(release), "{release}");
+        }
+    }
+
+    #[test]
+    fn check_latest_goes_beside_the_version_it_qualifies() {
+        let workflow = "steps:\n  - uses: actions/setup-node@v7\n    with:\n      node-version: 22\n      cache: pnpm\n  - run: pnpm build\n";
+        assert_eq!(
+            with_check_latest(workflow),
+            "steps:\n  - uses: actions/setup-node@v7\n    with:\n      node-version: 22\n      check-latest: true\n      cache: pnpm\n  - run: pnpm build\n"
+        );
+        let off = "    with:\n      node-version: '22.x'\n      check-latest: false\n      cache: pnpm\n";
+        assert_eq!(
+            with_check_latest(off),
+            "    with:\n      node-version: '22.x'\n      check-latest: true\n      cache: pnpm\n"
+        );
+        let crlf = "    with:\r\n      node-version: 22\r\n";
+        assert_eq!(with_check_latest(crlf), "    with:\r\n      node-version: 22\r\n      check-latest: true\r\n");
+        let release = "    with:\n      node-version: 22.23.4\n";
+        assert_eq!(with_check_latest(release), release, "one release has nothing newer to ask for");
+        let done = "    with:\n      node-version: 22\n      check-latest: true\n";
+        assert_eq!(with_check_latest(done), done);
+    }
+
+    /// Every workflow the templates write already asks for the newest Node,
+    /// so a generated project and a repaired one say the same.
+    #[test]
+    fn the_templates_ask_for_the_newest_node() {
+        for &form in Form::ALL {
+            for source in templates::sources_for(form) {
+                let Contents::Text(text) = source.contents else { continue };
+                if text.contains("actions/setup-node@") {
+                    assert_eq!(with_check_latest(text), text, "{form}: {} sets up Node without check-latest", source.path);
+                }
+            }
+        }
     }
 
     #[test]

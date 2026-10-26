@@ -21,6 +21,20 @@ fn current() -> String {
     manifest["standard"].as_str().unwrap().to_string()
 }
 
+/// The versions the archive keeps after the oldest, in order: the ones an
+/// upgrade from it walks through.
+fn versions_after_the_oldest() -> Vec<String> {
+    let archive = Path::new(env!("CARGO_MANIFEST_DIR")).join("src/standard/archive");
+    let parts = |v: &str| v.split('.').map(|p| p.parse::<u32>().unwrap()).collect::<Vec<_>>();
+    let mut versions: Vec<String> = fs::read_dir(archive)
+        .unwrap()
+        .filter_map(|e| e.unwrap().file_name().to_string_lossy().strip_suffix(".toml").map(str::to_string))
+        .filter(|v| v != OLDEST)
+        .collect();
+    versions.sort_by_key(|v| parts(v));
+    versions
+}
+
 struct Machine {
     _dir: tempfile::TempDir,
     global: PathBuf,
@@ -112,9 +126,24 @@ fn an_older_standard_is_caught_up_with_in_one_commit() {
 
     let (report, passed) = machine.upgrade(&root, &["--yes"]);
     assert!(passed, "{report}");
+    // Every version on the way, in order, each named on a line of its own.
+    let named: Vec<&str> = report
+        .split_once("What the standard changed since:\n")
+        .map(|(_, rest)| {
+            rest.lines()
+                .take_while(|l| !l.is_empty())
+                .filter(|l| l.starts_with("  ") && !l.starts_with("   "))
+                .map(str::trim)
+                .collect()
+        })
+        .unwrap_or_default();
+    assert_eq!(
+        named,
+        versions_after_the_oldest(),
+        "not every version from {OLDEST} to {to}, in order, in:\n{report}"
+    );
     for line in [
         format!("from the standard {OLDEST} to {to}"),
-        format!("What the standard changed since:\n  {to}\n"),
         "added".to_string(),
         format!("Committed: chore(standard): take the line's standard {to}"),
     ] {

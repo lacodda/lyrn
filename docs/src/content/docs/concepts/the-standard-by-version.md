@@ -19,6 +19,11 @@ the newest, merging each change into the files as they are now, and
 never changes once a release of lyrn has carried it: a later change to a file of
 the standard is a new version, and a second one in a month is `2026.11.1`.
 
+## 2026.11.1
+
+- Every workflow that sets up Node asks for the newest release of its major (`check-latest: true`): the one the runner has cached lags the floor Astro and Vite raise in patch releases, and Astro 7.4.2 refused the Node 22.23.3 GitHub's runners had.
+- In the files a project starts with rather than the standard's: the docs form's workflows ask for the newest Node too, and `lyrn doctor --fix` adds the line to the others.
+
 ## 2026.11
 
 - A shopfront workflow, `.github/workflows/shopfronts.yml`: `lyrn check` on every push, documentation alone included, with lyrn installed from the release that wrote it.

@@ -194,6 +194,12 @@ runs: `verifyDepsBeforeRun: install` in its `pnpm-workspace.yaml` (or
 pull checks the packages installed last month, not the ones the lockfile - and
 the release - names. `--fix` adds the setting, as the templates write it.
 
+A `setup-node` given a major - `22`, `22.x` - also says `check-latest: true`.
+Without it the job runs on whatever release of the major the runner has
+cached, and the cache lags the floor tools raise in patch releases: Astro 7.4.2
+asked for Node 22.23.4 while GitHub's runners had 22.23.3. `--fix` adds the
+line under `node-version`.
+
 ### audit
 
 Every tracked `Cargo.lock`, `pnpm-lock.yaml` and `package-lock.json` is read

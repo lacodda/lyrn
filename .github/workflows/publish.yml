@@ -61,6 +61,7 @@ jobs:
       - uses: actions/setup-node@v7
         with:
           node-version: 24
+          check-latest: true
           registry-url: https://registry.npmjs.org
       - name: Check whether this version is already on npm
         id: check

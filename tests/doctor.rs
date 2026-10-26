@@ -469,6 +469,21 @@ const TILE: [u8; 4] = [0x6D, 0x7B, 0xF2, 255];
 
 /// A repository of the line's lessons about the mark: the three masters, a
 /// site's favicon a version behind, an `.ico` listed smallest first.
+/// A site's workflow on a Node major, as the line wrote them before the
+/// runner's cache fell behind Astro.
+const DOCS_WORKFLOW: &str = "name: Docs
+on: [push]
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/setup-node@v7
+        with:
+          node-version: 22
+          cache: pnpm
+      - run: pnpm build
+";
+
 fn repository_with_a_stale_mark(machine: &Machine, root: &Path) {
     write(root, "README.md", "# demo\n\n> A demo.\n");
     write(root, ".gitignore", "target/\n");
@@ -478,6 +493,7 @@ fn repository_with_a_stale_mark(machine: &Machine, root: &Path) {
     write(root, "docs/public/favicon.svg", "<svg><!-- last month's S --></svg>\n");
     write(root, "docs/package.json", "{\n  \"name\": \"demo-docs\",\n  \"private\": true\n}\n");
     write(root, "docs/pnpm-lock.yaml", "");
+    write(root, ".github/workflows/docs.yml", DOCS_WORKFLOW);
     // Two releases glued together, as a body template that ends without a
     // blank line writes them.
     write(
@@ -558,7 +574,7 @@ fn many_repositories_are_a_table_and_json_is_one_document() {
     let bad_row = row("bad");
     let marks: Vec<&str> = bad_row.split_whitespace().skip(1).collect();
     assert_eq!(marks[4], "✗", "{report}");
-    assert!(report.contains("1 fails, 1 passes; `lyrn doctor --fix` puts 7 findings right"), "{report}");
+    assert!(report.contains("1 fails, 1 passes; `lyrn doctor --fix` puts 8 findings right"), "{report}");
     assert!(
         report
             .lines()
@@ -610,7 +626,8 @@ fn fix_writes_the_repairs_and_examines_again() {
         "assets/icon.ico lists its images 16, 24, 32, 48, 256",
         "docs/pnpm-workspace.yaml lets a script run against node_modules older than docs/pnpm-lock.yaml",
         "CHANGELOG.md: 1 release starts straight after the line above - the first, `## [0.1.0] - 2026-10-01`, at line 6",
-        "`lyrn doctor --fix` puts 7 findings right",
+        "docs.yml sets up a Node major without check-latest",
+        "`lyrn doctor --fix` puts 8 findings right",
     ] {
         assert!(report.contains(expected), "the report does not say `{expected}`:\n{report}");
     }
@@ -626,6 +643,7 @@ fn fix_writes_the_repairs_and_examines_again() {
         "  ✓ assets/icon.ico: put its largest image first\n",
         "  ✓ docs/pnpm-workspace.yaml: has pnpm install what fell behind the lockfile before a script runs\n",
         "  ✓ CHANGELOG.md: puts a blank line before every release\n",
+        "  ✓ .github/workflows/docs.yml: asks setup-node for the newest Node of its major\n",
     ] {
         assert!(report.contains(written), "the report does not say `{written}`:\n{report}");
     }
@@ -638,6 +656,7 @@ fn fix_writes_the_repairs_and_examines_again() {
         "lists its images",
         "lets a script run against",
         "straight after the line above",
+        "without check-latest",
     ] {
         assert!(!report.contains(gone), "`{gone}` is still found after --fix:\n{report}");
     }
@@ -653,6 +672,11 @@ fn fix_writes_the_repairs_and_examines_again() {
         fs::read(root.join("assets/logo-s.svg")).unwrap()
     );
     assert_eq!(ico_sizes(&fs::read(root.join("assets/icon.ico")).unwrap()), [256, 48, 32, 24, 16]);
+    assert!(
+        fs::read_to_string(root.join(".github/workflows/docs.yml"))
+            .unwrap()
+            .contains("          node-version: 22\n          check-latest: true\n          cache: pnpm\n")
+    );
     assert!(
         fs::read_to_string(root.join("docs/pnpm-workspace.yaml"))
             .unwrap()
