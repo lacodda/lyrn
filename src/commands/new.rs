@@ -187,6 +187,7 @@ pub fn build_context(wanted: &Wanted, native: &Native, origin: &Origin, interact
             .set("host_lookup", host.lookup)
             .set("protocol_version", host.protocol_version.to_string())
             .set("subject_about", host.subject)
+            .set("meta_about", host.meta)
             .set("target", target.key)
             .set("target_about", target.about)
             // Every point the host offers, for the generated protocol test to

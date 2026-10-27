@@ -155,8 +155,8 @@ plugins today; one whose turn has not come is refused with that reason, and so
 is `--host` on a form that has no host:
 
 ```console
-$ lyrn new demo --form plugin --host kasl
-error: `kasl` does not accept plugins yet; when it does it will be listed here (known: kilna)
+$ lyrn new demo --form plugin --host turnout
+error: `turnout` does not accept plugins yet; when it does it will be listed here (known: kilna, kasl)
 
 $ lyrn new demo --form cli --host kilna
 error: the `cli` form is not generated against a host, so `--host kilna` means nothing

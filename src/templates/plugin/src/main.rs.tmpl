@@ -63,9 +63,8 @@ fn run() {
 /// The plugin's own work, kept apart from the plumbing so that it can be
 /// tested without a process: everything above reads and writes, this decides.
 ///
-/// Replace it with what your plugin is for. What it returns is merged into the
-/// subject's fields by the host - a plugin adds and overwrites its own keys and
-/// never clears the rest.
+/// Replace it with what your plugin is for. The fields it returns under `meta`
+/// are {{ meta_about }}.
 fn answer(invocation: &Invocation) -> Outcome {
     // The host sends the whole row, not an identifier, so the first thing a
     // plugin does is never a request for data back.

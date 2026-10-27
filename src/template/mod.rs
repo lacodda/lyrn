@@ -70,6 +70,7 @@ pub const VARIABLES: &[&str] = &[
     "host_lookup",
     "protocol_version",
     "subject_about",
+    "meta_about",
     "target",
     "target_about",
     "target_list",

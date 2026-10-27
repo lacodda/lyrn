@@ -16,7 +16,7 @@ version = "2.14.0"
 # whose CI passed.
 source = "lyrn"
 revision = "2.14.0"
-standard = "2026.11.1"
+standard = "2026.11.2"
 # The add-ons it was generated with: the standard's files carry sections of
 # them, and `lyrn upgrade` renders the standard with the same ones.
 with = []

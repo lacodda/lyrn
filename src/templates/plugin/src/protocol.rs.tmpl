@@ -55,8 +55,7 @@ impl Invocation {
 /// nothing to say, and the host treats it as such.
 #[derive(Debug, Default, Serialize)]
 pub struct Outcome {
-    /// Fields merged into the subject's own. The host adds and overwrites
-    /// these keys and leaves the rest of the row alone.
+    /// Fields for the host: {{ meta_about }}.
     #[serde(skip_serializing_if = "Map::is_empty")]
     pub meta: Map<String, Value>,
     /// One line shown to the user.

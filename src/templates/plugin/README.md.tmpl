@@ -37,9 +37,8 @@ plugin contributes:
 ```
 
 An invocation arrives as `{"command": "{{ command_key }}", "target": "{{ target }}", "subject": {…}}`,
-where `subject` is {{ subject_about }}. The reply may carry `meta` (merged into
-the row - a plugin adds and overwrites its own keys but never clears the rest),
-`message` (shown to the user), or `error`.
+where `subject` is {{ subject_about }}. The reply may carry `meta` (fields
+{{ meta_about }}), `message` (shown to the user), or `error`.
 
 Plugins live for the duration of one call. Nothing here starts a service.
 

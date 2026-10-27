@@ -25,6 +25,7 @@ mono           pnpm monorepo publishing a TypeScript package to npm
   --with stand            A Vite page in the workspace where the package runs
 plugin         Plugin for a host of the line: an executable speaking JSON over stdio
   --host kilna            a desktop workbench for content makers
+  --host kasl             a work activity tracker for the command line
 tauri-plugin   Tauri 2 plugin: a Rust crate and the npm package that calls it
 docs           Documentation site added to an existing repository: Starlight, llms.txt
 ```
@@ -402,9 +403,21 @@ them. Asking for one whose turn has not come is refused with that reason rather
 than accepted:
 
 ```console
-$ lyrn new demo --form plugin --host kasl
-error: `kasl` does not accept plugins yet; when it does it will be listed here (known: kilna)
+$ lyrn new demo --form plugin --host turnout
+error: `turnout` does not accept plugins yet; when it does it will be listed here (known: kilna, kasl)
 ```
+
+The hosts differ in what a plugin is handed and in what becomes of the fields
+it answers with under `meta`, and the generated README and code say which:
+
+| Host | A command runs on | `subject` | `meta` |
+| --- | --- | --- | --- |
+| kilna | a work (first), a release | the row, with each version role's latest text under `bodies` | merged into the subject's fields |
+| kasl | a day (first), an inbox issue | the day as `kasl report --json` prints it, or the issue as `kasl inbox show --json` prints it | shown under the plugin's message, never kept |
+
+A kasl plugin may also hear events and answer as an inbox source; those parts
+of its manifest are written by hand, from kasl's "Writing a plugin" page - a
+form generates the one command every plugin has.
 
 A preset written against a protocol nobody implements cannot be checked by
 anything: the project would compile and its protocol test would pass, because
