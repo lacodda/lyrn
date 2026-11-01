@@ -22,9 +22,12 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v7
+      # The version docs/package.json pins, not one written here: beside a root
+      # package.json that names its own packageManager, a second version stops
+      # the action with "Multiple versions of pnpm specified".
       - uses: pnpm/action-setup@v6
         with:
-          version: 10
+          package_json_file: docs/package.json
       - uses: actions/setup-node@v7
         with:
           node-version: 22
