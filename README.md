@@ -26,7 +26,7 @@ made, and made the same way for every product on the line.
 
 ```console
 $ lyrn new demo-app --accent kilna --yes
-Created 45 files in `demo-app`.
+Created 48 files in `demo-app`.
 Installing dependencies... done
 Starting the repository... done
 Staging the first commit... done
@@ -51,16 +51,16 @@ request.
 
 ```console
 $ lyrn doctor
-lyrn doctor: ~/demo-app, a `spa` project on standard 2026.11.1
+lyrn doctor: ~/demo-app, a `spa` project on standard 2026.11.3
 
 ✓ standard   all 20 files of the `spa` standard
 ✓ readme     the longest block is 18 words, in 25 lines
 ✓ changelog  no release yet
 ✓ mark       a mark of its own
 ✓ assets     three levels in assets/, 1 copy or icon in place
-✓ language   45 text files in English, translations in their places
-✓ private    nothing from this computer in 45 text files
-✓ actions    7 actions in 3 workflows, none retired or behind the standard
+✓ language   48 text files in English, translations in their places
+✓ private    nothing from this computer in 48 text files
+✓ actions    10 actions in 4 workflows, none retired or behind the standard
 - msrv       not a Rust project
 ✓ node       pnpm 10 and Node 22+ across 1 project
 ✓ audit      1 lockfile audited
