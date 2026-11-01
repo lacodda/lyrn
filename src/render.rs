@@ -36,6 +36,15 @@ pub fn render(input: &str, context: &Context) -> Result<String, UnknownPlacehold
         let (before, from_open) = rest.split_at(start);
         out.push_str(before);
 
+        // `${{{ key }}` is a shell's `${...}` around a placeholder - an
+        // installer's `${{{ env_prefix }}_VERSION:-}`. No GitHub Actions
+        // expression opens with three braces, so the first one is the shell's.
+        if before.ends_with('$') && from_open.starts_with("{{{") {
+            out.push('{');
+            rest = &from_open[1..];
+            continue;
+        }
+
         // `${{ ... }}` belongs to GitHub Actions, which uses the same braces
         // for its own expressions. The dollar tells them apart, so a workflow
         // can carry both without being excluded from substitution entirely.
@@ -74,6 +83,11 @@ pub fn placeholders(input: &str) -> Vec<String> {
 
     while let Some(start) = rest.find("{{") {
         let from_open = &rest[start..];
+        // A shell's `${` around a placeholder, as `render` reads it.
+        if rest[..start].ends_with('$') && from_open.starts_with("{{{") {
+            rest = &from_open[1..];
+            continue;
+        }
         let Some(end) = from_open.find("}}") else { break };
         // `${{ ... }}` is a GitHub Actions expression, not a placeholder; and
         // `{{#addon}}` / `{{^addon}}` / `{{/addon}}` are section markers the
@@ -126,6 +140,16 @@ mod tests {
     fn leaves_shell_and_js_interpolation_alone() {
         let input = "echo ${HOME} and `${count}`";
         assert_eq!(render(input, &ctx()).unwrap(), input);
+    }
+
+    #[test]
+    fn a_shell_expansion_around_a_placeholder_is_rendered() {
+        // The cli form's install.sh shipped `${{{ env_prefix }}_VERSION:-}`
+        // as it was written: the renderer took it for a GitHub expression,
+        // and sh refused the script as a bad substitution.
+        let input = r#"TAG="${{{ name }}_VERSION:-}" and ${{ github.ref }}"#;
+        assert_eq!(render(input, &ctx()).unwrap(), r#"TAG="${demo-app_VERSION:-}" and ${{ github.ref }}"#);
+        assert_eq!(placeholders(input), vec!["name".to_string()]);
     }
 
     #[test]

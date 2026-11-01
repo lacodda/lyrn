@@ -64,26 +64,36 @@ fn writes_the_files_the_standard_asks_for() {
 
 #[test]
 fn no_generated_file_still_holds_a_placeholder() {
-    let (_dir, root) = generate("demo-app", &[]);
-
     // A template that renders half a value produces a project that looks fine
     // and is wrong. `cliff.toml` legitimately carries `{{ }}`: the manifest
     // marks it verbatim, because Tera owns that syntax. A workflow carries
     // `${{ }}`, which is GitHub Actions' own and which the renderer leaves
-    // alone - so that, and only that, is set aside before looking.
+    // alone - so that, in a workflow and nowhere else, is set aside before
+    // looking. Every form: the cli form's install.sh kept
+    // `${{{ env_prefix }}_VERSION:-}` for months, because only the spa form
+    // was looked at and `${{` was set aside in every file.
     let verbatim = [Path::new("cliff.toml")];
 
-    for entry in walk(&root) {
-        let relative = entry.strip_prefix(&root).unwrap();
-        if verbatim.contains(&relative) {
-            continue;
+    for form in common::FORMS.iter().filter(|form| **form != "docs") {
+        let mut extra = vec!["--form", form];
+        if *form == "plugin" {
+            extra.extend(["--host", "kilna"]);
         }
-        let Ok(contents) = fs::read_to_string(&entry) else { continue };
-        assert!(
-            !contents.replace("${{", "").contains("{{"),
-            "{} still contains an unrendered placeholder",
-            relative.display()
-        );
+        let (_dir, root) = generate("demo-app", &extra);
+        for entry in walk(&root) {
+            let relative = entry.strip_prefix(&root).unwrap();
+            if verbatim.contains(&relative) {
+                continue;
+            }
+            let Ok(contents) = fs::read_to_string(&entry) else { continue };
+            let workflow = relative.starts_with(".github/workflows");
+            let looked_at = if workflow { contents.replace("${{ ", "") } else { contents };
+            assert!(
+                !looked_at.contains("{{"),
+                "{form}: {} still contains an unrendered placeholder",
+                relative.display()
+            );
+        }
     }
 }
 
