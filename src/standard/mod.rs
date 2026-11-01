@@ -143,6 +143,7 @@ mod tests {
         ("2026.10", "d8876be1441d5162"),
         ("2026.11", "989f06e993e280cc"),
         ("2026.11.1", "49d26bf7b43b015b"),
+        ("2026.11.2", "6262c6b5d715a846"),
     ];
 
     /// The standard the built-in forms write, by form: path, then template.

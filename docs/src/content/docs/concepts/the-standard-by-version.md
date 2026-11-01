@@ -19,6 +19,11 @@ the newest, merging each change into the files as they are now, and
 never changes once a release of lyrn has carried it: a later change to a file of
 the standard is a new version, and a second one in a month is `2026.11.1`.
 
+## 2026.11.3
+
+- cliff.toml no longer carries git-cliff's sample `skip_tags = "v0.1.0-beta.1"`: it skipped a tag no repository of the line has, and furca's release engine read it as a stale version in every repository, which stops a release.
+- In the files a project starts with rather than the standard's - the release contour, which `lyrn new` writes once: every form has a `release.toml` furca's engine releases it from, a release page whose notes end with the `Checked live` list of `.github/release-notes.md`, and a publish that waits for the release; the installers leave the PATH alone under `<APP>_NO_PATH` and move a running program aside on Windows.
+
 ## 2026.11.2
 
 - The plugin form's README says what its host does with the `meta` a reply carries, in the host's own words - kilna merges it into the subject's fields, kasl shows it under the plugin's message - instead of kilna's answer for every host; kasl is a host (`--host kasl`).
