@@ -36,7 +36,7 @@ fi
 case "$TAG" in
     v[0-9]*) ;;
     *)
-        echo "Cannot resolve the latest release of $REPO - set LYRN_VERSION to a tag like v2.0.0" >&2
+        echo "Cannot resolve the latest release of $REPO - set LYRN_VERSION to a release tag (vX.Y.Z)" >&2
         exit 1
         ;;
 esac
@@ -54,7 +54,11 @@ mkdir -p "$BIN_DIR"
 install -m 755 "$TMP/$NAME/lyrn" "$BIN_DIR/lyrn"
 echo "Installed lyrn $TAG to $BIN_DIR/lyrn"
 
-case ":$PATH:" in
-    *":$BIN_DIR:"*) ;;
-    *) echo "Note: add $BIN_DIR to your PATH." ;;
-esac
+# LYRN_NO_PATH: an install into a scratch directory - `lyrn check --release
+# --install`, which proves the installer works - has no PATH to talk about.
+if [ -z "${LYRN_NO_PATH:-}" ]; then
+    case ":$PATH:" in
+        *":$BIN_DIR:"*) ;;
+        *) echo "Note: add $BIN_DIR to your PATH." ;;
+    esac
+fi

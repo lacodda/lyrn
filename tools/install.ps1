@@ -22,7 +22,7 @@ if (-not $tag) {
     }
 }
 if (-not $tag -or $tag -notmatch '^v\d') {
-    throw "Cannot resolve the latest release of $repo - set `$env:LYRN_VERSION to a tag like v2.0.0"
+    throw "Cannot resolve the latest release of $repo - set `$env:LYRN_VERSION to a release tag (vX.Y.Z)"
 }
 
 $name = "lyrn-$tag-x86_64-pc-windows-msvc"
@@ -31,14 +31,31 @@ $dir = if ($env:LYRN_INSTALL_DIR) { $env:LYRN_INSTALL_DIR } else { Join-Path $en
 $tmp = Join-Path ([IO.Path]::GetTempPath()) "lyrn-install-$([guid]::NewGuid())"
 New-Item -ItemType Directory -Force $tmp | Out-Null
 
+$target = Join-Path $dir "lyrn.exe"
 try {
     Write-Host "Downloading $url"
     Invoke-WebRequest $url -OutFile (Join-Path $tmp "lyrn.zip")
     Expand-Archive (Join-Path $tmp "lyrn.zip") -DestinationPath $tmp -Force
     New-Item -ItemType Directory -Force $dir | Out-Null
-    Copy-Item (Join-Path $tmp "$name\lyrn.exe") $dir -Force
+    # A running lyrn.exe cannot be overwritten, but it can be renamed: the old
+    # one steps aside, so an update does not fail while lyrn runs. It is
+    # deleted below, or by the next install once it no longer runs.
+    if (Test-Path $target) {
+        Move-Item $target "$target.old-$([guid]::NewGuid())" -Force
+    }
+    Copy-Item (Join-Path $tmp "$name\lyrn.exe") $target -Force
 } finally {
     Remove-Item $tmp -Recurse -Force -ErrorAction SilentlyContinue
+}
+Get-ChildItem $dir -Filter "lyrn.exe.old-*" -ErrorAction SilentlyContinue |
+    Remove-Item -Force -ErrorAction SilentlyContinue
+
+# $env:LYRN_NO_PATH leaves the PATH alone: an install into a scratch
+# directory - `lyrn check --release --install`, which proves the installer
+# works - must not add that directory to the user's PATH.
+if ($env:LYRN_NO_PATH) {
+    Write-Host "Installed lyrn $tag to $target"
+    return
 }
 
 # The PATH is edited through the registry rather than with
@@ -72,4 +89,4 @@ try {
     $key.Close()
 }
 
-Write-Host "Installed lyrn $tag to $dir\lyrn.exe"
+Write-Host "Installed lyrn $tag to $target"

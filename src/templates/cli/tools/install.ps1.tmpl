@@ -21,7 +21,7 @@ if (-not $tag) {
     }
 }
 if (-not $tag -or $tag -notmatch '^v\d') {
-    throw "Cannot resolve the latest release of $repo"
+    throw "Cannot resolve the latest release of $repo - set `$env:{{ env_prefix }}_VERSION to a release tag (vX.Y.Z)"
 }
 
 $name = "{{ name }}-$tag-x86_64-pc-windows-msvc"
@@ -30,14 +30,31 @@ $dir = if ($env:{{ env_prefix }}_INSTALL_DIR) { $env:{{ env_prefix }}_INSTALL_DI
 $tmp = Join-Path ([IO.Path]::GetTempPath()) "{{ name }}-install-$([guid]::NewGuid())"
 New-Item -ItemType Directory -Force $tmp | Out-Null
 
+$target = Join-Path $dir "{{ name }}.exe"
 try {
     Write-Host "Downloading $url"
     Invoke-WebRequest $url -OutFile (Join-Path $tmp "{{ name }}.zip")
     Expand-Archive (Join-Path $tmp "{{ name }}.zip") -DestinationPath $tmp -Force
     New-Item -ItemType Directory -Force $dir | Out-Null
-    Copy-Item (Join-Path $tmp "$name\{{ name }}.exe") $dir -Force
+    # A running {{ name }}.exe cannot be overwritten, but it can be renamed: the
+    # old one steps aside, so an update does not fail while the program runs.
+    # It is deleted below, or by the next install once it no longer runs.
+    if (Test-Path $target) {
+        Move-Item $target "$target.old-$([guid]::NewGuid())" -Force
+    }
+    Copy-Item (Join-Path $tmp "$name\{{ name }}.exe") $target -Force
 } finally {
     Remove-Item $tmp -Recurse -Force -ErrorAction SilentlyContinue
+}
+Get-ChildItem $dir -Filter "{{ name }}.exe.old-*" -ErrorAction SilentlyContinue |
+    Remove-Item -Force -ErrorAction SilentlyContinue
+
+# $env:{{ env_prefix }}_NO_PATH leaves the PATH alone: an install into a scratch
+# directory - the release check that proves the installer works - must not
+# add that directory to the user's PATH.
+if ($env:{{ env_prefix }}_NO_PATH) {
+    Write-Host "Installed {{ name }} $tag to $target"
+    return
 }
 
 # The PATH is edited through the registry rather than with
@@ -67,4 +84,4 @@ try {
     $key.Close()
 }
 
-Write-Host "Installed {{ name }} $tag to $dir\{{ name }}.exe"
+Write-Host "Installed {{ name }} $tag to $target"

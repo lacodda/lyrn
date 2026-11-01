@@ -22,6 +22,17 @@ fn read(installer: &str) -> String {
     std::fs::read_to_string(&path).unwrap_or_else(|e| panic!("cannot read {}: {e}", path.display()))
 }
 
+/// An installer without its comment lines: the comments explaining a rule
+/// name what the rule forbids.
+fn code(installer: &str) -> String {
+    read(installer).lines().map(str::trim).filter(|line| !line.starts_with('#')).collect::<Vec<_>>().join("\n")
+}
+
+/// The prefix of the installers' environment: `DEMO_TOOL` for `demo-tool`.
+fn env_prefix() -> String {
+    env!("CARGO_PKG_NAME").to_ascii_uppercase().replace('-', "_")
+}
+
 /// Git Bash, MSYS2 and Cygwin all run a `sh` script on Windows. Without a case
 /// of its own for them the script answers "no prebuilt binary for
 /// MINGW64_NT-...", which reads as "there is no Windows build" - when there is
@@ -76,9 +87,7 @@ fn the_installers_suggest_the_crate_that_is_published() {
 /// Comments are left out of the search: the one explaining this names the call.
 #[test]
 fn the_windows_installer_keeps_the_path_expandable() {
-    let code: Vec<String> =
-        read("install.ps1").lines().map(str::trim).filter(|line| !line.starts_with('#')).map(String::from).collect();
-    let code = code.join("\n");
+    let code = code("install.ps1");
     assert!(
         !code.contains("SetEnvironmentVariable"),
         "install.ps1 calls SetEnvironmentVariable, which turns the PATH into a plain string"
@@ -87,4 +96,35 @@ fn the_windows_installer_keeps_the_path_expandable() {
         code.contains("DoNotExpandEnvironmentNames") && code.contains("ExpandString"),
         "install.ps1 has to read the PATH unexpanded and write it back as an expandable string"
     );
+}
+
+/// `<APP>_NO_PATH` leaves the PATH alone. The release check that proves an
+/// installer works installs into a scratch directory, and an installer that
+/// edits the PATH anyway leaves that directory on the user's PATH for good.
+/// The flag has to be read before the first edit, not after it.
+#[test]
+fn the_installers_leave_the_path_alone_when_asked() {
+    let flag = format!("{}_NO_PATH", env_prefix());
+
+    let ps1 = code("install.ps1");
+    let read_at = ps1.find(&format!("$env:{flag}")).unwrap_or_else(|| panic!("install.ps1 never reads {flag}"));
+    let edit_at = ps1.find("OpenSubKey(\"Environment\"").expect("install.ps1 edits the user PATH");
+    assert!(read_at < edit_at, "install.ps1 reads {flag} only after it has edited the PATH");
+
+    let sh = code("install.sh");
+    let read_at = sh.find(&flag).unwrap_or_else(|| panic!("install.sh never reads {flag}"));
+    let note_at = sh.find("to your PATH").expect("install.sh says where the program went");
+    assert!(read_at < note_at, "install.sh reads {flag} only after it has talked about the PATH");
+}
+
+/// Windows will not overwrite a program that is running, but it will rename
+/// it. An installer that copies over the old exe fails exactly when it is
+/// needed most: updating a program from inside itself, or while it serves.
+#[test]
+fn the_windows_installer_moves_a_running_program_aside() {
+    let ps1 = code("install.ps1");
+    let aside = ps1.find("Move-Item $target").expect("install.ps1 never moves the installed program aside");
+    let copy = ps1.find("Copy-Item").expect("install.ps1 copies the program into place");
+    assert!(aside < copy, "install.ps1 moves the old program aside only after copying over it");
+    assert!(ps1.contains(".exe.old-*"), "install.ps1 never cleans up the programs it moved aside");
 }
