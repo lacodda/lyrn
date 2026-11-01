@@ -3,6 +3,17 @@
 # names passes for something other than what ships.
 verifyDepsBeforeRun: install
 
+# Advisories accepted on purpose, each with the reason next to it. The audit
+# workflow fails on any other.
+auditConfig:
+  ignoreGhsas:
+    # minimatch 10.x, reached through dowel-ui's peer on eslint: a pattern of
+    # many brace parts takes long to expand. Only patterns from outside are a
+    # risk, and eslint expands the project's own, at lint time; nothing of it
+    # ships. eslint 10 takes minimatch ^10 and the fix is in 11.0.1 - drop
+    # this line when eslint moves on.
+    - GHSA-g3hv-75wg-m249
+
 # pnpm 11 is broken on Windows; the line stays on 10.
 onlyBuiltDependencies:
   - esbuild
