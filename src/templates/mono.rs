@@ -159,14 +159,12 @@ pub fn sources() -> Vec<SourceFile> {
             addon: None,
         },
         SourceFile {
-            path: ".github/workflows/release.yml",
-            contents: Contents::Text(include_str!("mono/github/release.yml.tmpl")),
-            executable: false,
-            addon: None,
-        },
-        SourceFile {
             path: ".github/workflows/publish.yml",
-            contents: Contents::Text(include_str!("mono/github/publish.yml.tmpl")),
+            contents: Contents::Text(concat!(
+                include_str!("community/release/publish-head.yml.tmpl"),
+                include_str!("community/release/wait.yml.tmpl"),
+                include_str!("mono/github/publish.yml.tmpl"),
+            )),
             executable: false,
             addon: None,
         },

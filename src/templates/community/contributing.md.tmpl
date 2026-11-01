@@ -6,6 +6,18 @@
 from them (`cliff.toml`), so a commit message is the line the release notes
 will carry.
 
+## Releasing
+
+A release is the end of a stage, and furca's release engine runs it from
+[`release.toml`](release.toml): `furca release plan` says what the next
+release is and what stands in its way, and `furca release run` carries it
+out - bump, changelog, gate, commit, push, green CI, tag, publish - then
+checks what went out. The notes of every release end with
+[`.github/release-notes.md`](.github/release-notes.md), a checklist ticked on
+the release page once the release has reached a machine the way a user gets
+it and has been run by hand; `lyrn check --release` says which boxes are
+still empty.
+
 ## Decisions
 
 An architectural decision gets a record in [`docs/adr/`](docs/adr/README.md):

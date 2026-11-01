@@ -154,6 +154,14 @@ to name the crate that is published. And the PowerShell script has to keep the
 user `PATH` an expandable string, which `SetEnvironmentVariable` silently
 would not.
 
+Two more are the release engine's contract. `<APP>_NO_PATH=1` leaves the PATH
+alone, read before the first edit: furca and `lyrn check --release --install`
+install a release into a scratch directory to prove it, and that directory must
+not stay on the user's PATH. And on Windows the script moves a running
+`<name>.exe` aside before copying the new one - Windows will not overwrite a
+program that runs, but will rename it - and deletes what it moved on the next
+install.
+
 The npm launcher waits through Ctrl+C. The keystroke reaches the launcher as
 well as the binary; one that died of it at once would hand the prompt back
 while the binary was still finishing, and lose its exit code.
@@ -275,10 +283,11 @@ reads. That is the whole reason for the split, and it is why the form ships a
 
 ### Publishing two crates
 
-`publish.yml` publishes the library, waits for it to appear in the crates.io
-index, then publishes the binary. crates.io resolves the dependency at publish
-time and refuses a package whose dependency it cannot see yet - and the index
-does not carry a new version the instant `publish` returns.
+`publish.yml` publishes the library, then the binary: crates.io resolves the
+dependency at publish time and refuses a package whose dependency it cannot see
+yet, and `cargo publish` waits for each version to reach the index before it
+returns. A version crates.io holds already is skipped, so a run started again
+picks up where one stopped.
 
 Both crates need **their own trusted publisher** on crates.io, and the first
 version of each has to go up by hand: a publisher cannot be attached to a crate
@@ -543,6 +552,33 @@ domain is that one line plus the CNAME file; the build points at whatever was
 left behind.
 
 The generated project's two checks are the same files that build this site.
+
+## The release contour
+
+Every form that starts a repository writes the same contour around its code,
+so a release goes out the same way from each:
+
+- **`release.toml`** - what furca's release engine releases the repository
+  from: the manifests that carry the version, the gate, the CI workflow and the
+  one that publishes, the packages and their registries, the files the release
+  page carries, and what follows the publish - `[post.install]` where the
+  installers put a program on a machine, `[post.deploy]` where turnout puts a
+  service or an app on its stand. `furca release plan` reads it on the first
+  day; [`lyrn check`](/reference/check/#release) holds it on every commit.
+- **`.github/workflows/release.yml`** - the release page of a tag. The cli,
+  workspace and plugin forms build an archive for each target and attach it;
+  the others attach nothing. The notes are the changelog's section for the tag,
+  then `.github/release-notes.md`.
+- **`.github/release-notes.md`** - the `Checked live` list every release's
+  notes end with: a box for how the release reaches a machine - installed from
+  its page, deployed to its stand, added to an app - and one for running it by
+  hand. They are ticked on the release page once they hold;
+  [`lyrn check --release`](/reference/check/#live) says which are still empty.
+- **`.github/workflows/publish.yml`** - where the form publishes to a
+  registry, every job of it waits for `release.yml` to finish green on the
+  tag's commit. An npm wrapper downloads its binary from the release page, so a
+  package published first answers `npm install` with a 404 until the archives
+  arrive; and a release that failed to build reaches no registry at all.
 
 ## Coming in 2.x
 

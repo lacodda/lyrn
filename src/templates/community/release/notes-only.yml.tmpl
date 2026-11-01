@@ -1,0 +1,36 @@
+name: Release
+
+# The release page of a tag: the changelog's section for it, then
+# .github/release-notes.md - the checklist ticked once the release has been
+# through it. Nothing is attached: what ships goes out from publish.yml, or
+# to the stand.
+on:
+  push:
+    tags: ['v*']
+
+permissions:
+  contents: write
+
+jobs:
+  release:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v7
+        with:
+          fetch-depth: 0
+      - name: Generate release notes
+        uses: orhun/git-cliff-action@v4
+        id: cliff
+        with:
+          config: cliff.toml
+          args: --latest --strip header
+      - name: Write the release notes
+        env:
+          CHANGES: ${{ steps.cliff.outputs.content }}
+        run: |
+          printf '%s\n\n' "$CHANGES" > release-notes.md
+          cat .github/release-notes.md >> release-notes.md
+      - name: Create GitHub Release
+        uses: softprops/action-gh-release@v3
+        with:
+          body_path: release-notes.md

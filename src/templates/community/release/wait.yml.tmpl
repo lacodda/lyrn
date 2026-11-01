@@ -1,0 +1,38 @@
+  # Nothing goes to a registry before the release is out. An npm wrapper
+  # downloads its binary from the release page, so a package published first
+  # answers `npm install` with a 404 until the archives arrive; and a release
+  # that failed to build should reach no registry at all. Every job below
+  # needs this one.
+  release:
+    name: Wait for the release
+    runs-on: ubuntu-latest
+    permissions:
+      actions: read
+      contents: read
+    timeout-minutes: 90
+    steps:
+      - name: Wait for release.yml on the tag's commit
+        env:
+          GH_TOKEN: ${{ github.token }}
+          GH_REPO: ${{ github.repository }}
+          TAG: ${{ github.event_name == 'workflow_dispatch' && inputs.tag || github.ref_name }}
+        run: |
+          set -euo pipefail
+          sha=$(gh api "repos/$GH_REPO/commits/$TAG" --jq .sha)
+          started=$(date +%s)
+          while :; do
+            run=$(gh run list --workflow release.yml --commit "$sha" --limit 1 \
+              --json status,conclusion,url --jq '.[0] // {} | "\(.status // "none") \(.conclusion // "none") \(.url // "-")"')
+            read -r status conclusion url <<< "$run"
+            case "$status/$conclusion" in
+              completed/success) echo "release.yml put $TAG out: $url"; exit 0 ;;
+              completed/*) echo "release.yml ended '$conclusion' for $TAG: $url" >&2; exit 1 ;;
+              none/*)
+                if [ $(( $(date +%s) - started )) -gt 600 ]; then
+                  echo "release.yml has not started for $TAG in ten minutes" >&2
+                  exit 1
+                fi
+                ;;
+            esac
+            sleep 30
+          done

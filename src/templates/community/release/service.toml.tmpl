@@ -1,0 +1,29 @@
+manifests = [
+    "Cargo.toml",
+{{#spa}}
+    "frontend/package.json",
+{{/spa}}
+]
+# ADRs record what happened: the versions they name are history.
+as_written = ["docs/adr/"]
+
+# The tests need the Postgres that DATABASE_URL names, as in CI.
+[gate]
+commands = [
+{{#spa}}
+    "pnpm --dir frontend lint",
+    "pnpm --dir frontend build",
+{{/spa}}
+    "cargo fmt --check",
+    "cargo clippy --all-targets -- -D warnings",
+    "cargo test",
+]
+
+[ci]
+provider = "github"
+workflow = "ci.yml"
+
+# The service goes out to its stand: turnout deploys it from here and checks
+# the stand's health. Which stand is turnout's own configuration, not this
+# file's.
+[post.deploy]

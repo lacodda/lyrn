@@ -1,0 +1,47 @@
+# The workspace root carries the version of both crates and of the path
+# dependency between them; the npm wrapper downloads the binary.
+manifests = ["Cargo.toml", "npm/package.json"]
+# ADRs record what happened: the versions they name are history.
+as_written = ["docs/adr/"]
+
+[gate]
+commands = [
+    "cargo fmt --all --check",
+    "cargo clippy --workspace --all-targets -- -D warnings",
+    "cargo test --workspace",
+]
+
+[ci]
+provider = "github"
+workflow = "ci.yml"
+publish = "publish.yml"
+
+# In publishing order: the binary depends on the library.
+[[package]]
+registry = "crates"
+name = "{{ name }}-core"
+manifest = "crates/{{ name }}-core/Cargo.toml"
+
+[[package]]
+registry = "crates"
+name = "{{ name }}"
+manifest = "crates/{{ name }}/Cargo.toml"
+
+[[package]]
+registry = "npm"
+name = "{{ name }}"
+manifest = "npm/package.json"
+wraps = "{{ name }}"
+
+# The files the tag's release page has to carry: checked after the publish,
+# and against the targets the installers ask for on every commit.
+[page]
+assets = [
+    "{{ name }}-{tag}-x86_64-pc-windows-msvc.zip",
+    "{{ name }}-{tag}-x86_64-unknown-linux-gnu.tar.gz",
+    "{{ name }}-{tag}-aarch64-apple-darwin.tar.gz",
+]
+
+# The program is installed from the release by tools/install.ps1 and
+# tools/install.sh, and proven to be the release's own build.
+[post.install]

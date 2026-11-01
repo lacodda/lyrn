@@ -1,21 +1,5 @@
-name: Publish
-
-# Triggered by the tag push directly (not the release event): releases here are
-# created by release.yml with GITHUB_TOKEN, and such events do not start other
-# workflows.
-on:
-  push:
-    tags: ['v*']
-  workflow_dispatch:
-    inputs:
-      tag:
-        description: Tag to publish
-        required: true
-
-permissions: {}
-
-jobs:
   crates-io:
+    needs: release
     runs-on: ubuntu-latest
     permissions:
       id-token: write
@@ -25,12 +9,57 @@ jobs:
         with:
           ref: ${{ github.event_name == 'workflow_dispatch' && inputs.tag || github.ref }}
       - uses: dtolnay/rust-toolchain@stable
-      # The first publish of a crate has to be manual: a trusted publisher
-      # cannot be attached to a crate that does not exist yet. Set one up on
-      # crates.io after that first release, and this job takes over.
+      # A version is published once: a re-run - after the first publish by
+      # hand, or for a tag pushed again - skips it instead of failing on it.
+      - name: Check whether this version is on crates.io
+        id: check
+        run: |
+          version=$(cargo metadata --no-deps --format-version 1 | jq -r '.packages[0].version')
+          if curl -sf "https://crates.io/api/v1/crates/{{ name }}/$version" -H 'user-agent: {{ name }}-publish' > /dev/null; then
+            echo "published=true" >> "$GITHUB_OUTPUT"
+            echo "{{ name }} $version is on crates.io already"
+          else
+            echo "published=false" >> "$GITHUB_OUTPUT"
+          fi
+      # The first publish of a crate is by hand: a trusted publisher cannot be
+      # attached to a crate that does not exist yet. Set one up on crates.io
+      # after that first release, and this job takes over.
       - name: Get a crates.io token (OIDC trusted publishing)
+        if: steps.check.outputs.published == 'false'
         uses: rust-lang/crates-io-auth-action@v1
         id: auth
-      - run: cargo publish
+      - if: steps.check.outputs.published == 'false'
+        run: cargo publish
         env:
           CARGO_REGISTRY_TOKEN: ${{ steps.auth.outputs.token }}
+
+  # The wrapper that downloads the binary from the release page - which is why
+  # it waits for the release above.
+  npm:
+    needs: release
+    runs-on: ubuntu-latest
+    permissions:
+      id-token: write
+      contents: read
+    steps:
+      - uses: actions/checkout@v7
+        with:
+          ref: ${{ github.event_name == 'workflow_dispatch' && inputs.tag || github.ref }}
+      # npm >= 11.5.1 exchanges the OIDC token itself (trusted publishing);
+      # provenance is attached automatically.
+      - uses: actions/setup-node@v7
+        with:
+          node-version: 24
+          check-latest: true
+          registry-url: https://registry.npmjs.org
+      # The first publish is by hand, as for the crate; a version npm holds
+      # already is skipped.
+      - name: Publish
+        working-directory: npm
+        run: |
+          version=$(node -p "require('./package.json').version")
+          if npm view "{{ name }}@$version" version > /dev/null 2>&1; then
+            echo "{{ name }}@$version is on npm already"
+          else
+            npm publish
+          fi

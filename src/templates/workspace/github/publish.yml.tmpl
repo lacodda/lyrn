@@ -1,21 +1,5 @@
-name: Publish
-
-# Triggered by the tag push directly (not the release event): releases here are
-# created by release.yml with GITHUB_TOKEN, and such events do not start other
-# workflows.
-on:
-  push:
-    tags: ['v*']
-  workflow_dispatch:
-    inputs:
-      tag:
-        description: Tag to publish
-        required: true
-
-permissions: {}
-
-jobs:
   crates-io:
+    needs: release
     runs-on: ubuntu-latest
     permissions:
       id-token: write
@@ -25,46 +9,61 @@ jobs:
         with:
           ref: ${{ github.event_name == 'workflow_dispatch' && inputs.tag || github.ref }}
       - uses: dtolnay/rust-toolchain@stable
-      # The first publish of each crate has to be manual: a trusted publisher
-      # cannot be attached to a crate that does not exist yet. Publish both by
-      # hand once, add a publisher to each on crates.io, and this job takes
-      # over - two crates means two publishers, and forgetting the second one
-      # fails with a message that reads like a token problem and is not.
+      # The first publish of each crate is by hand: a trusted publisher cannot
+      # be attached to a crate that does not exist yet. Publish both by hand
+      # once, add a publisher to each on crates.io, and this job takes over -
+      # two crates means two publishers, and forgetting the second one fails
+      # with a message that reads like a token problem and is not.
       - name: Get a crates.io token (OIDC trusted publishing)
         uses: rust-lang/crates-io-auth-action@v1
         id: auth
-      # From the workspace table, which is where the single version lives.
-      # `.packages[0]` would be whichever crate cargo listed first, and the
-      # answer would be right only by luck.
-      - name: Read the version being published
-        id: version
-        run: echo "value=$(cargo metadata --no-deps --format-version 1 | jq -r '[.packages[].version] | unique | .[0]')" >> "$GITHUB_OUTPUT"
-      # Order matters: the binary depends on the library, and crates.io refuses
-      # a package whose dependency it cannot resolve yet. Two `--package` steps
-      # rather than a workspace publish, so the order is stated rather than
-      # inferred.
-      - name: Publish {{ name }}-core
-        run: cargo publish --package {{ name }}-core
+      # In order - the binary depends on the library, and crates.io refuses a
+      # package whose dependency it cannot resolve; cargo waits for each to
+      # reach the index before it returns. The single version is the
+      # workspace's. A version crates.io holds already is skipped, so a re-run
+      # picks up where a publish stopped.
+      - name: Publish what crates.io does not hold yet
         env:
           CARGO_REGISTRY_TOKEN: ${{ steps.auth.outputs.token }}
-      # The index does not carry the new version the instant publish returns,
-      # and the next step resolves the library from it. Waiting for the version
-      # to appear beats a fixed sleep that is either too short or wasteful.
-      - name: Wait for {{ name }}-core to appear in the index
         run: |
-          version='${{ steps.version.outputs.value }}'
-          for attempt in $(seq 1 30); do
-            if curl -sf "https://crates.io/api/v1/crates/{{ name }}-core/$version" \
-                 -H 'user-agent: {{ name }}-release' > /dev/null; then
-              echo "{{ name }}-core $version is available"
-              exit 0
-            fi
-            echo "attempt $attempt: not indexed yet"
-            sleep 10
+          set -euo pipefail
+          version=$(cargo metadata --no-deps --format-version 1 | jq -r '[.packages[].version] | unique | .[0]')
+          for crate in {{ name }}-core {{ name }}; do
+            status=$(curl -s -o /dev/null -w '%{http_code}' -A '{{ name }}-publish' "https://crates.io/api/v1/crates/$crate/$version")
+            case "$status" in
+              200) echo "$crate $version is on crates.io already" ;;
+              404) cargo publish --package "$crate" ;;
+              *) echo "crates.io answered $status for $crate $version" >&2; exit 1 ;;
+            esac
           done
-          echo "{{ name }}-core $version never appeared in the index" >&2
-          exit 1
-      - name: Publish {{ name }}
-        run: cargo publish --package {{ name }}
-        env:
-          CARGO_REGISTRY_TOKEN: ${{ steps.auth.outputs.token }}
+
+  # The wrapper that downloads the binary from the release page - which is why
+  # it waits for the release above.
+  npm:
+    needs: release
+    runs-on: ubuntu-latest
+    permissions:
+      id-token: write
+      contents: read
+    steps:
+      - uses: actions/checkout@v7
+        with:
+          ref: ${{ github.event_name == 'workflow_dispatch' && inputs.tag || github.ref }}
+      # npm >= 11.5.1 exchanges the OIDC token itself (trusted publishing);
+      # provenance is attached automatically.
+      - uses: actions/setup-node@v7
+        with:
+          node-version: 24
+          check-latest: true
+          registry-url: https://registry.npmjs.org
+      # The first publish is by hand, as for the crates; a version npm holds
+      # already is skipped.
+      - name: Publish
+        working-directory: npm
+        run: |
+          version=$(node -p "require('./package.json').version")
+          if npm view "{{ name }}@$version" version > /dev/null 2>&1; then
+            echo "{{ name }}@$version is on npm already"
+          else
+            npm publish
+          fi

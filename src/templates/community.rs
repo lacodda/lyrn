@@ -35,6 +35,9 @@ const EVERY_FORM: &[&str] = &[
     ".github/pull_request_template.md",
     ".github/workflows/audit.yml",
     ".github/workflows/shopfronts.yml",
+    ".github/workflows/release.yml",
+    ".github/release-notes.md",
+    "release.toml",
     "docs/adr/0001-record-architecture-decisions.md",
     "docs/adr/0002-dependabot-is-off.md",
     "docs/adr/README.md",
@@ -101,6 +104,15 @@ pub fn sources(form: Form) -> Vec<SourceFile> {
         text("assets/logo-s.svg", include_str!("dowel/marks/lacodda-S.svg")),
     ];
 
+    // The release contour every form shares: what furca's engine releases,
+    // the checklist every release's notes end with, and - where the form
+    // attaches no binaries - the workflow that writes the release page.
+    files.push(text("release.toml", release_toml(form)));
+    files.push(text(".github/release-notes.md", release_notes(form)));
+    if !builds_binaries(form) {
+        files.push(text(".github/workflows/release.yml", include_str!("community/release/notes-only.yml.tmpl")));
+    }
+
     if has_crates(form) {
         files.push(text("deny.toml", include_str!("community/deny.toml.tmpl")));
     }
@@ -121,6 +133,58 @@ pub fn sources(form: Form) -> Vec<SourceFile> {
 /// Whether a form builds Rust, and so has crates for `cargo deny` to check.
 pub fn has_crates(form: Form) -> bool {
     !matches!(form, Form::Spa | Form::Mono | Form::Docs)
+}
+
+/// Whether a form's own release.yml builds binaries for the release page. The
+/// others share one that writes the page's notes and attaches nothing.
+pub fn builds_binaries(form: Form) -> bool {
+    matches!(form, Form::Cli | Form::Workspace | Form::Plugin)
+}
+
+/// `release.toml`: the head every form shares, then the form's manifests,
+/// gate, packages, release page and what follows the publish.
+fn release_toml(form: Form) -> &'static str {
+    macro_rules! with_head {
+        ($body:literal) => {
+            concat!(include_str!("community/release/head.toml.tmpl"), include_str!($body))
+        };
+    }
+    match form {
+        Form::Spa => with_head!("community/release/spa.toml.tmpl"),
+        Form::Cli => with_head!("community/release/cli.toml.tmpl"),
+        Form::Desktop => with_head!("community/release/desktop.toml.tmpl"),
+        Form::Service => with_head!("community/release/service.toml.tmpl"),
+        Form::Workspace => with_head!("community/release/workspace.toml.tmpl"),
+        Form::Mono => with_head!("community/release/mono.toml.tmpl"),
+        Form::Plugin => with_head!("community/release/plugin.toml.tmpl"),
+        Form::TauriPlugin => with_head!("community/release/tauri-plugin.toml.tmpl"),
+        Form::Docs => unreachable!("the docs form adds to a repository and releases nothing of its own"),
+    }
+}
+
+/// `.github/release-notes.md`: what every release's notes end with - a
+/// checklist ticked once the release has been installed from itself, or
+/// deployed, and run by hand. The first item says how this form's release
+/// reaches a machine; the last is the same everywhere.
+fn release_notes(form: Form) -> &'static str {
+    macro_rules! checklist {
+        ($reach:literal) => {
+            concat!(
+                include_str!("community/release/notes-head.md.tmpl"),
+                include_str!($reach),
+                include_str!("community/release/notes-tail.md.tmpl"),
+            )
+        };
+    }
+    match form {
+        Form::Cli | Form::Workspace => checklist!("community/release/notes-binary.md.tmpl"),
+        Form::Plugin => checklist!("community/release/notes-plugin.md.tmpl"),
+        Form::Mono => checklist!("community/release/notes-package.md.tmpl"),
+        Form::TauriPlugin => checklist!("community/release/notes-tauri-plugin.md.tmpl"),
+        Form::Spa | Form::Service => checklist!("community/release/notes-stand.md.tmpl"),
+        Form::Desktop => checklist!("community/release/notes-desktop.md.tmpl"),
+        Form::Docs => unreachable!("the docs form adds to a repository and releases nothing of its own"),
+    }
 }
 
 /// CONTRIBUTING.md: the form's own gate and layout, then what every repository

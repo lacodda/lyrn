@@ -1,21 +1,5 @@
-name: Publish
-
-# Triggered by the tag push directly (not the release event): releases here are
-# created by release.yml with GITHUB_TOKEN, and such events do not start other
-# workflows.
-on:
-  push:
-    tags: ['v*']
-  workflow_dispatch:
-    inputs:
-      tag:
-        description: Tag to publish
-        required: true
-
-permissions: {}
-
-jobs:
   npm:
+    needs: release
     runs-on: ubuntu-latest
     permissions:
       id-token: write

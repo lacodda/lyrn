@@ -1,0 +1,40 @@
+# The crate, and the npm wrapper that downloads its binary from the release.
+manifests = ["Cargo.toml", "npm/package.json"]
+# ADRs record what happened: the versions they name are history.
+as_written = ["docs/adr/"]
+
+[gate]
+commands = [
+    "cargo fmt --check",
+    "cargo clippy --all-targets -- -D warnings",
+    "cargo test",
+]
+
+[ci]
+provider = "github"
+workflow = "ci.yml"
+publish = "publish.yml"
+
+[[package]]
+registry = "crates"
+name = "{{ name }}"
+manifest = "Cargo.toml"
+
+[[package]]
+registry = "npm"
+name = "{{ name }}"
+manifest = "npm/package.json"
+wraps = "{{ name }}"
+
+# The files the tag's release page has to carry: checked after the publish,
+# and against the targets the installers ask for on every commit.
+[page]
+assets = [
+    "{{ name }}-{tag}-x86_64-pc-windows-msvc.zip",
+    "{{ name }}-{tag}-x86_64-unknown-linux-gnu.tar.gz",
+    "{{ name }}-{tag}-aarch64-apple-darwin.tar.gz",
+]
+
+# The program is installed from the release by tools/install.ps1 and
+# tools/install.sh, and proven to be the release's own build.
+[post.install]

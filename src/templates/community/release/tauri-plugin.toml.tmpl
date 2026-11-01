@@ -1,0 +1,29 @@
+# Both halves carry one version: they ship together.
+manifests = ["Cargo.toml", "package.json"]
+# ADRs record what happened: the versions they name are history.
+as_written = ["docs/adr/"]
+
+[gate]
+commands = [
+    "cargo fmt --check",
+    "cargo clippy --all-targets -- -D warnings",
+    "cargo test",
+    "pnpm lint",
+    "pnpm test",
+    "pnpm build",
+]
+
+[ci]
+provider = "github"
+workflow = "ci.yml"
+publish = "publish.yml"
+
+[[package]]
+registry = "crates"
+name = "tauri-plugin-{{ name }}"
+manifest = "Cargo.toml"
+
+[[package]]
+registry = "npm"
+name = "tauri-plugin-{{ name }}-api"
+manifest = "package.json"

@@ -1,0 +1,23 @@
+manifests = ["Cargo.toml"]
+# ADRs record what happened: the versions they name are history.
+as_written = ["docs/adr/"]
+
+[gate]
+commands = [
+    "cargo fmt --check",
+    "cargo clippy --all-targets -- -D warnings",
+    "cargo test",
+]
+
+[ci]
+provider = "github"
+workflow = "ci.yml"
+
+# The archives the host installs the plugin from: the release page has to
+# carry one for every target.
+[page]
+assets = [
+    "{{ bin_name }}-{tag}-x86_64-pc-windows-msvc.zip",
+    "{{ bin_name }}-{tag}-x86_64-unknown-linux-gnu.tar.gz",
+    "{{ bin_name }}-{tag}-aarch64-apple-darwin.tar.gz",
+]

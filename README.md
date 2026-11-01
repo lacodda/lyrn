@@ -80,8 +80,13 @@ standard in one table, and `lyrn doctor --explain <rule>` says why it exists.
 Before a release, `lyrn check` holds the shopfronts to each other - one
 version, one description, only commands that exist - and `lyrn ci` runs the CI
 the push would start on a clean copy of the commit, so a red run is seen here
-first. When the standard moves on, `lyrn upgrade` merges what changed into the
-repository's files and commits it as one change.
+first.
+
+Every form writes the `release.toml` furca's release engine releases it from.
+After the tag, `lyrn check --release --install` checks what went out - the
+page, the registries, the `Checked live` list of its notes, the build its
+installer puts in place. When the standard moves on, `lyrn upgrade` merges what
+changed into the repository's files and commits it as one change.
 
 ## Install
 
@@ -97,7 +102,7 @@ $ lyrn init [path] [options]     # the same, in a directory that already exists
 $ lyrn adopt [path]              # the standard's missing files, into an old repository
 $ lyrn upgrade [path]            # the newest standard, merged into the files and committed
 $ lyrn doctor [path...] [--fix]  # what is off against the standard, why, and the safe repairs
-$ lyrn check [path...]           # the shopfronts held to each other: versions, descriptions, commands
+$ lyrn check [path...]           # the shopfronts held to each other; --release: what went out
 $ lyrn assets [--from <dir>]     # the mark laid out by the canon, every raster drawn from its masters
 $ lyrn brand pick [name]         # a new mark's code and colour, held to the line's marks
 $ lyrn ci [job...]               # the CI a push of this commit would start, run here first
@@ -197,17 +202,20 @@ More forms — egui — follow in 2.x.
 ## Status
 
 v2.15.0, in daily use. All nine forms pass their own `lyrn doctor` and their
-gate on Linux, macOS and Windows on every push; `lyrn adopt` and `lyrn upgrade`
+gate on Linux, macOS and Windows on every push, and the eight that start a
+repository release through furca's engine; `lyrn adopt` and `lyrn upgrade`
 bring older repositories to the newest standard. What landed in each version:
 [CHANGELOG](https://github.com/lacodda/lyrn/blob/main/CHANGELOG.md).
 
 ## Migrating from 1.x
 
+<!-- historical versions -->
 Version 1 wrapped webpack and generated its configuration. That job belongs to
 Vite now, and the wrapper is gone: `lyrn create`, `start`, `build` and `export`
 no longer exist. An existing 1.x project keeps working — pin `lyrn@1.3.0`, or
 move to Vite directly, which is what the 1.x templates were producing
 configuration for anyway.
+<!-- /historical versions -->
 
 ## Contributing
 

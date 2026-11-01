@@ -1,0 +1,17 @@
+manifests = ["package.json"]
+# ADRs record what happened: the versions they name are history.
+as_written = ["docs/adr/"]
+
+[gate]
+commands = [
+    "pnpm lint",
+    "pnpm build",
+]
+
+[ci]
+provider = "github"
+workflow = "ci.yml"
+
+# The app goes out to its stand: turnout deploys it from here and checks the
+# stand's health. Which stand is turnout's own configuration, not this file's.
+[post.deploy]

@@ -1,0 +1,19 @@
+# The window and its core carry one version: the frontend's package, the
+# crate, and the bundle Tauri builds.
+manifests = ["package.json", "src-tauri/Cargo.toml", "src-tauri/tauri.conf.json"]
+# ADRs record what happened: the versions they name are history.
+as_written = ["docs/adr/"]
+
+# The frontend first: the crate embeds what `pnpm build` writes.
+[gate]
+commands = [
+    "pnpm lint",
+    "pnpm build",
+    "cargo fmt --manifest-path src-tauri/Cargo.toml --check",
+    "cargo clippy --manifest-path src-tauri/Cargo.toml --all-targets -- -D warnings",
+    "cargo test --manifest-path src-tauri/Cargo.toml",
+]
+
+[ci]
+provider = "github"
+workflow = "ci.yml"

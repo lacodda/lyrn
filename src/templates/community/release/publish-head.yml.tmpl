@@ -1,0 +1,17 @@
+name: Publish
+
+# Started by the tag push itself, not by the release event: release.yml
+# creates the release with GITHUB_TOKEN, and such events start no other
+# workflow. workflow_dispatch publishes a tag again.
+on:
+  push:
+    tags: ['v*']
+  workflow_dispatch:
+    inputs:
+      tag:
+        description: Tag to publish (vX.Y.Z)
+        required: true
+
+permissions: {}
+
+jobs:

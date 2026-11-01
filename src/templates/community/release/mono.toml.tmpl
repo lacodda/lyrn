@@ -1,0 +1,21 @@
+# The package is what ships; the workspace around it is private and carries
+# no version.
+manifests = ["packages/{{ name }}/package.json"]
+# ADRs record what happened: the versions they name are history.
+as_written = ["docs/adr/"]
+
+[gate]
+commands = [
+    "pnpm lint",
+    "pnpm build",
+]
+
+[ci]
+provider = "github"
+workflow = "ci.yml"
+publish = "publish.yml"
+
+[[package]]
+registry = "npm"
+name = "{{ name }}"
+manifest = "packages/{{ name }}/package.json"

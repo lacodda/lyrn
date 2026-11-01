@@ -1,4 +1,4 @@
-Would create 45 files in `demo-tool`:
+Would create 47 files in `demo-tool`:
 
   ├── .github/
   │   ├── ISSUE_TEMPLATE/
@@ -11,7 +11,8 @@ Would create 45 files in `demo-tool`:
   │   │   ├── publish.yml
   │   │   ├── release.yml
   │   │   └── shopfronts.yml
-  │   └── pull_request_template.md
+  │   ├── pull_request_template.md
+  │   └── release-notes.md
   ├── assets/
   │   ├── icon.ico
   │   ├── logo-m.svg
@@ -55,4 +56,5 @@ Would create 45 files in `demo-tool`:
   ├── deny.toml
   ├── llms.txt
   ├── lyrn.toml
+  ├── release.toml
   └── rustfmt.toml

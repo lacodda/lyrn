@@ -1,4 +1,4 @@
-Would create 61 files in `demo-tool`:
+Would create 64 files in `demo-tool`:
 
   ├── .github/
   │   ├── ISSUE_TEMPLATE/
@@ -8,8 +8,10 @@ Would create 61 files in `demo-tool`:
   │   ├── workflows/
   │   │   ├── audit.yml
   │   │   ├── ci.yml
+  │   │   ├── release.yml
   │   │   └── shopfronts.yml
-  │   └── pull_request_template.md
+  │   ├── pull_request_template.md
+  │   └── release-notes.md
   ├── assets/
   │   ├── logo-m.svg
   │   ├── logo-s.svg
@@ -72,6 +74,7 @@ Would create 61 files in `demo-tool`:
   ├── lyrn.toml
   ├── package.json
   ├── pnpm-workspace.yaml
+  ├── release.toml
   ├── tsconfig.json
   ├── vite.config.ts
   └── vitest.config.ts
