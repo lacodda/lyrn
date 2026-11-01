@@ -73,6 +73,14 @@ jobs:
         with:
           config: cliff.toml
           args: --latest --strip header
+      # The changelog's section for the tag, then .github/release-notes.md:
+      # the checklist ticked once the release has been through it.
+      - name: Write the release notes
+        env:
+          CHANGES: ${{ steps.cliff.outputs.content }}
+        run: |
+          printf '%s\n\n' "$CHANGES" > release-notes.md
+          cat .github/release-notes.md >> release-notes.md
       - uses: actions/download-artifact@v8
         with:
           path: packages
@@ -80,5 +88,5 @@ jobs:
       - name: Create GitHub Release
         uses: softprops/action-gh-release@v3
         with:
-          body: ${{ steps.cliff.outputs.content }}
+          body_path: release-notes.md
           files: packages/*

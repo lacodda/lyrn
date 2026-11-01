@@ -1,0 +1,57 @@
+# How lyrn is released: read by furca's release engine (`furca release plan`,
+# `run`, `verify`) and by `lyrn check`, which holds the installers to the
+# release page and, with `--release`, checks what a release put out.
+# Reference: https://lacodda.github.io/furca/reference/release/
+
+[project]
+name = "lyrn"
+changelog = "CHANGELOG.md"
+# The crate, and the npm wrapper that downloads its binary.
+manifests = ["Cargo.toml", "npm/package.json"]
+# Left as written: ADRs and the archive of the standard record what happened,
+# and the reference pages show sample output with numbers of its own.
+as_written = [
+    "docs/adr/",
+    "docs/src/content/docs/concepts/the-standard-by-version.md",
+    "docs/src/content/docs/reference/check.md",
+    "docs/src/content/docs/reference/stage.md",
+    "docs/src/content/docs/reference/status.md",
+    "docs/src/content/docs/reference/versions.md",
+    "src/standard/archive/",
+]
+
+[gate]
+commands = [
+    "cargo fmt --all --check",
+    "cargo clippy --all-targets -- -D warnings",
+    "cargo test",
+]
+
+[ci]
+provider = "github"
+workflow = "ci.yml"
+publish = "publish.yml"
+
+[[package]]
+registry = "crates"
+name = "lyrn"
+manifest = "Cargo.toml"
+
+[[package]]
+registry = "npm"
+name = "lyrn"
+manifest = "npm/package.json"
+wraps = "lyrn"
+
+# The files the tag's release page has to carry: checked after the publish,
+# and against the targets the installers ask for on every commit.
+[page]
+assets = [
+    "lyrn-{tag}-x86_64-pc-windows-msvc.zip",
+    "lyrn-{tag}-x86_64-unknown-linux-gnu.tar.gz",
+    "lyrn-{tag}-aarch64-apple-darwin.tar.gz",
+]
+
+# lyrn is installed for the owner from the release by tools/install.ps1 and
+# tools/install.sh, and proven to be the release's own build.
+[post.install]
