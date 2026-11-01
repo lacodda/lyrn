@@ -127,6 +127,72 @@ fn shopfronts_that_agree_pass() {
         assert!(report.lines().any(|l| l.starts_with(&format!("✓ {name}"))), "{name} did not pass:\n{report}");
     }
     assert!(report.contains("4 places say 1.2.0"), "{report}");
+    // Nothing here releases, so nothing has to say how.
+    assert!(report.contains("- release       no release.toml, and no workflow that releases"), "{report}");
+}
+
+/// A repository whose workflows put releases out is one furca's engine
+/// could release, if a release.toml said how: a warning, not a failure -
+/// most of the line was released by hand before the engine existed.
+#[test]
+fn a_release_workflow_without_release_toml_is_worth_a_look() {
+    let repo = repository();
+    write(repo.path(), ".github/workflows/release.yml", "on:\n  push:\n    tags: ['v*']\njobs: {}\n");
+    let (report, passed) = check(repo.path());
+    assert!(passed, "a missing release.toml failed the check:\n{report}");
+    assert!(report.contains("! release"), "{report}");
+    assert!(report.contains("no release.toml says how furca releases them"), "{report}");
+}
+
+/// A tag names one repository's release; across the line, each one's newest
+/// is the only question that makes sense.
+#[test]
+fn a_release_tag_belongs_to_one_repository() {
+    let out = common::lyrn().args(["check", "--all", "--release", "v1.0.0"]).output().unwrap();
+    assert!(!out.status.success());
+    let said = String::from_utf8(out.stderr).unwrap();
+    assert!(said.contains("names one repository's release"), "{said}");
+
+    let out = common::lyrn().args(["check", "--install"]).output().unwrap();
+    assert!(!out.status.success(), "--install ran without --release");
+}
+
+/// Before the first tag there is no release to ask the forge about, and the
+/// check says so without asking.
+#[test]
+fn before_the_first_tag_the_release_checks_do_not_apply() {
+    let repo = repository();
+    write(repo.path(), ".github/workflows/ci.yml", "on: push\njobs: {}\n");
+    write(
+        repo.path(),
+        "release.toml",
+        "[project]\nname = \"demo\"\nchangelog = \"CHANGELOG.md\"\nmanifests = [\"Cargo.toml\", \"npm/package.json\"]\n\n[gate]\ncommands = [\"cargo test\"]\n\n[ci]\nprovider = \"github\"\nworkflow = \"ci.yml\"\n",
+    );
+    write(repo.path(), ".gitignore", "/target/\n");
+    for args in [
+        &["init", "--quiet"][..],
+        &["add", "."],
+        &["-c", "user.name=t", "-c", "user.email=t@t", "commit", "--quiet", "-m", "feat: start"],
+    ] {
+        let status = std::process::Command::new("git").args(args).current_dir(repo.path()).status().unwrap();
+        assert!(status.success(), "git {args:?}");
+    }
+    build(repo.path());
+    let out = common::lyrn()
+        .arg("check")
+        .arg(repo.path())
+        .arg("--release")
+        .env_remove("CARGO_TARGET_DIR")
+        .output()
+        .unwrap();
+    let report = String::from_utf8(out.stdout).unwrap();
+    for shop in ["page", "registries", "links", "live"] {
+        assert!(
+            report.lines().any(|l| l.starts_with(&format!("- {shop}")) && l.contains("no release yet")),
+            "{shop}:\n{report}"
+        );
+    }
+    assert!(!report.contains("- install"), "install was asked without --install:\n{report}");
 }
 
 /// A program run with flags alone - a service - has no command to page, and
@@ -180,7 +246,27 @@ fn each_lesson_unlearnt_fails_its_check() {
             write(root, "Cargo.lock", "version = 4\n\n[[package]]\nname = \"demo\"\nversion = \"1.1.0\"\n");
         }),
         ("versions", "release.toml does not list npm/package.json", |root| {
-            write(root, "release.toml", "[project]\nname = \"demo\"\nmanifests = [\"Cargo.toml\"]\n");
+            write(root, ".github/workflows/ci.yml", "on: push\njobs: {}\n");
+            write(
+                root,
+                "release.toml",
+                "[project]\nname = \"demo\"\nchangelog = \"CHANGELOG.md\"\nmanifests = [\"Cargo.toml\"]\n\n[gate]\ncommands = [\"cargo test\"]\n\n[ci]\nprovider = \"github\"\nworkflow = \"ci.yml\"\n",
+            );
+        }),
+        ("release", "release.toml: the CI workflow `.github/workflows/ci.yml` does not exist", |root| {
+            write(
+                root,
+                "release.toml",
+                "[project]\nname = \"demo\"\nchangelog = \"CHANGELOG.md\"\nmanifests = [\"Cargo.toml\", \"npm/package.json\"]\n\n[gate]\ncommands = [\"cargo test\"]\n\n[ci]\nprovider = \"github\"\nworkflow = \"ci.yml\"\n",
+            );
+        }),
+        ("release", "release.toml: unknown field `stage`", |root| {
+            write(root, ".github/workflows/ci.yml", "on: push\njobs: {}\n");
+            write(
+                root,
+                "release.toml",
+                "[project]\nname = \"demo\"\nchangelog = \"CHANGELOG.md\"\nmanifests = [\"Cargo.toml\", \"npm/package.json\"]\nstage = \"v1\"\n\n[gate]\ncommands = [\"cargo test\"]\n\n[ci]\nprovider = \"github\"\nworkflow = \"ci.yml\"\n",
+            );
         }),
         ("changelog", "CHANGELOG.md has no section for 1.2.0", |root| {
             write(root, "CHANGELOG.md", "# Changelog\n\n## [1.1.0] - 2026-10-01\n");

@@ -1,0 +1,11 @@
+An installer only ever runs on someone else's machine, after a release, so a
+mistake in it arrives as a confused user rather than a failed build. And a
+version alone proves little: a local build of the same number prints the
+same.
+
+With --release --install the check runs the repository's own installer -
+tools/install.ps1 on Windows, tools/install.sh elsewhere - for the release,
+into a temporary directory and with `<APP>_NO_PATH=1`, so the user's place
+and PATH are left alone. The installed program has to print the version and
+hash the same as the binary inside the release page's archive, and so does
+every alias. The proof is furca's own.

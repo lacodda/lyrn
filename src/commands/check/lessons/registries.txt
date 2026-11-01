@@ -1,0 +1,8 @@
+A release that reached one registry and not another says two versions at
+once: `cargo install` gets the new one, `npm install` the old one, and both
+look like the product.
+
+With --release the check asks every registry release.toml names - crates.io
+and npm - whether it holds the released version. A package a registry has
+never seen is published the first time by hand: a trusted publisher cannot
+be attached to a package that does not exist yet.

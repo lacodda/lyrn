@@ -1,0 +1,7 @@
+The release page is what a stranger downloads from, and what the installers
+and an npm wrapper fetch: a tag whose page is missing, still a draft, or
+short of an archive installs nothing on the machines it was built for.
+
+With --release the check asks the forge for the page of the release and
+holds it to `[page] assets` in release.toml, with {tag} and {version} filled
+in. The question is furca's own: `furca release verify` asks it the same way.

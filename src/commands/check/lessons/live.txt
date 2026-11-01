@@ -1,0 +1,11 @@
+Tests and a green CI say the release was built right; they do not say it
+works where a user gets it. The line learned that more than once: a release
+whose installer was never run, a build that was never opened.
+
+So every release's notes end with a `Checked live` list, written from
+.github/release-notes.md: the first box says the release reached a machine
+the way a user gets it - installed from its own page, deployed to its stand -
+and the last that what it changed was run by hand. They are ticked on the
+release page once they hold. With --release the check reads the notes and
+warns on every box still empty, so the fact lives in the notes rather than
+in someone's memory.

@@ -1,0 +1,6 @@
+Every registry shows the links a manifest gives - homepage, documentation,
+repository - and a dead one is the first thing a stranger clicks. They die
+quietly: a site that moved, a repository renamed.
+
+With --release the check asks each link the manifests release.toml lists
+show, and passes when every one answers.

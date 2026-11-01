@@ -15,3 +15,8 @@ One suggested `cargo install kasl` as the way round a missing binary, while
 the crate was published as `kasl-cli`. A suggestion that fails is worse than
 none, so a `cargo install <name>` in an installer has to name a crate of the
 repository.
+
+One asked for archives the release never built: kasl's for unknown-linux-musl,
+while its releases were unknown-linux-gnu. With a release.toml, furca's engine
+holds every target an installer asks for to the files `[page] assets` says the
+release page carries - the same question `furca release plan` asks.

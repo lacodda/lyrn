@@ -7,7 +7,10 @@
 //! until sixty anonymous questions an hour are spent on a shared address; one
 //! suggesting `cargo install` of a name the repository does not publish
 //! suggests a command that fails (kasl suggested `kasl` while publishing
-//! `kasl-cli`).
+//! `kasl-cli`). One asking for an archive the release never builds fails on
+//! that machine only - kasl's asked for `unknown-linux-musl` while releases
+//! were `unknown-linux-gnu` - so with a `release.toml` furca's engine holds
+//! every target the installers ask for to the files of the release page.
 
 use regex::Regex;
 
@@ -55,8 +58,17 @@ pub fn check(repo: &Repo, product: &Product) -> Outcome {
             }
         }
     }
+    // The engine's own reading: every target an installer asks for is a file
+    // the release page will carry, by release.toml's `[page] assets`.
+    let held = super::release::installers(repo);
+    let to_the_page = held.as_ref().is_some_and(Vec::is_empty);
+    findings.extend(held.unwrap_or_default());
     let slug = product.github.as_deref().map_or(String::new(), |s| format!(" from {s}"));
     Outcome::from_findings(findings, || {
-        format!("{} fetch releases{slug} by the redirect", plural(present.len(), "installer", "installers"))
+        let page = if to_the_page { ", for files the release page carries" } else { "" };
+        format!(
+            "{} fetch releases{slug} by the redirect{page}",
+            plural(present.len(), "installer", "installers")
+        )
     })
 }

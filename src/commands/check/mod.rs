@@ -21,6 +21,7 @@ mod descriptions;
 mod installers;
 pub mod product;
 mod readme;
+mod release;
 mod site;
 mod versions;
 
@@ -48,9 +49,16 @@ pub enum Shop {
     Commands,
     Site,
     Installers,
+    Release,
+    Page,
+    Registries,
+    Links,
+    Live,
+    Install,
 }
 
 impl Shop {
+    /// The checks of the repository: read from its files, on every commit.
     pub const ALL: &'static [Shop] = &[
         Shop::Versions,
         Shop::Changelog,
@@ -59,7 +67,12 @@ impl Shop {
         Shop::Commands,
         Shop::Site,
         Shop::Installers,
+        Shop::Release,
     ];
+
+    /// The checks of a release that went out, asked of the forge and the
+    /// registries with --release; install only with --install.
+    pub const RELEASED: &'static [Shop] = &[Shop::Page, Shop::Registries, Shop::Links, Shop::Live, Shop::Install];
 
     pub fn name(self) -> &'static str {
         match self {
@@ -70,6 +83,12 @@ impl Shop {
             Shop::Commands => "commands",
             Shop::Site => "site",
             Shop::Installers => "installers",
+            Shop::Release => "release",
+            Shop::Page => "page",
+            Shop::Registries => "registries",
+            Shop::Links => "links",
+            Shop::Live => "live",
+            Shop::Install => "install",
         }
     }
 
@@ -81,7 +100,13 @@ impl Shop {
             Shop::Readme => "One README for every registry, and its links work away from GitHub",
             Shop::Commands => "Every command the README and the docs show exists, and every command has a page",
             Shop::Site => "The documentation site agrees with itself and the manifests about where it lives",
-            Shop::Installers => "The installers fetch this repository's releases, and name the crate it publishes",
+            Shop::Installers => "The installers fetch this repository's releases, name the crate it publishes, and ask for files the release page carries",
+            Shop::Release => "release.toml says how the repository is released, and furca's engine reads it",
+            Shop::Page => "The release page is out, with every file release.toml lists",
+            Shop::Registries => "Every registry release.toml names holds the released version",
+            Shop::Links => "Every homepage, documentation and repository link the manifests show answers",
+            Shop::Live => "Every box of the Checked live list the release's notes end with is ticked",
+            Shop::Install => "The installer puts the release's own build in place, proven by its hash",
         }
     }
 
@@ -94,6 +119,12 @@ impl Shop {
             Shop::Commands => include_str!("lessons/commands.txt"),
             Shop::Site => include_str!("lessons/site.txt"),
             Shop::Installers => include_str!("lessons/installers.txt"),
+            Shop::Release => include_str!("lessons/release.txt"),
+            Shop::Page => include_str!("lessons/page.txt"),
+            Shop::Registries => include_str!("lessons/registries.txt"),
+            Shop::Links => include_str!("lessons/links.txt"),
+            Shop::Live => include_str!("lessons/live.txt"),
+            Shop::Install => include_str!("lessons/install.txt"),
         }
     }
 
@@ -106,6 +137,9 @@ impl Shop {
             Shop::Commands => commands::check(repo, product),
             Shop::Site => site::check(repo, product),
             Shop::Installers => installers::check(repo, product),
+            Shop::Release => release::check(repo),
+            // Asked of the forge, not of the files: eleased answers them.
+            Shop::Page | Shop::Registries | Shop::Links | Shop::Live | Shop::Install => Outcome::Skip("asked with --release".to_string()),
         }
     }
 }
@@ -147,6 +181,19 @@ pub fn run(args: CheckArgs) -> Result<bool, Box<dyn Error>> {
         println!("\nMore: {DOCS}#{}", shop.name());
         return Ok(true);
     }
+    // `--release` alone means each repository's newest release; a tag names
+    // one repository's.
+    let tag = args.release.as_deref().filter(|t| !t.is_empty());
+    if let Some(tag) = tag {
+        if args.all || args.paths.len() > 1 {
+            return Err(format!("`--release {tag}` names one repository's release - leave the tag out to check the newest release of each").into());
+        }
+        if !tag.starts_with('v') {
+            return Err(format!("`{tag}` is not a release tag - write it as vX.Y.Z").into());
+        }
+    }
+    let released = args.release.is_some().then_some(Released { tag, install: args.install });
+
     let (targets, skipped): (Vec<(String, PathBuf)>, Vec<Skipped>) = if args.all {
         crate::rigger::line()?
     } else {
@@ -174,7 +221,7 @@ pub fn run(args: CheckArgs) -> Result<bool, Box<dyn Error>> {
     };
 
     let reports: Vec<Report> = std::thread::scope(|scope| {
-        let handles: Vec<_> = targets.iter().map(|(name, path)| scope.spawn(move || examine(name, path))).collect();
+        let handles: Vec<_> = targets.iter().map(|(name, path)| scope.spawn(move || examine(name, path, released))).collect();
         handles.into_iter().map(|h| h.join().expect("checking a repository does not panic")).collect()
     });
     let passed = reports.iter().all(Report::passed);
@@ -188,7 +235,16 @@ pub fn run(args: CheckArgs) -> Result<bool, Box<dyn Error>> {
     Ok(passed)
 }
 
-fn examine(name: &str, path: &std::path::Path) -> Report {
+/// What `--release` asks of a release that went out.
+#[derive(Clone, Copy)]
+struct Released<'a> {
+    /// The release; the newest one when `None`.
+    tag: Option<&'a str>,
+    /// Install it too, into a temporary directory.
+    install: bool,
+}
+
+fn examine(name: &str, path: &std::path::Path, released: Option<Released>) -> Report {
     if !path.is_dir() {
         return Report {
             name: name.to_string(),
@@ -200,7 +256,10 @@ fn examine(name: &str, path: &std::path::Path) -> Report {
     }
     let repo = Repo::read(path);
     let product = Product::read(&repo);
-    let outcomes = check_all(&repo, &product);
+    let mut outcomes = check_all(&repo, &product);
+    if let Some(released) = released {
+        outcomes.extend(release::released(&repo.root, released.tag, released.install));
+    }
     let version = product.version().map(|(_, v)| format!(" {v}")).unwrap_or_default();
     Report {
         name: name.to_string(),
@@ -283,14 +342,21 @@ fn render_table(reports: &[Report], skipped: &[Skipped], all: bool) -> String {
     };
     let mut out = format!("lyrn check: {count}{from}\n\n");
     let width = reports.iter().map(|r| r.name.chars().count()).max().unwrap_or(4) + 2;
-    out.push_str(&format!("{:width$}{}\n", "", Shop::ALL.iter().map(|s| s.name()).collect::<Vec<_>>().join(" ")));
+    // The columns of the checks that ran: the release's only with --release.
+    let shops: Vec<Shop> = Shop::ALL
+        .iter()
+        .chain(Shop::RELEASED)
+        .copied()
+        .filter(|shop| Shop::ALL.contains(shop) || reports.iter().any(|r| r.outcomes.iter().any(|(s, _)| s == shop)))
+        .collect();
+    out.push_str(&format!("{:width$}{}\n", "", shops.iter().map(|s| s.name()).collect::<Vec<_>>().join(" ")));
     for report in reports {
         out.push_str(&format!("{:width$}", report.name));
         if let Some(reason) = &report.missing {
             out.push_str(&format!("✗ {reason}\n"));
             continue;
         }
-        let cells: Vec<String> = Shop::ALL
+        let cells: Vec<String> = shops
             .iter()
             .map(|shop| {
                 let mark = match report.outcomes.iter().find(|(s, _)| s == shop).map(|(_, o)| o) {
@@ -386,12 +452,20 @@ mod tests {
     #[test]
     fn every_check_is_explained_under_the_name_it_is_reported_by() {
         use clap::ValueEnum;
-        for shop in Shop::ALL {
+        for shop in Shop::ALL.iter().chain(Shop::RELEASED) {
             let value = shop.to_possible_value().expect("every check can be named");
             assert_eq!(value.get_name(), shop.name());
             assert!(!shop.lesson().trim().is_empty(), "{} has no lesson", shop.name());
         }
-        assert_eq!(Shop::ALL.len(), Shop::value_variants().len(), "a check is missing from Shop::ALL");
+        assert_eq!(
+            Shop::ALL.len() + Shop::RELEASED.len(),
+            Shop::value_variants().len(),
+            "a check is in neither Shop::ALL nor Shop::RELEASED"
+        );
+        assert!(
+            Shop::ALL.iter().all(|s| !Shop::RELEASED.contains(s)),
+            "a check is both the repository's and the release's"
+        );
     }
 
     #[test]

@@ -1,11 +1,12 @@
 ---
 title: lyrn check
-description: Hold the shopfronts to each other - versions, descriptions, the commands the README shows, where the documentation site lives - on every commit.
+description: Hold the shopfronts to each other - versions, descriptions, the commands the README shows, where the documentation site lives - on every commit, and check what a release put out.
 ---
 
 ```console
 $ lyrn check [path...] [--json]
 $ lyrn check --all [--json]
+$ lyrn check [path] --release [tag] [--install]
 $ lyrn check --explain <check>
 ```
 
@@ -43,9 +44,10 @@ lyrn check: ~/word-count, word-count 0.2.0
       → show a command the program has, or give the program the command
     why: lyrn check --explain commands
 ✓ site          https://lacodda.github.io/word-count/, a project site
-✓ installers    2 installers fetch releases from lacodda/word-count by the redirect
+✓ installers    2 installers fetch releases from lacodda/word-count by the redirect, for files the release page carries
+✓ release       furca reads release.toml: 2 manifests, 2 packages
 
-3 failed, 4 passed
+3 failed, 5 passed
 ```
 
 A failure (`✗`) makes `lyrn check` exit with 1, so it works as a gate: put it
@@ -61,9 +63,42 @@ site - says why and counts as neither. `lyrn check` reads the repository and
 writes nothing to it.
 
 The release itself - moving the number, writing the changelog, tagging,
-checking the registries afterwards - is the release engine's, `furca release`.
-`lyrn check` keeps the shopfronts agreeing in between, and it knows which files
-are shopfronts, which is how it can tell `release.toml` that it forgot one.
+publishing - is the release engine's, `furca release`, and it releases a
+repository from `release.toml`. `lyrn check` keeps the shopfronts agreeing in
+between: it knows which files are shopfronts, which is how it can tell
+`release.toml` that it forgot one, and it reads `release.toml` the way the
+engine does, through the engine's own crate.
+
+## What a release put out
+
+`--release` adds the checks of a release that went out - the newest one, or
+the `tag` named: its page and files, the registries, the links, and the
+`Checked live` list its notes end with. `--install` installs it too, into a
+temporary directory, and proves the build. They ask the forge and the
+registries, so they are not part of the gate on every commit; they belong to
+the end of a stage, after the tag:
+
+```console
+$ lyrn check --release --install
+  install  tools/install.ps1 for v2.16.0
+  ...
+✓ release       furca reads release.toml: 2 manifests, 2 packages
+✓ page          v2.16.0: out with every file release.toml lists (3 of 3)
+✓ registries    v2.16.0: 2.16.0 is in crates.io, npm
+✓ links         v2.16.0: 3 links answer
+! live
+    ! v2.16.0: not ticked yet - Run by hand on a real machine: what this release changed works as these notes say
+      → tick it on the release page once it holds: https://github.com/lacodda/lyrn/releases/tag/v2.16.0
+    why: lyrn check --explain live
+✓ install       v2.16.0 installed by its own installer: the release's own build, as in lyrn-v2.16.0-x86_64-pc-windows-msvc.zip
+```
+
+Every check but `live` is the engine's own: `furca release verify [tag]
+--install` asks the same questions the same way, and a release that passes one
+passes the other. With `--all` they ask about the newest release of every
+project in the record, one column each. The forge is asked with the token
+`GH_TOKEN`, `GITHUB_TOKEN` or the `gh` CLI offers, and anonymously
+otherwise.
 
 ## The checks
 
@@ -87,8 +122,8 @@ carries the number, since `furca release` rewrites only the files it lists.
 
 ### changelog
 
-`CHANGELOG.md` has a section for the version the manifests say - `## [1.2.0] -
-date`, `## 1.2.0`, `## [v1.2.0]`. The number moves in the release commit, and
+`CHANGELOG.md` has a section for the version the manifests say - `## [X.Y.Z] -
+date`, `## X.Y.Z`, `## [vX.Y.Z]`. The number moves in the release commit, and
 its section moves with it: the release page is written from it. Before the
 first release, a changelog with no version sections passes.
 
@@ -151,6 +186,57 @@ from the redirect of `/releases/latest`, never from `api.github.com`, which
 answers sixty anonymous questions an hour per address; and a `cargo install
 <name>` they suggest names a crate of the repository.
 
+With a `release.toml`, the engine holds them to the release page too: every
+target an installer asks for - `x86_64-pc-windows-msvc`, `aarch64-apple-darwin`
+- is a file `[page] assets` says the page carries. kasl's installer once asked
+for `unknown-linux-musl` archives no release had ever built.
+
+### release
+
+`release.toml` says how the repository is released, and furca's engine reads
+it without a problem: the manifests, the changelog and the workflows it names
+are there, every key is one it knows, and `[post.install]` has the installers
+it runs. A repository whose workflows put releases out and that has no
+`release.toml` gets a warning - the engine cannot release it. [`lyrn
+new`](/reference/new/) writes one for every form.
+
+### page
+
+With `--release`: the release page is out, not a draft, with every file
+`[page] assets` lists, `{tag}` and `{version}` filled in.
+
+### registries
+
+With `--release`: crates.io and npm hold the released version of every
+package `release.toml` names. A package a registry has never seen is
+published the first time by hand.
+
+### links
+
+With `--release`: every homepage, documentation and repository link the
+manifests show answers.
+
+### live
+
+With `--release`: every box of the `Checked live` list the release's notes
+end with is ticked. The list comes from `.github/release-notes.md`, which
+`release.yml` adds after the changelog's section: the first box says the
+release reached a machine the way a user gets it - installed from its own
+page, deployed to its stand - and the last that what it changed was run by
+hand. They are ticked on the release page once they hold, so the fact lives in
+the notes rather than in memory. A release whose notes have no such list -
+one from before the list existed - is not applicable.
+
+### install
+
+With `--release --install`: the repository's own installer -
+`tools/install.ps1` on Windows, `tools/install.sh` elsewhere - installs the
+release into a temporary directory with `<APP>_NO_PATH=1`, so neither the
+user's place nor the PATH is touched; the installed program prints the version
+and hashes the same as the binary in the release page's archive, and so does
+every alias. A `release.toml` without `[post.install]` has nothing to
+install.
+
 ## Many repositories
 
 Name more than one, and the report is a table: a mark per check, a row per
@@ -162,9 +248,9 @@ repository. `--all` checks every project in
 $ lyrn check word-count lyrn
 lyrn check: 2 repositories
 
-            versions changelog descriptions readme commands site installers
-word-count  ✗        ✗         ✓            ✓      ✗        ✓    ✓
-lyrn        ✓        ✓         ✓            ✓      ✓        ✓    ✓
+            versions changelog descriptions readme commands site installers release
+word-count  ✗        ✗         ✓            ✓      ✗        ✓    ✓          -
+lyrn        ✓        ✓         ✓            ✓      ✓        ✓    ✓          ✓
 
 1 fails, 1 passes
 `lyrn check <path>` says what is off in one of them and how to put it right
@@ -214,4 +300,6 @@ a check's `result` is also `skip` when it does not apply.
 | `[path...]` | The repositories to check; defaults to the one the current directory is in |
 | `--all` | Every project in rigger's record |
 | `--json` | One JSON document instead of the report |
+| `--release [tag]` | Check what a release put out too - the newest, or `tag`: its page, registries, links and `Checked live` list |
+| `--install` | With `--release`: install it into a temporary directory and prove the build |
 | `--explain <check>` | Why a check exists and how to satisfy it, instead of checking |

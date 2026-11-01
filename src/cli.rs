@@ -144,8 +144,20 @@ pub struct CheckArgs {
     #[arg(long)]
     pub json: bool,
 
+    /// Check what a release put out as well: its page and files, the
+    /// registries, the links, the Checked live list of its notes. The newest
+    /// release unless a tag is named. Asks the forge and the registries
+    #[arg(long, value_name = "TAG", num_args = 0..=1, default_missing_value = "")]
+    pub release: Option<String>,
+
+    /// With --release: install the release with the repository's own
+    /// installer into a temporary directory, and prove the build is the
+    /// release's own
+    #[arg(long, requires = "release")]
+    pub install: bool,
+
     /// Say why a check exists and how to satisfy it, instead of checking
-    #[arg(long, value_name = "CHECK", conflicts_with_all = ["paths", "all", "json"])]
+    #[arg(long, value_name = "CHECK", conflicts_with_all = ["paths", "all", "json", "release"])]
     pub explain: Option<crate::commands::check::Shop>,
 }
 

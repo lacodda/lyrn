@@ -1,0 +1,11 @@
+A release of the line is run by furca's release engine, and the engine
+releases a repository from release.toml: where the version is written, the
+gate, the CI workflow and the one that publishes, the packages and their
+registries, the files the release page carries, what follows the publish.
+
+The check reads release.toml the way the engine does and reports every
+problem it would stop on: a manifest or a workflow that is not there, a key
+the engine does not know, an installer named without [post.install]. A
+repository whose workflows put releases out and that has no release.toml
+gets a warning: the engine cannot release it, and every release is done by
+hand again. `lyrn new` writes the file for every form.
