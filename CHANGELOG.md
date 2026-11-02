@@ -8,6 +8,33 @@ last release, which follow [Conventional Commits](https://www.conventionalcommit
 $ git cliff --unreleased --tag vX.Y.Z --prepend CHANGELOG.md
 ```
 
+## 🎉 [2.16.0] - 2026-11-02
+
+### ✨ Features
+
+- Give every form the release contour furca reads
+- Check releases with furca's engine, --release and --install
+- Leave the PATH alone under <APP>_NO_PATH
+- Generate plugins for kasl
+
+### 📐 Standard
+
+- Take the line's standard 2026.11.3
+
+### 📖 Documentation
+
+- Take the README's transcripts from today's build
+
+### 🛟 Miscellaneous Tasks
+
+- Publish after the release, and release lyrn with furca's engine
+
+### 🛠️ Bug Fixes
+
+- Accept the minimatch advisory eslint brings through dowel-ui
+- Take pnpm's version from docs/package.json
+- Render a placeholder inside a shell's ${...}
+
 ## 🎉 [2.15.0] - 2026-10-26
 
 ### ✨ Features
