@@ -64,6 +64,20 @@ fn main() -> ExitCode {
         cli::Command::Versions(args) => commands::versions::run(args),
         cli::Command::Deps(args) => commands::deps::run(args),
         cli::Command::Msrv(args) => commands::msrv::run(args),
+        cli::Command::Adr(command) => commands::adr::run(command),
+        // A site that does not hold, or a transcript that no longer matches, is
+        // an answer too: the report has said what, and the exit code says it.
+        cli::Command::Docs(command) => match commands::docs::run(command) {
+            Ok(true) => return ExitCode::SUCCESS,
+            Ok(false) => return ExitCode::FAILURE,
+            Err(e) => Err(e),
+        },
+        cli::Command::Readme(command) => match commands::readme::run(command) {
+            Ok(true) => return ExitCode::SUCCESS,
+            Ok(false) => return ExitCode::FAILURE,
+            Err(e) => Err(e),
+        },
+        cli::Command::Changelog(args) => commands::changelog::run(args),
         cli::Command::Forms => {
             list_forms();
             Ok(())

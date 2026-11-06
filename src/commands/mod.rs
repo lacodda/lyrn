@@ -1,13 +1,17 @@
 pub mod adopt;
+pub mod adr;
 pub mod assets;
 pub mod brand;
+pub mod changelog;
 pub mod check;
 pub mod ci;
 pub mod deps;
+pub mod docs;
 pub mod doctor;
 pub mod init;
 pub mod msrv;
 pub mod new;
+pub mod readme;
 pub mod stage;
 pub mod standing;
 pub mod status;

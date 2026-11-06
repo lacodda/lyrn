@@ -82,6 +82,17 @@ pub fn validate_name(name: &str) -> Result<(), NameError> {
     Ok(())
 }
 
+/// A title as a file's name: lowercase words joined by hyphens. Empty when no
+/// ASCII letter or digit is left to name it by.
+pub fn slug(title: &str) -> String {
+    title
+        .to_ascii_lowercase()
+        .split(|c: char| !c.is_ascii_alphanumeric())
+        .filter(|word| !word.is_empty())
+        .collect::<Vec<_>>()
+        .join("-")
+}
+
 /// Resolve `--accent`: either a product of the line, or a literal hex colour.
 pub fn resolve_accent(input: &str) -> Result<String, String> {
     if let Some(hex) = product_accent(input) {
@@ -228,6 +239,13 @@ pub fn camel_from_key(key: &str) -> String {
 #[cfg(test)]
 mod tests {
     use super::*;
+
+    #[test]
+    fn a_title_becomes_a_file_s_name() {
+        assert_eq!(slug("Dependabot is off, on purpose!"), "dependabot-is-off-on-purpose");
+        assert_eq!(slug("  API v2 "), "api-v2");
+        assert_eq!(slug("Только русский"), "");
+    }
 
     #[test]
     fn accepts_a_plain_name() {

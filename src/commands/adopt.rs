@@ -35,7 +35,7 @@ use crate::commands::init::name_of;
 use crate::commands::new::{Wanted, build_context};
 use crate::generate::{self, Plan, PlannedFile};
 use crate::naming;
-use crate::repo::{Facts, already_there, origin_repo};
+use crate::repo::{Facts, already_there, decision_log, origin_repo};
 use crate::template::{self, Kind};
 use crate::templates::{self, community, docs, dowel};
 
@@ -117,7 +117,7 @@ pub fn run(args: AdoptArgs) -> Result<(), Box<dyn Error>> {
         }
     }
     let repo = Repo::read(&root);
-    let decision = keep_the_decision_s_number(&mut missing, &root, &repo, &native.files, &context, &native.manifest)?;
+    let decision = keep_the_decision_s_number(&mut missing, &root, &native.files, &context, &native.manifest)?;
     audit_the_root_workspace(&mut missing, &facts);
     audit_every_lockfile(&mut missing, &root, &repo);
     // What fitting added is shown as added, even under a path the log's rule
@@ -182,7 +182,6 @@ pub fn run(args: AdoptArgs) -> Result<(), Box<dyn Error>> {
 fn keep_the_decision_s_number(
     missing: &mut Plan,
     root: &Path,
-    repo: &Repo,
     files: &[generate::TemplateFile],
     context: &crate::model::Context,
     manifest: &crate::model::TemplateManifest,
@@ -196,19 +195,14 @@ fn keep_the_decision_s_number(
     if !missing.files.iter().any(|f| String::from_utf8_lossy(&f.contents).contains(STANDARD)) {
         return Ok(None);
     }
-    let Some(dir) = ["docs/adr", "doc/adr"].into_iter().find(|d| repo.files.iter().any(|f| in_the_log(f, d))) else {
+    let Some(log) = decision_log(root) else {
         return Ok(None);
     };
-    let in_log: Vec<&str> = repo.files.iter().filter(|f| in_the_log(f, dir)).map(String::as_str).collect();
-    let (path, added) = match in_log.iter().find(|f| f.ends_with(&format!("-{NAME}"))) {
-        Some(found) => (found.to_string(), None),
+    let dir = log.dir;
+    let (path, added) = match log.decisions.iter().find(|name| name.ends_with(&format!("-{NAME}"))) {
+        Some(found) => (format!("{dir}/{found}"), None),
         None => {
-            let next = in_log
-                .iter()
-                .filter_map(|f| f.rsplit('/').next()?.split('-').next()?.parse::<u32>().ok())
-                .max()
-                .map_or(1, |n| n + 1);
-            let number = format!("{next:04}");
+            let number = format!("{:04}", log.next_number());
             let path = format!("{dir}/{number}-{NAME}");
             let source = files
                 .iter()
@@ -232,13 +226,6 @@ fn keep_the_decision_s_number(
         executable: false,
     });
     Ok(Some(added))
-}
-
-/// A decision's file directly in the log, not its index.
-fn in_the_log(file: &str, dir: &str) -> bool {
-    file.strip_prefix(dir)
-        .and_then(|rest| rest.strip_prefix('/'))
-        .is_some_and(|name| name.ends_with(".md") && !name.contains('/') && !name.eq_ignore_ascii_case("README.md"))
 }
 
 /// A desktop app inside a workspace has its Cargo.lock at the top, and the

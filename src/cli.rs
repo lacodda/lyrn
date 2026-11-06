@@ -48,11 +48,112 @@ pub enum Command {
     Deps(PathArgs),
     /// Measure the oldest Rust the code builds on, and write it as rust-version
     Msrv(PathArgs),
+    /// Write a decision down: the next number in the log, listed in its index
+    #[command(subcommand)]
+    Adr(AdrCommand),
+    /// The documentation site: a page written, the site held to the program, the site served
+    #[command(subcommand)]
+    Docs(DocsCommand),
+    /// Take the README's transcripts again from the build
+    #[command(subcommand)]
+    Readme(ReadmeCommand),
+    /// A version's changelog section, and the screens that go with it
+    Changelog(ChangelogArgs),
     /// List the forms a project can take, and your own templates
     Forms,
     /// Check a template, or write a built-in form out as one
     #[command(subcommand)]
     Template(TemplateCommand),
+}
+
+#[derive(Subcommand)]
+pub enum AdrCommand {
+    /// Write a new decision under the next free number, and list it in the index
+    New {
+        /// What was decided, as the record's title
+        title: String,
+
+        /// The repository; defaults to the one the current directory is in
+        #[arg(long, value_name = "PATH")]
+        path: Option<PathBuf>,
+    },
+}
+
+#[derive(Subcommand)]
+pub enum DocsCommand {
+    /// Write a command's reference page from its --help; with no command, every page missing
+    Ref {
+        /// The command; defaults to every command with no page yet
+        command: Option<String>,
+
+        /// The repository; defaults to the one the current directory is in
+        #[arg(long, value_name = "PATH")]
+        path: Option<PathBuf>,
+    },
+    /// Start a guide: a page that walks through doing something
+    Guide {
+        /// The page's title
+        title: String,
+
+        /// One line for search results and the page's metadata
+        #[arg(long)]
+        description: Option<String>,
+
+        /// The repository; defaults to the one the current directory is in
+        #[arg(long, value_name = "PATH")]
+        path: Option<PathBuf>,
+    },
+    /// Start a concept: a page that says what something is and why
+    Concept {
+        /// The page's title
+        title: String,
+
+        /// One line for search results and the page's metadata
+        #[arg(long)]
+        description: Option<String>,
+
+        /// The repository; defaults to the one the current directory is in
+        #[arg(long, value_name = "PATH")]
+        path: Option<PathBuf>,
+    },
+    /// Hold the site to the program: commands, subcommands and flags with no page, pages and links to nothing
+    Check {
+        /// The repository; defaults to the one the current directory is in
+        path: Option<PathBuf>,
+    },
+    /// Serve the site as you write it, installing it first if it has not been
+    Dev {
+        /// The repository; defaults to the one the current directory is in
+        path: Option<PathBuf>,
+    },
+}
+
+#[derive(Subcommand)]
+pub enum ReadmeCommand {
+    /// Run the console blocks marked `<!-- snap -->` and write what they print back
+    Snap {
+        /// The repository; defaults to the one the current directory is in
+        path: Option<PathBuf>,
+
+        /// Say what no longer matches, write nothing, and exit with 1 if anything does
+        #[arg(long)]
+        check: bool,
+    },
+}
+
+#[derive(clap::Args)]
+pub struct ChangelogArgs {
+    /// The version; defaults to the newest in CHANGELOG.md
+    #[arg(value_name = "VERSION")]
+    pub release: Option<String>,
+
+    /// Put the version's images from docs/screens/<tag>/ into its section, instead of printing it
+    #[arg(long)]
+    pub screens: bool,
+
+    /// The repository; defaults to the one the current directory is in
+    #[arg(long, value_name = "PATH")]
+    pub path: Option<PathBuf>,
 }
 
 #[derive(Subcommand)]

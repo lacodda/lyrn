@@ -190,6 +190,47 @@ pub fn already_there(root: &Path, path: &Path) -> Option<String> {
     None
 }
 
+/// A log of decisions a repository keeps: where it is, and its decisions' file
+/// names, its index aside.
+#[derive(Debug, Clone, PartialEq, Eq)]
+pub struct DecisionLog {
+    pub dir: &'static str,
+    pub decisions: Vec<String>,
+}
+
+impl DecisionLog {
+    /// The number after the highest one taken. Read from the names, so a gap
+    /// stays a gap rather than being handed out again: a decision that was
+    /// deleted was still that number once.
+    pub fn next_number(&self) -> u32 {
+        self.decisions
+            .iter()
+            .filter_map(|name| name.split('-').next()?.parse::<u32>().ok())
+            .max()
+            .map_or(1, |n| n + 1)
+    }
+}
+
+/// The log of decisions in a repository, if it keeps one: a directory that holds
+/// at least its index or one decision, as they stand on disk.
+pub fn decision_log(root: &Path) -> Option<DecisionLog> {
+    for dir in ["docs/adr", "doc/adr"] {
+        let Ok(entries) = std::fs::read_dir(root.join(dir)) else { continue };
+        let names: Vec<String> = entries
+            .filter_map(Result::ok)
+            .map(|e| e.file_name().to_string_lossy().into_owned())
+            .filter(|name| name.ends_with(".md"))
+            .collect();
+        if names.is_empty() {
+            continue;
+        }
+        let mut decisions: Vec<String> = names.into_iter().filter(|name| !name.eq_ignore_ascii_case("README.md")).collect();
+        decisions.sort();
+        return Some(DecisionLog { dir, decisions });
+    }
+    None
+}
+
 /// `owner/name` of the GitHub repository `origin` points at.
 pub fn origin_repo(root: &Path) -> Option<String> {
     let out = Process::new("git").args(["remote", "get-url", "origin"]).current_dir(root).output().ok()?;
@@ -238,6 +279,24 @@ mod tests {
     fn a_remote_that_is_not_github_names_nothing() {
         assert_eq!(github_repo("https://gitlab.com/lacodda/lyrn.git"), None);
         assert_eq!(github_repo("https://github.com/lacodda"), None);
+    }
+
+    #[test]
+    fn a_log_says_its_next_number_and_keeps_its_gaps() {
+        let dir = tempfile::tempdir().unwrap();
+        assert_eq!(decision_log(dir.path()), None);
+        let log = dir.path().join("docs/adr");
+        std::fs::create_dir_all(&log).unwrap();
+        assert_eq!(decision_log(dir.path()), None, "an empty directory keeps nothing");
+        std::fs::write(log.join("README.md"), "# Decisions").unwrap();
+        assert_eq!(decision_log(dir.path()).unwrap().next_number(), 1);
+        std::fs::write(log.join("0001-a.md"), "").unwrap();
+        std::fs::write(log.join("0009-b.md"), "").unwrap();
+        std::fs::write(log.join("notes.md"), "").unwrap();
+        let found = decision_log(dir.path()).unwrap();
+        assert_eq!(found.dir, "docs/adr");
+        assert_eq!(found.decisions, ["0001-a.md", "0009-b.md", "notes.md"]);
+        assert_eq!(found.next_number(), 10);
     }
 
     #[test]
