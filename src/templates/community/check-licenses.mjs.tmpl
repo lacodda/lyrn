@@ -29,6 +29,13 @@ const ALLOWED = new Set([
   'Zlib',
 ])
 
+/** Packages accepted one by one, by name and version, each with its reason:
+ *   'some-package@1.2.3': 'MIT, by the license file it ships; its package.json names none',
+ * A new version is a new decision: the reason was read for this one. An entry
+ * for a package the build no longer has fails too, so the list never reads as
+ * an exception that still exists. */
+const ONE_BY_ONE = {}
+
 /** Whether an SPDX expression is satisfied by the accepted licenses: one side
  * of an OR is enough, every side of an AND is needed, and parentheses group as
  * written. A bare split on `OR` would let `(A OR B) AND C` through on A alone. */
@@ -84,11 +91,19 @@ function main() {
   const byLicense = JSON.parse(output)
 
   const refused = []
+  const seen = new Set()
   for (const [license, packages] of Object.entries(byLicense)) {
+    for (const pkg of packages) {
+      for (const version of pkg.versions) seen.add(`${pkg.name}@${version}`)
+    }
     if (accepted(license)) continue
     for (const pkg of packages) {
-      refused.push(`${pkg.name}@${pkg.versions.join(', ')}: ${license}`)
+      const left = pkg.versions.filter((version) => !(`${pkg.name}@${version}` in ONE_BY_ONE))
+      if (left.length > 0) refused.push(`${pkg.name}@${left.join(', ')}: ${license}`)
     }
+  }
+  for (const entry of Object.keys(ONE_BY_ONE)) {
+    if (!seen.has(entry)) refused.push(`${entry}: accepted one by one, and no longer in the build`)
   }
 
   if (refused.length > 0) {

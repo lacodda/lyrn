@@ -22,7 +22,7 @@ mod installers;
 pub mod product;
 mod readme;
 mod release;
-mod site;
+pub mod site;
 mod versions;
 
 use std::error::Error;

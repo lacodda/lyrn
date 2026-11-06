@@ -19,6 +19,12 @@ the newest, merging each change into the files as they are now, and
 never changes once a release of lyrn has carried it: a later change to a file of
 the standard is a new version, and a second one in a month is `2026.11.1`.
 
+## 2026.11.4
+
+- tools/check-licenses.mjs is a file of the standard wherever the audit runs it at the top of the repository, so `adopt` and `upgrade` bring it, and it accepts a package one by one: name, version and reason, with an entry for a package the build no longer has failing the check.
+- .editorconfig says what the tools write: four spaces in Rust, as rustfmt does, and tabs in the site's scripts, as Starlight's scaffold does.
+- In the files a project starts with rather than the standard's: `[gate]` in `release.toml` is formatting, or the lint where there is no cargo - seconds and no compiling, since CI runs the rest before the tag; dowel-ui 0.43, with the minimatch advisory no longer accepted; the spa and desktop start files call `overlayScrollbars()`, and the desktop window asks WebView2 for its overlay bar.
+
 ## 2026.11.3
 
 - cliff.toml no longer carries git-cliff's sample `skip_tags = "v0.1.0-beta.1"`: it skipped a tag no repository of the line has, and furca's release engine read it as a stale version in every repository, which stops a release.

@@ -18,7 +18,7 @@
 mod actions;
 mod ai;
 mod assets;
-mod audit;
+pub mod audit;
 mod authors;
 pub mod changelog;
 pub mod git;

@@ -247,6 +247,26 @@ fn audit(form: Form) -> &'static str {
     }
 }
 
+/// The audit job for the packages of a directory the form knows nothing of: a
+/// frontend in `web/`, say. The same job a service's `frontend/` gets, wherever
+/// the lockfile turned out to be.
+pub fn packages_job(dir: &str) -> String {
+    let job = include_str!("community/audit/packages-frontend.yml.tmpl");
+    let job: String = job.lines().filter(|l| !l.starts_with("{{")).map(|l| format!("{l}\n")).collect();
+    let id = dir.replace(|c: char| !c.is_ascii_alphanumeric(), "-");
+    job.replace("  packages:\n", &format!("  packages-{id}:\n"))
+        .replace("name: Packages\n", &format!("name: Packages in {dir}\n"))
+        .replace("frontend", dir)
+}
+
+/// The audit workflow of a documentation site in `dir`: what the docs form
+/// writes for one under `docs/`, wherever the site turned out to be.
+pub fn site_audit(dir: &str) -> String {
+    include_str!("docs/github/docs-audit.yml.tmpl")
+        .replace("docs/", &format!("{dir}/"))
+        .replace("working-directory: docs", &format!("working-directory: {dir}"))
+}
+
 /// The shopfront gate: `lyrn check`, with the program built first where the
 /// check reads its commands from the program's `--help`.
 fn shopfronts(form: Form) -> &'static str {

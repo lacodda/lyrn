@@ -335,7 +335,6 @@ pub fn decide_sections(text: &str, enabled: &[String], decides: impl Fn(&str) ->
 }
 
 /// Render every source file into a plan, with no add-ons enabled.
-#[cfg(test)]
 pub fn plan(sources: &[TemplateFile], manifest: &TemplateManifest, context: &Context) -> Result<Plan, GenerateError> {
     plan_with(sources, manifest, context, &[])
 }

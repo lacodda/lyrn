@@ -201,7 +201,7 @@ fn decisions_of_its_own_are_left_as_they_are() {
     old_cli(dir.path());
     write(dir.path(), "docs/adr/0001-use-rust.md", "# Use Rust\n");
     adopt(dir.path()).assert().success();
-    for added in ["0001-record-architecture-decisions.md", "0002-dependabot-is-off.md", "README.md"] {
+    for added in ["0001-record-architecture-decisions.md", "README.md"] {
         assert!(
             !dir.path().join("docs/adr").join(added).exists(),
             "adopt added docs/adr/{added} among the repository's own"
@@ -248,4 +248,139 @@ fn a_platform_dependency_decides_the_form_too() {
     write(dir.path(), "src/main.rs", "fn main() {}\n");
     let out = adopt(dir.path()).arg("--dry-run").assert().success().get_output().stdout.clone();
     assert!(String::from_utf8_lossy(&out).contains("as a `service` project"));
+}
+
+/// A log of its own stays whole, and the decision the audit points at joins it
+/// at the next free number: a link to the standard's 0002 would land on another
+/// decision, or on nothing.
+#[test]
+fn the_audit_points_at_the_next_free_decision_in_a_log_of_its_own() {
+    let dir = tempfile::tempdir().unwrap();
+    old_cli(dir.path());
+    write(dir.path(), "docs/adr/0001-use-rust.md", "# Use Rust\n");
+    write(dir.path(), "docs/adr/0002-store-in-sqlite.md", "# Store in SQLite\n");
+    write(dir.path(), "docs/adr/README.md", "# Decisions\n");
+    adopt(dir.path()).assert().success();
+
+    let decision = dir.path().join("docs/adr/0003-dependabot-is-off.md");
+    let text = fs::read_to_string(&decision).unwrap();
+    assert!(text.starts_with("# ADR 0003:"), "{text}");
+    for naming in [".github/workflows/audit.yml", "deny.toml"] {
+        let text = fs::read_to_string(dir.path().join(naming)).unwrap();
+        assert!(
+            text.contains("docs/adr/0003-dependabot-is-off.md"),
+            "{naming} does not name the decision:\n{text}"
+        );
+        assert!(!text.contains("0002-dependabot-is-off"), "{naming} still names the standard's number");
+    }
+    // The repository's own index is not rewritten.
+    assert_eq!(fs::read_to_string(dir.path().join("docs/adr/README.md")).unwrap(), "# Decisions\n");
+}
+
+/// A decision it already keeps, under any number, is the one the audit names.
+#[test]
+fn a_decision_already_kept_is_named_by_its_own_number() {
+    let dir = tempfile::tempdir().unwrap();
+    old_cli(dir.path());
+    write(dir.path(), "docs/adr/0007-dependabot-is-off.md", "# Off\n");
+    write(dir.path(), "docs/adr/0009-later.md", "# Later\n");
+    adopt(dir.path()).assert().success();
+
+    assert!(!dir.path().join("docs/adr/0010-dependabot-is-off.md").exists());
+    let audit = fs::read_to_string(dir.path().join(".github/workflows/audit.yml")).unwrap();
+    assert!(audit.contains("docs/adr/0007-dependabot-is-off.md"), "{audit}");
+}
+
+/// A desktop app: the licence tool audit.yml runs is written with it.
+fn old_desktop(root: &Path) {
+    write(
+        root,
+        "package.json",
+        "{\"name\": \"window\", \"description\": \"A window\", \"devDependencies\": {\"vite\": \"8\"}}\n",
+    );
+    write(root, "src-tauri/Cargo.toml", "[package]\nname = \"window\"\n");
+    write(root, "src-tauri/tauri.conf.json", "{}\n");
+}
+
+#[test]
+fn the_licence_tool_the_audit_runs_is_added_with_it() {
+    let dir = tempfile::tempdir().unwrap();
+    old_desktop(dir.path());
+    adopt(dir.path()).assert().success();
+
+    let audit = fs::read_to_string(dir.path().join(".github/workflows/audit.yml")).unwrap();
+    assert!(audit.contains("node tools/check-licenses.mjs"), "{audit}");
+    let tool = fs::read_to_string(dir.path().join("tools/check-licenses.mjs")).unwrap();
+    assert!(tool.contains("ONE_BY_ONE"), "the tool cannot accept a package by name:\n{tool}");
+}
+
+/// In a workspace the Cargo.lock is at the top, and the audit has to read it
+/// there; a lone window is audited where it is.
+#[test]
+fn a_desktop_app_in_a_workspace_is_audited_from_the_workspace() {
+    let lone = tempfile::tempdir().unwrap();
+    old_desktop(lone.path());
+    adopt(lone.path()).assert().success();
+    let audit = fs::read_to_string(lone.path().join(".github/workflows/audit.yml")).unwrap();
+    assert!(audit.contains("manifest-path: src-tauri/Cargo.toml"), "{audit}");
+
+    let workspace = tempfile::tempdir().unwrap();
+    old_desktop(workspace.path());
+    write(workspace.path(), "Cargo.toml", "[workspace]\nmembers = [\"src-tauri\", \"crates/*\"]\n");
+    adopt(workspace.path()).args(["--form", "desktop"]).assert().success();
+    let audit = fs::read_to_string(workspace.path().join(".github/workflows/audit.yml")).unwrap();
+    assert!(audit.contains("EmbarkStudios/cargo-deny-action"), "{audit}");
+    assert!(!audit.contains("manifest-path"), "{audit}");
+}
+
+/// A service with its web UI and its site in places of its own: every lockfile
+/// gets an audit, and the next steps do not claim the site is missing.
+#[test]
+fn every_lockfile_gets_an_audit_and_a_site_is_seen_wherever_it_is() {
+    let dir = tempfile::tempdir().unwrap();
+    write(dir.path(), "Cargo.toml", "[package]\nname = \"svc\"\n[dependencies]\naxum = \"0.8\"\n");
+    write(dir.path(), "src/main.rs", "fn main() {}\n");
+    write(dir.path(), "Cargo.lock", "version = 4\n");
+    write(dir.path(), "web/package.json", "{}\n");
+    write(dir.path(), "web/pnpm-lock.yaml", "lockfileVersion: '9.0'\n");
+    write(dir.path(), "docs/site/package.json", "{}\n");
+    write(dir.path(), "docs/site/pnpm-lock.yaml", "lockfileVersion: '9.0'\n");
+    write(dir.path(), "docs/site/astro.config.mjs", "export default {}\n");
+
+    let out = adopt(dir.path()).assert().success().get_output().stdout.clone();
+    let out = String::from_utf8_lossy(&out);
+    assert!(!out.contains("--form docs"), "the site in docs/site/ was not seen:\n{out}");
+
+    let audit = fs::read_to_string(dir.path().join(".github/workflows/audit.yml")).unwrap();
+    assert!(audit.contains("packages-web:"), "{audit}");
+    assert!(audit.contains("working-directory: web"), "{audit}");
+    assert!(audit.contains("package_json_file: web/package.json"), "{audit}");
+    assert!(
+        dir.path().join("web/tools/check-licenses.mjs").is_file(),
+        "the job's licence tool was not added"
+    );
+
+    let site = fs::read_to_string(dir.path().join(".github/workflows/docs-audit.yml")).unwrap();
+    assert!(site.contains("working-directory: docs/site"), "{site}");
+    assert!(site.contains("package_json_file: docs/site/package.json"), "{site}");
+}
+
+/// Rust is indented as rustfmt writes it, and the site as Starlight does.
+#[test]
+fn the_editor_settings_agree_with_what_the_tools_write() {
+    let dir = tempfile::tempdir().unwrap();
+    old_cli(dir.path());
+    adopt(dir.path()).assert().success();
+    let settings = fs::read_to_string(dir.path().join(".editorconfig")).unwrap();
+    assert!(settings.contains("[*.rs]\nindent_size = 4"), "{settings}");
+    assert!(settings.contains("[docs/**.{astro,mjs,ts}]\nindent_style = tab"), "{settings}");
+}
+
+/// The doctor reads what git tracks, so it stays red until the commit.
+#[test]
+fn it_says_the_doctor_sees_the_files_once_they_are_committed() {
+    let dir = tempfile::tempdir().unwrap();
+    old_cli(dir.path());
+    let out = adopt(dir.path()).assert().success().get_output().stdout.clone();
+    assert!(String::from_utf8_lossy(&out).contains("once they are committed"));
 }

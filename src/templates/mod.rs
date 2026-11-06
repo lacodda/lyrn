@@ -83,6 +83,8 @@ pub const STANDARD: &[&str] = &[
     // Only the Rust forms write these.
     "rustfmt.toml",
     "deny.toml",
+    // Only the forms whose audit runs it at the top of the repository.
+    "tools/check-licenses.mjs",
 ];
 
 /// The files of the standard among a template's, as the template writes them.
@@ -112,7 +114,8 @@ mod tests {
     // by `template::problems` - the same check `lyrn template check` runs on a
     // template from outside - in `template::tests`.
 
-    const RUST_ONLY: &[&str] = &["rustfmt.toml", "deny.toml"];
+    /// The files of the standard only some forms write.
+    const NOT_EVERY_FORM: &[&str] = &["rustfmt.toml", "deny.toml", "tools/check-licenses.mjs"];
 
     /// `adopt` promises the whole standard, so every form it can adopt has to
     /// write all of it - a form that dropped `cliff.toml` would silently
@@ -122,7 +125,7 @@ mod tests {
         for form in Form::ALL.iter().filter(|f| f.adoptable()) {
             let files: Vec<TemplateFile> = sources_for(*form).into_iter().map(TemplateFile::from).collect();
             let paths: Vec<String> = standard_files(&files).into_iter().map(|f| f.path).collect();
-            for entry in STANDARD.iter().filter(|e| !RUST_ONLY.contains(e)) {
+            for entry in STANDARD.iter().filter(|e| !NOT_EVERY_FORM.contains(e)) {
                 assert!(paths.iter().any(|p| p == entry), "{form} does not write `{entry}`, which `lyrn adopt` promises");
             }
         }

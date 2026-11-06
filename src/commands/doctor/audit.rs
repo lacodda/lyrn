@@ -85,6 +85,16 @@ pub fn check(repo: &Repo) -> Outcome {
     Outcome::from_findings(findings, || format!("{} audited", plural(lockfiles.len(), "lockfile", "lockfiles")))
 }
 
+/// The directories of the pnpm lockfiles no workflow audits yet.
+pub fn unaudited_pnpm(repo: &Repo) -> Vec<String> {
+    let covered = covered(repo);
+    repo.files_named("pnpm-lock.yaml")
+        .filter(|f| !is_test_material(f))
+        .map(|f| f.rsplit_once('/').map_or(".", |(dir, _)| dir).to_string())
+        .filter(|dir| !covered.contains(&(Ecosystem::Pnpm, dir.clone())))
+        .collect()
+}
+
 /// Every (ecosystem, directory) some workflow audits.
 fn covered(repo: &Repo) -> BTreeSet<(Ecosystem, String)> {
     let mut covered = BTreeSet::new();

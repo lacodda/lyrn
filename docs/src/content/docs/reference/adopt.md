@@ -24,6 +24,7 @@ standard every repository carries whatever its code does:
 | `SECURITY.md`, `CODE_OF_CONDUCT.md` | Where a vulnerability is reported, and how people treat each other |
 | `docs/adr/0001-record-architecture-decisions.md`, `0002-dependabot-is-off.md`, `README.md` | The decision log, started |
 | `rustfmt.toml`, `deny.toml` | The line's formatting, and what the audit holds crates to - for the Rust forms |
+| `tools/check-licenses.mjs` | What the audit holds packages to - for the forms with packages at the top |
 | `lyrn.toml` | What the project is, and the [version of the standard](/concepts/the-standard-by-version/) it carries, for `doctor` and [`upgrade`](/reference/upgrade/) to read |
 
 The release contour - release and publish workflows, the npm wrapper, the
@@ -52,6 +53,19 @@ The repository describes itself, and `adopt` listens before it assumes:
 
 Anything given on the command line wins.
 
+## What it fits
+
+What it adds has to hold in this repository, not in the one the form would have
+started:
+
+- **The audit reads every lockfile.** A pnpm lockfile the form's audit would
+  leave out gets a `packages-<dir>` job of its own, with the licence tool it runs
+  beside it; a site's lockfile under `docs/` gets `docs-audit.yml`, wherever the
+  site is. An `audit.yml` already there is the repository's, and
+  [`lyrn doctor`](/reference/doctor/#audit) says what it misses.
+- **A desktop app in a Cargo workspace is audited from the workspace**, where its
+  `Cargo.lock` is, rather than from `src-tauri/`.
+
 ## What is already there
 
 A file of the standard counts as present under its own name or under one it is
@@ -60,6 +74,11 @@ for the changelog, `ci.yaml` for the gate. The decision log is adopted whole or
 not at all: a repository that keeps decisions of its own in `docs/adr/` gets
 none of the standard's, since a second 0001 would make "ADR 1" mean two things
 and an index written for the standard's decisions would list its own wrongly.
+The one decision the standard's files point at, why Dependabot is off, joins
+that log at the next free number - or is named by its own number if the log
+already has one - and `audit.yml` and `deny.toml` name that file. The index stays
+the repository's, so the next steps say to list it there.
+
 The tree shown before writing says which files are kept and why:
 
 ```console

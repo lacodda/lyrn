@@ -14,19 +14,29 @@
 //! tree shown beforehand says which is which. A file under another common
 //! name - `LICENSE.md` - counts as present, and so does `docs/adr/` as a whole
 //! when the repository keeps decisions of its own.
+//!
+//! What it adds has to hold in this repository, not in the one the form would
+//! have started. So the files are fitted before they are written: a decision
+//! the audit points at gets the next free number where the log is the
+//! repository's, the audit reads the workspace's manifest where there is one,
+//! and every lockfile the form knows nothing of gets its own audit job. Nothing
+//! adopt adds should send a reader to a file that is not there, or leave a
+//! lockfile for the doctor to find the moment it is committed.
 
 use std::error::Error;
 use std::io::IsTerminal;
-use std::path::PathBuf;
+use std::path::{Path, PathBuf};
 
 use crate::cli::{AdoptArgs, IdentityArgs};
+use crate::commands::check::site::Site;
+use crate::commands::doctor::{Repo, audit};
 use crate::commands::init::name_of;
 use crate::commands::new::{Wanted, build_context};
-use crate::generate::{self, Plan};
+use crate::generate::{self, Plan, PlannedFile};
 use crate::naming;
-use crate::repo::{Facts, already_there, has_a_docs_site, origin_repo};
+use crate::repo::{Facts, already_there, origin_repo};
 use crate::template::{self, Kind};
-use crate::templates;
+use crate::templates::{self, community, docs};
 
 pub fn run(args: AdoptArgs) -> Result<(), Box<dyn Error>> {
     let root = args.path.clone().unwrap_or_else(|| PathBuf::from("."));
@@ -101,7 +111,19 @@ pub fn run(args: AdoptArgs) -> Result<(), Box<dyn Error>> {
             }
         }
     }
-    let kept = notes.len() - missing.files.len();
+    let repo = Repo::read(&root);
+    let decision = keep_the_decision_s_number(&mut missing, &root, &repo, &native.files, &context, &native.manifest)?;
+    audit_the_root_workspace(&mut missing, &facts);
+    audit_every_lockfile(&mut missing, &root, &repo);
+    // What fitting added is shown as added, even under a path the log's rule
+    // had set aside: the next free number can be the standard's own.
+    for file in &missing.files {
+        match notes.iter_mut().find(|(path, _)| *path == file.path) {
+            Some((_, note)) => *note = None,
+            None => notes.push((file.path.clone(), None)),
+        }
+    }
+    let kept = notes.iter().filter(|(_, note)| note.is_some()).count();
 
     if missing.files.is_empty() {
         println!("Nothing to add: `{}` already carries every file of the `{form}` standard.", root.display());
@@ -135,10 +157,144 @@ pub fn run(args: AdoptArgs) -> Result<(), Box<dyn Error>> {
 
     println!("\nNext:");
     println!("  git status    # what was added, before it is committed");
-    if !has_a_docs_site(&root) {
+    println!("  lyrn doctor   # it reads what git tracks, so it sees these once they are committed");
+    if let Some(decision) = decision.filter(|d| root.join(d.rsplit_once('/').map_or(".", |(dir, _)| dir)).join("README.md").is_file()) {
+        println!("  list {decision} in the index beside it    # the index is the repository's own");
+    }
+    if Site::read(&repo).is_none() && !docs::FOREIGN_SITES.iter().any(|m| root.join(m).exists()) {
         println!("  lyrn new {name} --form docs    # it has no documentation site");
     }
     Ok(())
+}
+
+/// The decision the audit points at, in a repository that keeps a log of its
+/// own: `docs/adr/` was left alone as a whole, and audit.yml and deny.toml
+/// would otherwise send the reader to a 0002 that is another decision, or none.
+///
+/// One it already keeps is used under its own number. Otherwise the decision
+/// joins the log at the next free one, and that is what the two files name.
+/// The path of the decision, when one was added.
+fn keep_the_decision_s_number(
+    missing: &mut Plan,
+    root: &Path,
+    repo: &Repo,
+    files: &[generate::TemplateFile],
+    context: &crate::model::Context,
+    manifest: &crate::model::TemplateManifest,
+) -> Result<Option<String>, Box<dyn Error>> {
+    const STANDARD: &str = "docs/adr/0002-dependabot-is-off.md";
+    const NAME: &str = "dependabot-is-off.md";
+    if root.join(STANDARD).exists() || missing.files.iter().any(|f| f.path == Path::new(STANDARD)) {
+        return Ok(None);
+    }
+    // Nothing the plan adds names it: both are the repository's already.
+    if !missing.files.iter().any(|f| String::from_utf8_lossy(&f.contents).contains(STANDARD)) {
+        return Ok(None);
+    }
+    let Some(dir) = ["docs/adr", "doc/adr"].into_iter().find(|d| repo.files.iter().any(|f| in_the_log(f, d))) else {
+        return Ok(None);
+    };
+    let in_log: Vec<&str> = repo.files.iter().filter(|f| in_the_log(f, dir)).map(String::as_str).collect();
+    let (path, added) = match in_log.iter().find(|f| f.ends_with(&format!("-{NAME}"))) {
+        Some(found) => (found.to_string(), None),
+        None => {
+            let next = in_log
+                .iter()
+                .filter_map(|f| f.rsplit('/').next()?.split('-').next()?.parse::<u32>().ok())
+                .max()
+                .map_or(1, |n| n + 1);
+            let number = format!("{next:04}");
+            let path = format!("{dir}/{number}-{NAME}");
+            let source = files
+                .iter()
+                .find(|f| f.path == STANDARD)
+                .ok_or("the standard has no decision about Dependabot")?;
+            let rendered = generate::plan(std::slice::from_ref(source), manifest, context)?;
+            let body = String::from_utf8_lossy(&rendered.files[0].contents).replace("# ADR 0002:", &format!("# ADR {number}:"));
+            (path.clone(), Some((path, body)))
+        }
+    };
+    for file in &mut missing.files {
+        let text = String::from_utf8_lossy(&file.contents);
+        if text.contains(STANDARD) {
+            file.contents = text.replace(STANDARD, &path).into_bytes();
+        }
+    }
+    let Some((added, body)) = added else { return Ok(None) };
+    missing.files.push(PlannedFile {
+        path: PathBuf::from(&added),
+        contents: body.into_bytes(),
+        executable: false,
+    });
+    Ok(Some(added))
+}
+
+/// A decision's file directly in the log, not its index.
+fn in_the_log(file: &str, dir: &str) -> bool {
+    file.strip_prefix(dir)
+        .and_then(|rest| rest.strip_prefix('/'))
+        .is_some_and(|name| name.ends_with(".md") && !name.contains('/') && !name.eq_ignore_ascii_case("README.md"))
+}
+
+/// A desktop app inside a workspace has its Cargo.lock at the top, and the
+/// crates beside the window are in it. Told `src-tauri/Cargo.toml`, the audit
+/// reads the window alone and leaves that lockfile to nobody.
+fn audit_the_root_workspace(missing: &mut Plan, facts: &Facts) {
+    if !facts.cargo.as_ref().is_some_and(|c| c.contains_key("workspace")) {
+        return;
+    }
+    let told = "      - uses: EmbarkStudios/cargo-deny-action@v2\n        with:\n          manifest-path: src-tauri/Cargo.toml\n";
+    if let Some(audit) = missing.files.iter_mut().find(|f| f.path == Path::new(".github/workflows/audit.yml")) {
+        let text = String::from_utf8_lossy(&audit.contents).replace(told, "      - uses: EmbarkStudios/cargo-deny-action@v2\n");
+        audit.contents = text.into_bytes();
+    }
+}
+
+/// A job for every pnpm lockfile the audit it is adding would leave out: the
+/// form's audit reads where the form keeps its packages, and a repository older
+/// than lyrn keeps them where it likes. Only when the audit is being added: one
+/// that is already there is the repository's, and the doctor says what it misses.
+fn audit_every_lockfile(missing: &mut Plan, root: &Path, repo: &Repo) {
+    let workflow = Path::new(".github/workflows/audit.yml");
+    let Some(at) = missing.files.iter().position(|f| f.path == workflow) else {
+        return;
+    };
+    let added = String::from_utf8_lossy(&missing.files[at].contents).into_owned();
+    let form_reads_the_top = added.contains("name: Packages\n") && !added.contains("working-directory: frontend");
+    let mut jobs = String::new();
+    let mut site: Option<String> = None;
+    for dir in audit::unaudited_pnpm(repo) {
+        if dir == "." && form_reads_the_top {
+            continue;
+        }
+        if dir == "docs" || dir.starts_with("docs/") {
+            // The first one the tree lists is the site's; one under it is not.
+            if site.is_none() {
+                site = Some(dir);
+                continue;
+            }
+        }
+        jobs.push_str(&community::packages_job(&dir));
+        let tool = PathBuf::from(&dir).join("tools/check-licenses.mjs");
+        if already_there(root, &tool).is_none() {
+            missing.files.push(PlannedFile {
+                path: tool,
+                contents: include_str!("../templates/community/check-licenses.mjs.tmpl").as_bytes().to_vec(),
+                executable: false,
+            });
+        }
+    }
+    missing.files[at].contents = format!("{added}{jobs}").into_bytes();
+    let site_workflow = Path::new(".github/workflows/docs-audit.yml");
+    if let Some(dir) = site
+        && already_there(root, site_workflow).is_none()
+    {
+        missing.files.push(PlannedFile {
+            path: site_workflow.to_path_buf(),
+            contents: community::site_audit(&dir).into_bytes(),
+            executable: false,
+        });
+    }
 }
 
 fn plural(count: usize) -> String {

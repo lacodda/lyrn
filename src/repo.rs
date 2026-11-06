@@ -10,7 +10,6 @@ use std::process::Command as Process;
 
 use crate::host;
 use crate::model::Form;
-use crate::templates;
 
 /// What a repository already says about itself.
 #[derive(Debug, Default)]
@@ -189,11 +188,6 @@ pub fn already_there(root: &Path, path: &Path) -> Option<String> {
         }
     }
     None
-}
-
-/// Whether the repository already has a documentation site, of any kind.
-pub fn has_a_docs_site(root: &Path) -> bool {
-    root.join("docs").join("astro.config.mjs").is_file() || templates::docs::FOREIGN_SITES.iter().any(|m| root.join(m).exists())
 }
 
 /// `owner/name` of the GitHub repository `origin` points at.
