@@ -7,16 +7,11 @@ manifests = [
 # ADRs record what happened: the versions they name are history.
 as_written = ["docs/adr/"]
 
-# The tests need the Postgres that DATABASE_URL names, as in CI.
 [gate]
+# Formatting only: it takes seconds and compiles nothing. The rest of the gate
+# is CI, which the run waits for before the tag.
 commands = [
-{{#spa}}
-    "pnpm --dir frontend lint",
-    "pnpm --dir frontend build",
-{{/spa}}
     "cargo fmt --check",
-    "cargo clippy --all-targets -- -D warnings",
-    "cargo test",
 ]
 
 [ci]

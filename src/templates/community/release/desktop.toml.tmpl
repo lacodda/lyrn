@@ -6,12 +6,10 @@ as_written = ["docs/adr/"]
 
 # The frontend first: the crate embeds what `pnpm build` writes.
 [gate]
+# Formatting only: it takes seconds and compiles nothing. The rest of the gate
+# is CI, which the run waits for before the tag.
 commands = [
-    "pnpm lint",
-    "pnpm build",
     "cargo fmt --manifest-path src-tauri/Cargo.toml --check",
-    "cargo clippy --manifest-path src-tauri/Cargo.toml --all-targets -- -D warnings",
-    "cargo test --manifest-path src-tauri/Cargo.toml",
 ]
 
 [ci]

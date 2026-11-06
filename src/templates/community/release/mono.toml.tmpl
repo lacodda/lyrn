@@ -5,9 +5,10 @@ manifests = ["packages/{{ name }}/package.json"]
 as_written = ["docs/adr/"]
 
 [gate]
+# The lint alone: it takes seconds and builds nothing. The rest of the gate is
+# CI, which the run waits for before the tag.
 commands = [
-    "pnpm lint",
-    "pnpm build",
+    "pnpm exec eslint .",
 ]
 
 [ci]

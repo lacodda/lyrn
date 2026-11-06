@@ -559,8 +559,9 @@ Every form that starts a repository writes the same contour around its code,
 so a release goes out the same way from each:
 
 - **`release.toml`** - what furca's release engine releases the repository
-  from: the manifests that carry the version, the gate, the CI workflow and the
-  one that publishes, the packages and their registries, the files the release
+  from: the manifests that carry the version, the gate - formatting or the lint
+  alone, which takes seconds and compiles nothing, since CI runs the rest before
+  the tag - the CI workflow and the one that publishes, the packages and their registries, the files the release
   page carries, and what follows the publish - `[post.install]` where the
   installers put a program on a machine, `[post.deploy]` where turnout puts a
   service or an app on its stand. `furca release plan` reads it on the first
