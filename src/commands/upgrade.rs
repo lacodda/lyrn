@@ -267,6 +267,8 @@ enum Action {
     Update,
     /// The standard's change, beside the repository's own.
     Merge,
+    /// The changelog: the standard's header put above the repository's releases.
+    Header,
     /// The repository and the standard changed the same lines, in this many
     /// places: marked for a person.
     Conflict(usize),
@@ -360,10 +362,13 @@ fn plan(root: &Path, old: &Plan, new: &Plan, from: &str, to: &str) -> Result<Vec
                 Some(_) => {}
                 None => steps.push(step(Action::Add, "", Some(theirs))),
             },
-            (_, Some(ours), Some(theirs)) if path == Path::new(CHANGELOG) => {
+            (base, Some(ours), Some(theirs)) if path == Path::new(CHANGELOG) => {
+                if keeps_its_own_header(root, &ours, base.as_deref(), text(old, Path::new(CLIFF)).as_deref()) {
+                    continue;
+                }
                 let after = under_the_standard_s_header(&ours, &theirs);
                 if after != ours {
-                    let action = if ours.lines().any(is_release) { Action::Merge } else { Action::Update };
+                    let action = if ours.lines().any(is_release) { Action::Header } else { Action::Update };
                     steps.push(step(action, &ours, Some(after)));
                 }
             }
@@ -404,14 +409,48 @@ fn plan(root: &Path, old: &Plan, new: &Plan, from: &str, to: &str) -> Result<Vec
 /// The changelog: its header is the standard's, its releases the
 /// repository's.
 const CHANGELOG: &str = "CHANGELOG.md";
+const CLIFF: &str = "cliff.toml";
+
+/// What a changelog says above its first release.
+fn header_of(changelog: &str) -> &str {
+    let mut at = 0;
+    for line in changelog.split_inclusive('\n') {
+        if is_release(line.trim_end_matches(['\n', '\r'])) {
+            return changelog[..at].trim();
+        }
+        at += line.len();
+    }
+    changelog.trim()
+}
+
+/// The header a cliff.toml names, as a changelog would show it.
+fn header_named_by(cliff: &str) -> Option<String> {
+    let table = toml::from_str::<toml::Table>(cliff).ok()?;
+    Some(table.get("changelog")?.get("header")?.as_str()?.trim().to_string())
+}
+
+/// Whether the changelog's header is the repository's on purpose: it is the one
+/// its own cliff.toml names, and neither is what the standard gave it. That pair
+/// is what `git cliff --prepend` needs, and replacing one half would send the
+/// next release out with the two disagreeing.
+fn keeps_its_own_header(root: &Path, ours: &str, base: Option<&str>, base_cliff: Option<&str>) -> bool {
+    let header = header_of(ours);
+    if header.is_empty() || base.is_some_and(|b| header_of(b) == header) {
+        return false;
+    }
+    let Some(named) = std::fs::read_to_string(root.join(CLIFF)).ok().and_then(|t| header_named_by(&t)) else {
+        return false;
+    };
+    named == header && base_cliff.and_then(header_named_by).as_deref() != Some(header)
+}
 
 /// The repository's releases under the standard's header.
 ///
 /// The header is the text git-cliff writes above the releases, and
 /// `--prepend` keeps it on top only while it is exactly the header cliff.toml
-/// names - so it belongs to the standard, and there is nothing in it to
-/// merge. A repository whose changelog was once written with `--output` lost
-/// the header the standard gave it, and a merge would read that as an edit.
+/// names. A repository whose changelog was once written with `--output` lost
+/// the header the standard gave it, and a merge would read that as an edit; one
+/// whose cliff.toml names the header it has keeps it, by the check above.
 fn under_the_standard_s_header(ours: &str, header: &str) -> String {
     let mut at = 0;
     for line in ours.split_inclusive('\n') {
@@ -467,6 +506,7 @@ fn summary(steps: &[Step]) -> String {
             Action::Add => "added".to_string(),
             Action::Update => "updated".to_string(),
             Action::Merge => "merged: the standard's change, beside the repository's own".to_string(),
+            Action::Header => "the standard's header above the repository's releases".to_string(),
             Action::Conflict(1) => "needs a hand: both changed the same lines in 1 place".to_string(),
             Action::Conflict(n) => format!("needs a hand: both changed the same lines in {n} places"),
             Action::Remove => "removed: the standard no longer writes it".to_string(),
@@ -706,9 +746,34 @@ mod tests {
             .into_iter()
             .find(|s| s.path == Path::new(CHANGELOG))
             .unwrap();
-        assert_eq!(step.action, Action::Merge);
+        assert_eq!(step.action, Action::Header);
         let header = text(new.files.iter().find(|f| f.path == Path::new(CHANGELOG)).unwrap());
         assert_eq!(step.after.unwrap(), format!("{}\n\n{releases}", header.trim_end()));
+    }
+
+    /// A header of the repository's own, the same one its cliff.toml names, is
+    /// the pair `git cliff --prepend` needs: replacing the changelog's half
+    /// would leave the next release disagreeing with the file above it.
+    #[test]
+    fn a_header_the_repository_s_cliff_toml_names_is_left_alone() {
+        let to = standard::current();
+        let (dir, old, new) = on_the_oldest(Form::Cli);
+        let root = dir.path();
+        let own = "# Changelog\n\nThe protocol keeps a version of its own.\n";
+        std::fs::write(root.join(CHANGELOG), format!("{own}\n\n## 🎉 [0.1.0] - 2026-10-01\n\n- One\n")).unwrap();
+        std::fs::write(root.join("cliff.toml"), format!("[changelog]\nheader = \"\"\"\n{own}\"\"\"\n")).unwrap();
+
+        let steps = plan(root, &old, &new, OLDEST, &to).unwrap();
+        assert!(steps.iter().all(|s| s.path != Path::new(CHANGELOG)), "the changelog was touched");
+
+        // The header alone, without its cliff.toml, is the case above: a
+        // changelog that lost the standard's header.
+        std::fs::write(root.join("cliff.toml"), "[changelog]\nheader = \"# Something else\"\n").unwrap();
+        let steps = plan(root, &old, &new, OLDEST, &to).unwrap();
+        assert!(
+            steps.iter().any(|s| s.path == Path::new(CHANGELOG)),
+            "the changelog was left under a header cliff.toml does not name"
+        );
     }
 
     /// Where the repository changed the very lines the standard changed, the
@@ -718,15 +783,20 @@ mod tests {
         let to = standard::current();
         let (dir, old, new) = on_the_oldest(Form::Cli);
         let root = dir.path();
+        // A file where the standard changed a line, rather than only added some.
+        let changed_at = |path: &Path| {
+            let base = text(old.files.iter().find(|f| f.path == path).unwrap());
+            let theirs = text(new.files.iter().find(|f| f.path == path).unwrap());
+            base.lines().zip(theirs.lines()).position(|(b, t)| b != t)
+        };
         let path = plan(root, &old, &new, OLDEST, &to)
             .unwrap()
             .into_iter()
-            .find(|s| s.action == Action::Update && s.path != Path::new(CHANGELOG))
+            .find(|s| s.action == Action::Update && s.path != Path::new(CHANGELOG) && changed_at(&s.path).is_some())
             .map(|s| s.path)
             .unwrap();
         let base = text(old.files.iter().find(|f| f.path == path).unwrap());
-        let theirs = text(new.files.iter().find(|f| f.path == path).unwrap());
-        let at = base.lines().zip(theirs.lines()).position(|(b, t)| b != t).unwrap();
+        let at = changed_at(&path).unwrap();
         let ours: Vec<String> = base
             .lines()
             .enumerate()
