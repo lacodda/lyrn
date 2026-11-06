@@ -553,7 +553,7 @@ fn dev(path: Option<PathBuf>) -> Result<bool, Box<dyn Error>> {
             return Err(format!("`pnpm install` failed in {}/", site.dir).into());
         }
     }
-    Ok(pnpm(&dir, "dev")?)
+    pnpm(&dir, "dev")
 }
 
 /// `pnpm <command>` in a directory, on the terminal. Through `cmd` on Windows,

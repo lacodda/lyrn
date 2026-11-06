@@ -33,7 +33,7 @@ fn new(title: &str, path: Option<PathBuf>) -> Result<(), Box<dyn Error>> {
 
     let number = format!("{:04}", log.next_number());
     let name = format!("{number}-{slug}.md");
-    let file = root.join(&log.dir).join(&name);
+    let file = root.join(log.dir).join(&name);
     let date = chrono::Utc::now().format("%Y-%m-%d");
     std::fs::write(&file, record(&number, &title, &date.to_string())).map_err(|e| format!("{}: {e}", file.display()))?;
     println!("Wrote {}/{name}.", log.dir);
@@ -64,7 +64,7 @@ fn record(number: &str, title: &str, date: &str) -> String {
 /// was a table to add it to. An index without one is the repository's own idea
 /// of an index, and is not rewritten into the standard's.
 fn list_it(root: &std::path::Path, log: &DecisionLog, number: &str, name: &str, title: &str) -> Result<bool, Box<dyn Error>> {
-    let file = root.join(&log.dir).join("README.md");
+    let file = root.join(log.dir).join("README.md");
     let Ok(text) = std::fs::read_to_string(&file) else { return Ok(false) };
     let Some(listed) = with_a_row(&text, number, name, title) else {
         return Ok(false);
