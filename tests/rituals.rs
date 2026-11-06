@@ -87,7 +87,7 @@ impl Record {
         write(
             dir.path(),
             "projects.json",
-            &format!("[{{\"name\":\"demo\",\"path\":\"{path}\",\"kind\":\"repo\",\"tier\":null}}]\n"),
+            &format!("[{{\"name\":\"demo\",\"path\":\"{path}\",\"kind\":\"repo\",\"weight\":1}}]\n"),
         );
         write(
             dir.path(),

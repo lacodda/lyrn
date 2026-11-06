@@ -80,7 +80,8 @@ fn parse_line(json: &str) -> Result<Line, Box<dyn Error>> {
             });
             continue;
         }
-        if field("tier") == Some("out") {
+        // A weight of 0 leaves the queue, which is what being out of the line is.
+        if project.get("weight").and_then(Value::as_u64) == Some(0) {
             skipped.push(Skipped {
                 name: name.to_string(),
                 reason: "out of the line in rigger's record".to_string(),
@@ -177,11 +178,11 @@ mod tests {
     #[test]
     fn the_record_s_repositories_are_taken_and_the_rest_passed_over() {
         let json = r#"[
-            {"name": "beta", "path": "/src/beta", "kind": "repo", "tier": null},
-            {"name": "alpha", "path": "/src/alpha", "kind": "repo", "tier": "A"},
-            {"name": "frozen", "path": "/src/frozen", "kind": "repo", "tier": "out"},
-            {"name": "gone", "path": "/src/gone", "kind": "repo", "tier": "out", "retired_at": "2026-10-13T17:41:26Z"},
-            {"name": "line", "path": "service:line", "kind": "service", "tier": null}
+            {"name": "beta", "path": "/src/beta", "kind": "repo", "weight": 1},
+            {"name": "alpha", "path": "/src/alpha", "kind": "repo", "weight": 6},
+            {"name": "frozen", "path": "/src/frozen", "kind": "repo", "weight": 0},
+            {"name": "gone", "path": "/src/gone", "kind": "repo", "weight": 0, "retired_at": "2026-10-13T17:41:26Z"},
+            {"name": "line", "path": "service:line", "kind": "service", "weight": 1}
         ]"#;
         let (repositories, skipped) = parse_line(json).unwrap();
         let names: Vec<&str> = repositories.iter().map(|(name, _)| name.as_str()).collect();
