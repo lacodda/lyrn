@@ -183,7 +183,9 @@ fn installed(release: &Release, tag: &str, forge: &dyn Forge) -> Outcome {
     };
     // The installer's own output goes to standard error: standard output
     // carries the report, or one JSON document.
-    let machine = furca_release::Local { to_stderr: true };
+    let machine = furca_release::Local {
+        output: furca_release::Output::Stderr,
+    };
     let mut say = |line: &str| eprintln!("  install  {line}");
     let checks = match release.install_check(tag, dir.path(), forge, &machine, &mut say) {
         Ok(checks) => checks,

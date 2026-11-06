@@ -63,6 +63,7 @@ export interface FieldProps {
   /** The control's `name`, forwarded so a `Form` can attach a server error to
    * this field by name. */
   name?: string
+  /** Disables the control, and dims a `beside` control's label with it. */
   disabled?: boolean
   /** The control beside its name, inside the label, rather than under a
    * caption: for a Switch or a Checkbox. */
@@ -161,7 +162,10 @@ export interface FieldGroupProps {
   help?: ReactNode
   /** What is wrong with the group as a whole - "choose at least one". */
   error?: ReactNode
+  /** Keep the legend for screen readers but take it off the screen. */
   labelHidden?: boolean
+  /** Adds the mark a reader looks for to the legend. A statement about the
+   * form; the group does not validate anything itself. */
   required?: boolean
   /** Disables every native control inside, which is what a `<fieldset>`
    * does on its own. */
