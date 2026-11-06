@@ -28,6 +28,7 @@ made, and made the same way for every product on the line.
 ```console
 $ lyrn new demo-app --accent kilna --yes
 Created 48 files in `demo-app`.
+Wearing the mark of kilna, every raster drawn from it.
 Installing dependencies... done
 Starting the repository... done
 Staging the first commit... done
@@ -42,8 +43,7 @@ Next:
 ```console
 $ cd demo-app && pnpm lint
 > eslint . && tsc --noEmit && pnpm registry && pnpm test
-
-registry: 1 copy matches dowel-ui 0.40.0
+registry: 1 copy matches dowel-ui 0.43.0
  Test Files  2 passed (2)
       Tests  3 passed (3)
 ```
@@ -54,13 +54,13 @@ request.
 <!-- snap -->
 ```console
 $ lyrn doctor
-lyrn doctor: ~/demo-app, a `spa` project on standard 2026.11.3
+lyrn doctor: ~/demo-app, a `spa` project on standard 2026.11.4
 
-✓ standard   all 20 files of the `spa` standard
+✓ standard   all 21 files of the `spa` standard
 ✓ readme     the longest block is 18 words, in 25 lines
 ✓ changelog  no release yet
 ✓ mark       a mark of its own
-✓ assets     three levels in assets/, 1 copy or icon in place
+✓ assets     three levels in assets/, 3 copies and icons in place
 ✓ language   48 text files in English, translations in their places
 ✓ private    nothing from this computer in 48 text files
 ✓ actions    10 actions in 4 workflows, none retired or behind the standard
@@ -72,7 +72,7 @@ lyrn doctor: ~/demo-app, a `spa` project on standard 2026.11.3
 ✓ identity   commits as `Kirill Lakhtachev <lahtachev@gmail.com>`, the global identity; the global excludes file keeps assistant files out
 
 13 passed, 1 not applicable
-stack: node 22 · pnpm 10.34.7 · actions on the standard · updated today
+stack: node 22 · pnpm 10.34.9 · actions on the standard · updated today
 ```
 
 On an older repository the same command says what is off - a retired action,

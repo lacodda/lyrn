@@ -105,9 +105,9 @@ S, the level drawn for 27px and under, copied from `dowel-ui/marks`. The same
 gate that holds the primitives holds it: the favicon has to be one of the
 line's marks, byte for byte, and at level S. When the product has a mark of its
 own, its `<code>-S.svg` from the same package replaces the file and the gate
-agrees. The PWA icons, which have no SVG twin, are the plated mark rendered at
-their sizes; `lyrn.toml` records `mark = "placeholder"` until the accent is
-chosen.
+agrees, and `--accent <product>` starts there. The PWA icons, which have no SVG
+twin, are the plated mark rendered at their sizes; `lyrn.toml` records
+`mark = "placeholder"` until the project wears a mark of its own.
 
 ## cli
 

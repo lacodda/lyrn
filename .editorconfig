@@ -17,3 +17,12 @@ indent_size = 2
 
 [*.{js, ts}]
 quote_type = single
+
+# What rustfmt writes.
+[*.rs]
+indent_style = space
+indent_size = 4
+
+# What Starlight's scaffold writes.
+[docs/**.{astro,mjs,ts}]
+indent_style = tab
