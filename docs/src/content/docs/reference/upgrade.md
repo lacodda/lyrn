@@ -58,8 +58,10 @@ but split: its releases are the repository's and stay as they are, and the
 header above them - the text `cliff.toml` writes there - is the standard's,
 since `git cliff --prepend` keeps it on top only while the two are the same. A
 changelog once written with `--output` lost its header, and gets the
-standard's back over all its releases. A file checked out with `\r\n` line
-ends is merged on its lines and written back with them.
+standard's back over all its releases, and says so rather than calling it a
+merge. A header of the repository's own, the same one its `cliff.toml` names, is
+that pair already and is left alone. A file checked out with `\r\n` line ends is
+merged on its lines and written back with them.
 
 ## Where both changed the same lines
 

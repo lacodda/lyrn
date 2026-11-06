@@ -16,3 +16,4 @@ earlier one says so; the earlier one is marked superseded rather than deleted.
 | [0009](0009-the-hygiene-is-written-once.md) | What every repository carries is written once | Accepted |
 | [0010](0010-dependabot-is-off.md) | Dependabot is off on purpose | Accepted |
 | [0011](0011-lyrn-draws-the-mark.md) | lyrn draws the mark, with the line's font inside it | Accepted |
+| [0012](0012-the-mark-in-lyrn-toml-says-what-assets-holds.md) | The mark in lyrn.toml says what assets/ holds | Accepted |
