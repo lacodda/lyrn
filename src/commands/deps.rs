@@ -6,13 +6,16 @@
 //! code fixed in the same commit. Whether the week has passed is read from the
 //! history, by the fact. What to update is read from the lockfiles against the
 //! registries: the version a build actually uses, beside the newest one there
-//! is.
+//! is. A repository that carries templates pins what the projects it starts
+//! will build with, and those pins are read the same way: nothing builds them
+//! here, so no lockfile would say they fell behind.
 
 use std::error::Error;
 use std::path::PathBuf;
 use std::process::Command as Process;
 
 use chrono::Utc;
+use regex::Regex;
 use yaml_rust2::{Yaml, YamlLoader};
 
 use crate::cli::PathArgs;
@@ -82,6 +85,7 @@ pub fn run(args: PathArgs) -> Result<(), Box<dyn Error>> {
     let groups: Vec<Group> = cargo_groups(&repo)
         .into_iter()
         .chain(npm_groups(&repo))
+        .chain(template_groups(&repo))
         .filter(|g| !g.locked.is_empty())
         .collect();
     if groups.is_empty() {
@@ -130,7 +134,7 @@ pub fn run(args: PathArgs) -> Result<(), Box<dyn Error>> {
         let version_width = group.locked.iter().map(|l| l.version.len()).max().unwrap_or(5) + 2;
         for locked in &group.locked {
             match lookup(group.registry, &locked.name) {
-                Some(Ok(Some(newest))) if version_cmp(&locked.version, newest).is_lt() => {
+                Some(Ok(Some(newest))) if behind_by(&locked.version, newest) => {
                     behind += 1;
                     let major = breaking(&locked.version, newest);
                     if major {
@@ -168,6 +172,17 @@ pub fn run(args: PathArgs) -> Result<(), Box<dyn Error>> {
     }
     println!("{summary}.");
     Ok(())
+}
+
+/// Whether a version is behind the newest. A pin of fewer than three numbers
+/// asks Cargo for the newest compatible one, so only a breaking version can
+/// leave it behind.
+fn behind_by(version: &str, newest: &str) -> bool {
+    if version.split('.').count() < 3 {
+        breaking(version, newest)
+    } else {
+        version_cmp(version, newest).is_lt()
+    }
 }
 
 /// What `rustup check` says about the stable toolchain, when rustup is here.
@@ -318,6 +333,85 @@ fn npm_groups(repo: &Repo) -> Vec<Group> {
     groups
 }
 
+/// The dependencies a repository's templates pin: every `package.json.tmpl`
+/// and `Cargo.toml.tmpl`, and the dowel-ui its copies were taken from.
+fn template_groups(repo: &Repo) -> Vec<Group> {
+    let mut groups = Vec::new();
+    for file in repo.files.iter().filter(|f| !is_test_material(f)) {
+        let (registry, locked) = match file.rsplit('/').next() {
+            Some("package.json.tmpl") => (Registry::Npm, repo.read_text(file).map(|t| npm_pins(&t))),
+            Some("Cargo.toml.tmpl") => (Registry::Crates, repo.read_text(file).map(|t| cargo_pins(&t))),
+            Some("VERSION") if file.ends_with("templates/dowel/VERSION") => (
+                Registry::Npm,
+                repo.read_text(file).map(|t| {
+                    vec![Locked {
+                        name: "dowel-ui".to_string(),
+                        version: t.trim().to_string(),
+                    }]
+                }),
+            ),
+            _ => continue,
+        };
+        groups.push(Group {
+            manifest: file.clone(),
+            registry,
+            locked: locked.unwrap_or_default(),
+        });
+    }
+    groups
+}
+
+/// The versions a `package.json` template pins. Read line by line: the
+/// sections an add-on switches leave it no longer JSON.
+fn npm_pins(text: &str) -> Vec<Locked> {
+    let opens = Regex::new(r#"^\s*"(dependencies|devDependencies|optionalDependencies)":\s*\{"#).expect("a valid pattern");
+    let pin = Regex::new(r#"^\s*"([^"]+)":\s*"[\^~]?(\d[^"]*)""#).expect("a valid pattern");
+    let mut inside = false;
+    let mut pins = Vec::new();
+    for line in text.lines() {
+        if opens.is_match(line) {
+            inside = true;
+        } else if inside && line.trim_start().starts_with('}') {
+            inside = false;
+        } else if inside && let Some(found) = pin.captures(line) {
+            pins.push(Locked {
+                name: found[1].to_string(),
+                version: found[2].to_string(),
+            });
+        }
+    }
+    pins.sort_by(|a, b| a.name.cmp(&b.name));
+    pins.dedup();
+    pins
+}
+
+/// The versions a `Cargo.toml` template pins, by line for the same reason. A
+/// path dependency is a sibling, whatever version it names.
+fn cargo_pins(text: &str) -> Vec<Locked> {
+    let pin = Regex::new(r#"^([A-Za-z0-9_-]+)\s*=\s*(?:"([^"]+)"|\{.*\bversion\s*=\s*"([^"]+)")"#).expect("a valid pattern");
+    let mut inside = false;
+    let mut pins = Vec::new();
+    for line in text.lines() {
+        if line.starts_with('[') {
+            inside = line.trim_end().trim_end_matches(']').ends_with("dependencies");
+        } else if inside
+            && !line.contains("path =")
+            && let Some(found) = pin.captures(line)
+        {
+            let version = found.get(2).or_else(|| found.get(3)).map_or("", |m| m.as_str());
+            if version.starts_with(|c: char| c.is_ascii_digit()) {
+                pins.push(Locked {
+                    name: found[1].to_string(),
+                    version: version.to_string(),
+                });
+            }
+        }
+    }
+    pins.sort_by(|a, b| a.name.cmp(&b.name));
+    pins.dedup();
+    pins
+}
+
 #[cfg(test)]
 mod tests {
     use super::*;
@@ -377,5 +471,81 @@ rustup - up to date : 1.29.1
         assert_eq!(groups[0].manifest, "docs/package.json");
         let names: Vec<(&str, &str)> = groups[0].locked.iter().map(|l| (l.name.as_str(), l.version.as_str())).collect();
         assert_eq!(names, [("@types/node", "24.19.1"), ("astro", "7.3.8")]);
+    }
+
+    #[test]
+    fn a_template_s_pins_are_read_with_its_sections_still_in() {
+        let package = r#"{
+  "name": "{{ name }}",
+  "version": "0.1.0",
+  "dependencies": {
+    "@base-ui/react": "^1.9.0",
+{{#router}}
+    "react-router": "^8.5.0",
+{{/router}}
+    "shared": "workspace:*"
+  },
+  "peerDependencies": {
+    "react": ">=18"
+  },
+  "devDependencies": {
+    "vite": "~8.3.5"
+  }
+}
+"#;
+        let cargo = r#"[package]
+name = "{{ name }}"
+version = "0.1.0"
+
+[target.'cfg(windows)'.build-dependencies]
+winresource = "0.1"
+
+[dependencies]
+anyhow = "1"
+clap = { version = "4", features = ["derive"] }
+{{#keyring}}
+keyring = { version = "4" }
+{{/keyring}}
+sibling = { path = "../sibling", version = "0.1.0" }
+shared = { workspace = true }
+
+[profile.release]
+lto = true
+"#;
+        let (_dir, repo) = repo_with(&[
+            ("src/templates/spa/package.json.tmpl", package),
+            ("src/templates/cli/Cargo.toml.tmpl", cargo),
+            ("src/templates/dowel/VERSION", "0.40.0\n"),
+            ("src/templates/spa/index.html.tmpl", "<html></html>\n"),
+        ]);
+        let groups = template_groups(&repo);
+        let pins = |file: &str| -> Vec<(String, String)> {
+            let group = groups.iter().find(|g| g.manifest == file).unwrap_or_else(|| panic!("{file} was not read"));
+            group.locked.iter().map(|l| (l.name.clone(), l.version.clone())).collect()
+        };
+        let pairs = |list: &[(&str, &str)]| -> Vec<(String, String)> { list.iter().map(|(a, b)| (a.to_string(), b.to_string())).collect() };
+
+        assert_eq!(groups.len(), 3, "only the manifests and dowel's VERSION are pins");
+        assert_eq!(
+            pins("src/templates/spa/package.json.tmpl"),
+            pairs(&[("@base-ui/react", "1.9.0"), ("react-router", "8.5.0"), ("vite", "8.3.5")])
+        );
+        assert_eq!(
+            pins("src/templates/cli/Cargo.toml.tmpl"),
+            pairs(&[("anyhow", "1"), ("clap", "4"), ("keyring", "4"), ("winresource", "0.1")])
+        );
+        assert_eq!(pins("src/templates/dowel/VERSION"), pairs(&[("dowel-ui", "0.40.0")]));
+    }
+
+    #[test]
+    fn a_pin_of_two_numbers_falls_behind_only_at_a_breaking_version() {
+        // Cargo takes the newest compatible one for "4": 4.6 is not behind it.
+        assert!(!behind_by("4", "4.6.7"));
+        assert!(!behind_by("0.12", "0.12.3"));
+        assert!(behind_by("4", "5.0.0"));
+        assert!(behind_by("0.12", "0.13.0"));
+        // A pin of three numbers says what it was last moved to.
+        assert!(behind_by("19.3.1", "19.3.2"));
+        assert!(!behind_by("19.3.2", "19.3.2"));
     }
 }

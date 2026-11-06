@@ -47,4 +47,12 @@ across a breaking version - by Cargo's reading of semver, where `0.13` to
 `0.14` is one - is marked, since that is the one whose code has to change in
 the same commit.
 
+A repository that carries templates - lyrn itself, or a template repository -
+pins what the projects it starts will build with, and nothing builds those pins
+there, so no lockfile would say they fell behind. Every `package.json.tmpl` and
+`Cargo.toml.tmpl`, with the `dowel-ui` of `templates/dowel/VERSION`, gets a list
+of its own, the same way. A pin of fewer than three numbers (`clap = "4"`) asks
+Cargo for the newest compatible version, so only a breaking one leaves it
+behind.
+
 `lyrn deps` says; it updates nothing and exits with 0.
