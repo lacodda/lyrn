@@ -8,6 +8,38 @@ last release, which follow [Conventional Commits](https://www.conventionalcommit
 $ git cliff --unreleased --tag vX.Y.Z --prepend CHANGELOG.md
 ```
 
+## 🎉 [2.17.0] - 2026-11-06
+
+### ✨ Features
+
+- Put a version's screens into its section
+- Take the marked transcripts again from the build
+- Write a command's page from its help, and hold the site to it
+- Write a decision down under the next number of the log
+- Start a product with the owner's overlay scrollbar
+- Read the pins a repository's templates carry
+
+### 📖 Documentation
+
+- Record that the mark says what assets/ holds
+- Take the README's transcripts with the command that takes them
+
+### 🛟 Miscellaneous Tasks
+
+- Leave the full gate to CI
+
+### 🛠️ Bug Fixes
+
+- Take the borrows and the question mark clippy has no use for
+- Call an icon a level only when it was drawn from that level
+- Say what a project wears and what it goes by
+- Say when pnpm is named twice, or its settings read past
+- Read an icon's level against the masters that draw it
+- Keep a changelog header the repository keeps on purpose
+- Leave nothing the audit points at hanging
+- Keep a form's release gate to what takes seconds
+- Read a project out of the line from its weight
+
 ## 🎉 [2.16.0] - 2026-11-02
 
 ### ✨ Features
