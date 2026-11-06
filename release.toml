@@ -13,6 +13,7 @@ manifests = ["Cargo.toml", "npm/package.json"]
 as_written = [
     "docs/adr/",
     "docs/src/content/docs/concepts/the-standard-by-version.md",
+    "docs/src/content/docs/reference/changelog.md",
     "docs/src/content/docs/reference/check.md",
     "docs/src/content/docs/reference/stage.md",
     "docs/src/content/docs/reference/status.md",

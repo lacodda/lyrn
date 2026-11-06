@@ -296,9 +296,13 @@ fn artwork_box(pixmap: &Pixmap) -> Option<(u32, u32, u32, u32)> {
 }
 
 /// How far an image may stray from a level, in the mean difference of a channel
-/// out of 255, and still be drawn from it: another rasterizer's edges are a few
-/// steps away, and a different picture dozens.
-const CLOSE_TO_A_LEVEL: f64 = 24.0;
+/// out of 255, and still be drawn from it. Measured across the line's twenty marks
+/// in November 2026: two different marks come as close as 2.5 (nooma and sefy, at
+/// L, whatever the size), since most of any plated mark is the same plate, and the
+/// levels of one mark as close as 0.4. So this says "drawn from these masters, by
+/// this code" and little more: an icon from another rasterizer is held to the plate
+/// alone, which is a weaker judgement and not a false one.
+const CLOSE_TO_A_LEVEL: f64 = 1.0;
 
 #[cfg(test)]
 mod tests {
@@ -321,7 +325,8 @@ mod tests {
     }
 
     /// Each level is told from the others at the sizes it is ever mistaken at,
-    /// and a picture that is no level of the mark is not called one.
+    /// and a picture that is no level of the mark is not called one - not even
+    /// another product's mark, on the same plate, the closest there is.
     #[test]
     fn an_image_is_read_as_the_level_it_was_drawn_from() {
         let mark = umbrella();
@@ -333,6 +338,21 @@ mod tests {
         }
         let other = ico::tests::png_of(32, [0xE0, 0x30, 0x90, 255]);
         assert_eq!(mark.level_of(&other, 32), None, "a picture that is none of them");
+
+        let sefy = Mark::read(
+            &Masters {
+                l: include_bytes!("../templates/dowel/marks/sefy-L.svg"),
+                m: include_bytes!("../templates/dowel/marks/sefy-M.svg"),
+                s: include_bytes!("../templates/dowel/marks/sefy-S.svg"),
+                banner: None,
+            },
+            ["L", "M", "S", "banner"],
+        )
+        .unwrap();
+        let nooma = Drawing::parse(include_bytes!("../templates/dowel/marks/nooma-L.svg"), "L").unwrap();
+        for size in [32, 48, 256] {
+            assert_eq!(sefy.level_of(&nooma.png(size), size), None, "nooma's L is no level of sefy's mark at {size}px");
+        }
     }
 
     fn umbrella() -> Mark {

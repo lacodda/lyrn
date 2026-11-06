@@ -134,10 +134,10 @@ Copies are held to their masters byte for byte - a site's header
 (`src/assets/logo.svg`) to L, every `favicon.svg` to S, the documentation
 site's `apple-touch-icon.png` to the one in `assets/`. Each image inside an
 `.ico` is read against the levels the masters draw at its size, which tells all
-three apart: L at 32px is as much a finding as the S tile at 48px. An image close
-to none of them was not drawn from them, and is held only by how much of it is
-the line's plate, `#1B2126`, which M and L stand on and the S tile hardly has. The images
-are listed largest first - Tauri takes the first one as the window's icon -
+three apart: L at 32px is as much a finding as the S tile at 48px. An image not
+drawn from them by this code - another rasterizer's, another product's - is held
+only by how much of it is the line's plate, `#1B2126`, which M and L stand on and
+the S tile hardly has. The images are listed largest first - Tauri takes the first one as the window's icon -
 and an `.ico` without 16, 24, 32, 48 and 256 warns. A touch icon and
 `assets/logo-512.png` are drawn large and must be plated. Templates and test
 material are left out. `--fix` copies the masters over stale copies, reorders

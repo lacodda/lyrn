@@ -11,9 +11,10 @@ assets/logo-m.svg (M) and assets/logo-s.svg (S). A site's header
 (src/assets/logo.svg) must be the L master byte for byte, a favicon.svg the S
 master, and every apple-touch-icon.png the one in assets/. Each image inside
 an .ico is read against the levels the masters draw at its size, which tells
-all three apart; one that is close to none of them was not drawn from them, and
-is held only by its share of plate, which the filled S tile hardly has. No fixed
-pixel would do: where a level's code and metaphor fall is the product's. The
+all three apart; one not drawn from them by this code - another rasterizer's,
+another product's - is held only by its share of plate, which the filled S tile
+hardly has. No fixed pixel would do: where a level's code and metaphor fall is
+the product's. The
 images must be listed largest first: Windows picks by size, but Tauri takes the
 first one as the window's icon, and a title bar stretched out of 16 pixels is
 how kilna shipped once.

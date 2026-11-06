@@ -219,8 +219,9 @@ fn same(theirs: &[u8], ours: &[u8], path: &str) -> bool {
 }
 
 /// Whether an image inside an `.ico` is the level its size calls for: read
-/// against the masters, which tell all three apart. An image close to none of
-/// them was not drawn from them, and is held only to what any mark must do.
+/// against the masters, which tell all three apart when it was drawn from them.
+/// One close to none of them - another rasterizer's, or another product's, as a
+/// template's icon is here - is held only to what any mark must do.
 fn right_level(mark: Option<&Mark>, size: u32, image: &[u8]) -> bool {
     match mark.and_then(|mark| mark.level_of(image, size)) {
         Some(level) => level == Level::for_size(size),
