@@ -23,3 +23,8 @@ jobs:
       # the standard installs elsewhere is not out until this commit's tag.
       - name: Check the shopfronts
         run: cargo run --quiet --locked -- check
+      # Further than the shopfronts: every flag on its command's page, and every
+      # link inside the site. Not yet the standard's, since no form's site is
+      # written from its program's help until then.
+      - name: Hold the site to the program
+        run: cargo run --quiet --locked -- docs check

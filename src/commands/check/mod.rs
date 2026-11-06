@@ -16,7 +16,7 @@
 //! so that none of them is the one left behind.
 
 pub mod changelog;
-mod commands;
+pub mod commands;
 mod descriptions;
 mod installers;
 pub mod product;

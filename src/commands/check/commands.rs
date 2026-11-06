@@ -137,7 +137,7 @@ pub fn check(repo: &Repo, product: &Product) -> Outcome {
 }
 
 /// The commands a program's help lists, asked once per command path.
-struct Help<'a> {
+pub struct Help<'a> {
     program: &'a Path,
     asked: BTreeMap<Vec<String>, Result<Option<Listing>, String>>,
 }
@@ -151,7 +151,7 @@ struct Listing {
 }
 
 impl<'a> Help<'a> {
-    fn new(program: &'a Path) -> Help<'a> {
+    pub fn new(program: &'a Path) -> Help<'a> {
         Help {
             program,
             asked: BTreeMap::new(),
@@ -187,9 +187,77 @@ impl<'a> Help<'a> {
         self.listing(path).map(|l| l.map(|l| l.accepted))
     }
 
-    fn names(&mut self, path: &[&str]) -> Vec<String> {
+    pub fn names(&mut self, path: &[&str]) -> Vec<String> {
         self.listing(path).ok().flatten().map(|l| l.names).unwrap_or_default()
     }
+
+    /// What `--help` of a command path prints.
+    pub fn text(&self, path: &[&str]) -> Option<String> {
+        let out = Process::new(self.program).args(path).arg("--help").output().ok()?;
+        out.status.success().then(|| String::from_utf8_lossy(&out.stdout).into_owned())
+    }
+}
+
+/// The first paragraph of a help text: what the command is.
+pub fn about(help: &str) -> String {
+    let paragraph: Vec<&str> = help.lines().map(str::trim).skip_while(|l| l.is_empty()).take_while(|l| !l.is_empty()).collect();
+    paragraph.join(" ")
+}
+
+/// The usage line, as a person types it: no `.exe`.
+pub fn usage(help: &str) -> Option<String> {
+    let line = help.lines().find_map(|l| l.trim().strip_prefix("Usage: "))?;
+    Some(line.replacen(".exe", "", 1))
+}
+
+/// The entries under one heading of a help text, with their descriptions: on
+/// the entry's line, or on the lines below it where a long description put them.
+fn entries(help: &str, heading: &str) -> Vec<(String, String)> {
+    let mut lines = help.lines().skip_while(|l| l.trim() != heading);
+    lines.next();
+    let split = Regex::new(r"^(.*?\S)\s{2,}(\S.*)$").expect("a valid pattern");
+    let mut found: Vec<(String, String)> = Vec::new();
+    for line in lines {
+        if line.starts_with(|c: char| !c.is_whitespace()) {
+            break;
+        }
+        if line.trim().is_empty() {
+            continue;
+        }
+        let trimmed = line.trim();
+        let indent = line.len() - line.trim_start().len();
+        // An entry starts within the first six columns; anything deeper
+        // belongs to the one above it.
+        if indent <= 6 && (trimmed.starts_with('-') || trimmed.starts_with('<') || trimmed.starts_with('[')) {
+            match split.captures(trimmed) {
+                Some(parts) => found.push((parts[1].to_string(), parts[2].to_string())),
+                None => found.push((trimmed.to_string(), String::new())),
+            }
+        } else if let Some((_, about)) = found.last_mut() {
+            if !about.is_empty() {
+                about.push(' ');
+            }
+            about.push_str(trimmed);
+        }
+    }
+    found
+}
+
+/// The options of a help text: what is typed, and what it does.
+pub fn options(help: &str) -> Vec<(String, String)> {
+    entries(help, "Options:")
+}
+
+/// The positional arguments of a help text.
+pub fn arguments(help: &str) -> Vec<(String, String)> {
+    entries(help, "Arguments:")
+}
+
+/// The long flag of an option's spelling: `-y, --yes` is `--yes`.
+pub fn long_flag(spec: &str) -> Option<String> {
+    spec.split([' ', ',', '='])
+        .find(|word| word.starts_with("--") && word.len() > 2)
+        .map(str::to_string)
 }
 
 /// The commands under `Commands:` in clap's help, with their visible
@@ -250,7 +318,7 @@ fn shown(repo: &Repo, bin: &str) -> Vec<(String, usize, Vec<String>)> {
 
 /// The program as built in `target/`: built again first if a source of the
 /// package is newer, so the help read is the help of the code checked.
-fn binary(repo: &Repo, manifest: &Manifest, bin: &str) -> Result<PathBuf, String> {
+pub fn binary(repo: &Repo, manifest: &Manifest, bin: &str) -> Result<PathBuf, String> {
     let dir = repo.root.join(manifest.dir());
     let metadata = Process::new("cargo")
         .args(["metadata", "--format-version", "1", "--no-deps"])
@@ -307,6 +375,27 @@ mod tests {
     use super::*;
 
     const HELP: &str = "Start a new web application\n\nUsage: lyrn.exe <COMMAND>\n\nCommands:\n  new       Create a new project in a directory\n            of its own\n  doctor    Hold a repository to the standard [aliases: dr]\n  help      Print this message or the help of the given subcommand(s)\n\nOptions:\n  -h, --help  Print help\n";
+
+    const LONG: &str = "Hold a repository to the standard\n\nUsage: lyrn.exe doctor [OPTIONS] [PATH]...\n\nArguments:\n  [PATH]...\n          The repositories to examine\n\nOptions:\n      --all\n          Examine every project in rigger's record,\n          as a table\n\n  -y, --yes  Accept the defaults\n      --explain <RULE>\n          Say why a rule exists\n\n  -h, --help\n          Print help (see a summary with '-h')\n";
+
+    #[test]
+    fn a_help_text_says_what_a_page_has_to() {
+        assert_eq!(about(LONG), "Hold a repository to the standard");
+        assert_eq!(usage(LONG).as_deref(), Some("lyrn doctor [OPTIONS] [PATH]..."));
+        assert_eq!(arguments(LONG), [("[PATH]...".to_string(), "The repositories to examine".to_string())]);
+        let options = options(LONG);
+        assert_eq!(
+            options[0],
+            ("--all".to_string(), "Examine every project in rigger's record, as a table".to_string())
+        );
+        assert_eq!(options[1], ("-y, --yes".to_string(), "Accept the defaults".to_string()));
+        assert_eq!(options[2].0, "--explain <RULE>");
+        let flags: Vec<Option<String>> = options.iter().map(|(spec, _)| long_flag(spec)).collect();
+        assert_eq!(flags[0].as_deref(), Some("--all"));
+        assert_eq!(flags[1].as_deref(), Some("--yes"));
+        assert_eq!(flags[2].as_deref(), Some("--explain"));
+        assert_eq!(long_flag("-q"), None);
+    }
 
     #[test]
     fn the_commands_are_what_clap_lists() {
