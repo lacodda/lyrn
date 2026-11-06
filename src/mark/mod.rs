@@ -210,6 +210,34 @@ impl Mark {
         self.level(Level::for_size(size)).png(size)
     }
 
+    /// Which level of this mark an image `size` pixels square was drawn from:
+    /// the one it is closest to, drawn at that size. `None` when it is close to
+    /// none, as an icon made by some other hand from some other picture is.
+    ///
+    /// Against the masters rather than at fixed points of the image: where a
+    /// level's code and metaphor fall is the product's, and no pixel is clear of
+    /// them on every mark of the line.
+    pub fn level_of(&self, image: &[u8], size: u32) -> Option<Level> {
+        let pixels = ico::pixels(image)?;
+        let distance = |level: Level| {
+            let drawn = ico::pixels(&self.level(level).png(size))?;
+            (drawn.len() == pixels.len()).then(|| {
+                let sum: u64 = pixels
+                    .iter()
+                    .zip(&drawn)
+                    .map(|(a, b)| a.iter().zip(b).map(|(x, y)| u64::from(x.abs_diff(*y))).sum::<u64>())
+                    .sum();
+                sum as f64 / (pixels.len() * 4) as f64
+            })
+        };
+        let mut levels: Vec<(Level, f64)> = [Level::L, Level::M, Level::S]
+            .into_iter()
+            .filter_map(|level| distance(level).map(|d| (level, d)))
+            .collect();
+        levels.sort_by(|a, b| a.1.total_cmp(&b.1));
+        levels.first().filter(|(_, d)| *d <= CLOSE_TO_A_LEVEL).map(|(level, _)| *level)
+    }
+
     /// Every size Windows asks an icon for, each from its own level, the
     /// largest first.
     pub fn ico(&self) -> Vec<u8> {
@@ -267,6 +295,11 @@ fn artwork_box(pixmap: &Pixmap) -> Option<(u32, u32, u32, u32)> {
     found
 }
 
+/// How far an image may stray from a level, in the mean difference of a channel
+/// out of 255, and still be drawn from it: another rasterizer's edges are a few
+/// steps away, and a different picture dozens.
+const CLOSE_TO_A_LEVEL: f64 = 24.0;
+
 #[cfg(test)]
 mod tests {
     use super::*;
@@ -285,6 +318,21 @@ mod tests {
         assert_eq!(frame.color_type, png::ColorType::Rgba);
         let pixels = buffer[..frame.buffer_size()].as_chunks::<4>().0.to_vec();
         (frame.width, frame.height, pixels)
+    }
+
+    /// Each level is told from the others at the sizes it is ever mistaken at,
+    /// and a picture that is no level of the mark is not called one.
+    #[test]
+    fn an_image_is_read_as_the_level_it_was_drawn_from() {
+        let mark = umbrella();
+        for size in [16, 24, 32, 48, 64, 256] {
+            for level in [Level::L, Level::M, Level::S] {
+                let drawn = mark.level(level).png(size);
+                assert_eq!(mark.level_of(&drawn, size), Some(level), "{level:?} at {size}px");
+            }
+        }
+        let other = ico::tests::png_of(32, [0xE0, 0x30, 0x90, 255]);
+        assert_eq!(mark.level_of(&other, 32), None, "a picture that is none of them");
     }
 
     fn umbrella() -> Mark {

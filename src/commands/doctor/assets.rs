@@ -8,11 +8,13 @@
 //! copy of the mark a version behind the master. Each was found by someone
 //! looking at a screen, months later. Here they are found by reading the
 //! files: the copies against their masters byte for byte, and each image of
-//! an `.ico` by the one pixel that tells the filled tile from the plate.
+//! an `.ico` against the levels the masters draw at its size - or, where they do
+//! not draw, by the share of plate that tells the filled tile from the rest.
 
 use super::{Finding, Outcome, Repair, Repo, is_test_material, plural, some_of};
 use crate::commands::assets::read_mark;
 use crate::mark::ico::{self, Probe};
+use crate::mark::{Level, Mark};
 
 const L: &str = "assets/logo.svg";
 const M: &str = "assets/logo-m.svg";
@@ -122,7 +124,7 @@ pub fn check(repo: &Repo) -> Outcome {
         if levels {
             let wrong: Vec<String> = entries
                 .iter()
-                .filter(|e| !level_reads(e.size, ico::probe(e.bytes(&bytes))))
+                .filter(|e| !right_level(mark.as_ref(), e.size, e.bytes(&bytes)))
                 .map(|e| format!("{}px", e.size))
                 .collect();
             if !wrong.is_empty() {
@@ -131,10 +133,8 @@ pub fn check(repo: &Repo) -> Outcome {
                 } else {
                     format!("the {} images are", some_of(&wrong, 4))
                 };
-                let mut finding = Finding::fail(format!(
-                    "{path}: {which} the wrong level of the mark - S at 27px and below, the plated M and L above"
-                ))
-                .fix("`lyrn assets` draws each size from the level its size calls for");
+                let mut finding = Finding::fail(format!("{path}: {which} the wrong level of the mark - S at 27px and below, M to 63px, L above"))
+                    .fix("`lyrn assets` draws each size from the level its size calls for");
                 if let Some(mark) = &mark {
                     finding = finding.repair(Repair::new(*path, mark.ico(), "drawn again from the masters, every size from its level"));
                 }
@@ -218,6 +218,16 @@ fn same(theirs: &[u8], ours: &[u8], path: &str) -> bool {
     }
 }
 
+/// Whether an image inside an `.ico` is the level its size calls for: read
+/// against the masters, which tell all three apart. An image close to none of
+/// them was not drawn from them, and is held only to what any mark must do.
+fn right_level(mark: Option<&Mark>, size: u32, image: &[u8]) -> bool {
+    match mark.and_then(|mark| mark.level_of(image, size)) {
+        Some(level) => level == Level::for_size(size),
+        None => level_reads(size, ico::probe(image)),
+    }
+}
+
 /// Whether what an image shows reads at its size; an image this cannot judge
 /// is not a finding.
 fn level_reads(size: u32, probe: Probe) -> bool {
@@ -252,6 +262,27 @@ mod tests {
         assert!(level_reads(48, Probe::Plated));
         assert!(!level_reads(24, Probe::Plated));
         assert!(level_reads(24, Probe::Unknown));
+    }
+
+    /// L where M belongs is not the plate-or-tile question: both stand on the
+    /// plate, and only the masters tell them apart.
+    #[test]
+    fn a_plated_level_at_the_other_s_size_is_found() {
+        let (l, m, s) = (
+            include_bytes!("../../templates/dowel/marks/lacodda-L.svg").as_slice(),
+            include_bytes!("../../templates/dowel/marks/lacodda-M.svg").as_slice(),
+            include_bytes!("../../templates/dowel/marks/lacodda-S.svg").as_slice(),
+        );
+        let masters = crate::mark::Masters { l, m, s, banner: None };
+        let mark = Mark::read(&masters, ["L", "M", "S", "banner"]).unwrap();
+
+        assert!(right_level(Some(&mark), 32, &mark.m.png(32)));
+        assert!(!right_level(Some(&mark), 32, &mark.l.png(32)), "L at 32px");
+        assert!(!right_level(Some(&mark), 256, &mark.m.png(256)), "M at 256px");
+        assert!(!right_level(Some(&mark), 16, &mark.m.png(16)), "M at 16px");
+        // Without masters that draw, only the plate can be read.
+        assert!(right_level(None, 32, &mark.l.png(32)));
+        assert!(!right_level(None, 16, &mark.m.png(16)));
     }
 
     #[test]

@@ -123,12 +123,7 @@ const FILLED_BELOW: f32 = 0.15;
 /// whose code sits clear of it; a wide code reaches it at 32px, and the share
 /// does not care where the code is.
 pub fn probe(image: &[u8]) -> Probe {
-    let pixels = if image.starts_with(b"\x89PNG") {
-        png_pixels(image)
-    } else {
-        bitmap_pixels(image)
-    };
-    let Some(pixels) = pixels else { return Probe::Unknown };
+    let Some(pixels) = pixels(image) else { return Probe::Unknown };
     let opaque: Vec<&[u8; 4]> = pixels.iter().filter(|px| px[3] > 128).collect();
     if opaque.is_empty() {
         return Probe::Unknown;
@@ -144,6 +139,15 @@ pub fn probe(image: &[u8]) -> Probe {
         Probe::Filled
     } else {
         Probe::Unknown
+    }
+}
+
+/// The pixels of an image inside an `.ico`, as RGBA, a PNG or a bitmap alike.
+pub fn pixels(image: &[u8]) -> Option<Vec<[u8; 4]>> {
+    if image.starts_with(b"\x89PNG") {
+        png_pixels(image)
+    } else {
+        bitmap_pixels(image)
     }
 }
 

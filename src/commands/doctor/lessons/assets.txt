@@ -10,11 +10,13 @@ The rule reads the files instead. The masters are assets/logo.svg (L),
 assets/logo-m.svg (M) and assets/logo-s.svg (S). A site's header
 (src/assets/logo.svg) must be the L master byte for byte, a favicon.svg the S
 master, and every apple-touch-icon.png the one in assets/. Each image inside
-an .ico is judged by one pixel - a quarter across, halfway down, inside the
-hexagon and clear of the code - which is the dark plate for M and L and the
-product's colour for S. The images must be listed largest first: Windows
-picks by size, but Tauri takes the first one as the window's icon, and a
-title bar stretched out of 16 pixels is how kilna shipped once.
+an .ico is read against the levels the masters draw at its size, which tells
+all three apart; one that is close to none of them was not drawn from them, and
+is held only by its share of plate, which the filled S tile hardly has. No fixed
+pixel would do: where a level's code and metaphor fall is the product's. The
+images must be listed largest first: Windows picks by size, but Tauri takes the
+first one as the window's icon, and a title bar stretched out of 16 pixels is
+how kilna shipped once.
 
 `lyrn assets` draws every one of these from the masters, by the rule, and
 `lyrn doctor --fix` copies the masters over stale copies, reorders an .ico and
