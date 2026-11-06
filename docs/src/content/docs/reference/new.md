@@ -102,10 +102,12 @@ accent = "#6E7079"
 mark = "placeholder"   # or `chosen`, once the product has a mark
 ```
 
-Naming an accent is what choosing a mark looks like from here — it is the one
-thing `lyrn new` learns about a product's identity, and the whole palette is
-derived from it. Giving the placeholder's own hex explicitly still counts as
-unmarked, so nothing is quietly promoted.
+`--accent <product>` starts a project on that product's identity whole: its
+colour, its masters in `assets/` - all but the banner, which says its name - and
+every raster drawn from them. A colour alone, `--accent '#a1b2c3'`, colours the
+palette and leaves the umbrella mark on, so `mark` stays `placeholder`:
+`lyrn.toml` says what `assets/` holds. [`lyrn assets --from`](/reference/assets/)
+takes a mark of its own in later, and sets it to `chosen`.
 
 On the `desktop` form the placeholder is visible rather than implied: the
 application icon is the line's umbrella mark until you replace it. See

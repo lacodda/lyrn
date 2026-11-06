@@ -1,0 +1,8 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="512" height="512" viewBox="0 0 100 100"><defs><linearGradient id="pair" gradientUnits="userSpaceOnUse" x1="11" y1="5" x2="89" y2="95"><stop offset="0" stop-color="#8A62F0"/><stop offset="1" stop-color="#2FB3C6"/></linearGradient></defs><polygon points="50,5 89,27.5 89,72.5 50,95 11,72.5 11,27.5" fill="#1B2126" stroke="#1B2126" stroke-width="9" stroke-linejoin="round"/><polygon points="50,5 89,27.5 89,72.5 50,95 11,72.5 11,27.5" fill="none" stroke="url(#pair)" stroke-opacity="0.75" stroke-width="3.5" stroke-linejoin="round"/><text x="50" y="52" text-anchor="middle" font-family='"Cascadia Code","JetBrains Mono",Consolas,ui-monospace,monospace' font-weight="700" font-size="30" fill="url(#pair)">rr</text><g transform="translate(0 6)" fill="none" stroke="url(#pair)" stroke-linecap="round">
+      <path d="M50 76 L38 58" stroke-opacity="0.25" stroke-width="2.38"/>
+      <path d="M50 76 V55" stroke-opacity="0.25" stroke-width="2.38"/>
+      <path d="M50 76 L62 58" stroke-opacity="0.25" stroke-width="2.38"/>
+      <circle cx="38" cy="57" r="2" fill="url(#pair)" fill-opacity="0.3" stroke="none"/>
+      <circle cx="50" cy="54" r="2" fill="url(#pair)" fill-opacity="0.3" stroke="none"/>
+      <circle cx="62" cy="57" r="2" fill="url(#pair)" fill-opacity="0.3" stroke="none"/>
+      <circle cx="50" cy="77" r="2.9" fill="url(#pair)" fill-opacity="0.55" stroke="none"/></g></svg>

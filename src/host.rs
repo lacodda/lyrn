@@ -89,7 +89,7 @@ const KASL: Host = Host {
     ],
     subject: "the day as `kasl report --json` prints it, or the issue as `kasl inbox show --json` prints it",
     meta: "shown under the plugin's message - the host keeps no field a plugin writes",
-    lookup: "the `plugins` directory in its data folder (`%LOCALAPPDATA%\\lacodda\\kasl\\plugins` on Windows), then your `PATH`",
+    lookup: "the `plugins` directory in its data folder (`%LOCALAPPDATA%\\lacodda\\kasl\\plugins` on Windows), then beside its own executable, where the plugins that ship with it live, then your `PATH`",
 };
 
 /// Every host a plugin can be generated for.

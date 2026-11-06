@@ -202,3 +202,31 @@ fn nothing_is_left_unrendered() {
         assert_eq!(&workflow[index - 1..index], "$", "the workflow has an unrendered placeholder");
     }
 }
+
+/// A site added to a repository with a mark of its own wears that mark, not the
+/// umbrella's: the doctor holds the copies to the masters, byte for byte.
+#[test]
+fn a_site_is_drawn_from_the_masters_the_repository_keeps() {
+    let dir = tempfile::tempdir().unwrap();
+    let root = dir.path().join("demo-tool");
+    common::lyrn()
+        .args(["new", "demo-tool", "--form", "cli", "--yes", "--no-hooks", "--accent", "kilna", "--path"])
+        .arg(&root)
+        .assert()
+        .success();
+    common::lyrn()
+        .current_dir(&root)
+        .args(["new", "demo-tool", "--form", "docs", "--yes", "--no-hooks"])
+        .assert()
+        .success();
+    for (copy, master) in [
+        ("docs/public/favicon.svg", "assets/logo-s.svg"),
+        ("docs/src/assets/logo.svg", "assets/logo.svg"),
+    ] {
+        assert_eq!(fs::read(root.join(copy)).unwrap(), fs::read(root.join(master)).unwrap(), "{copy}");
+    }
+    assert_eq!(
+        fs::read(root.join("docs/public/apple-touch-icon.png")).unwrap(),
+        fs::read(root.join("assets/apple-touch-icon.png")).unwrap()
+    );
+}

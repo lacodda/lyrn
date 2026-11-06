@@ -17,6 +17,29 @@
 use crate::generate::{Contents, SourceFile};
 use crate::model::Addon;
 
+include!(concat!(env!("OUT_DIR"), "/marks.rs"));
+
+/// The line's umbrella mark, which a project wears until it has one of its own.
+pub const UMBRELLA: &str = "lacodda";
+
+/// A product's masters, L, M and S, if the line has that product; the umbrella
+/// mark is no product's.
+pub fn product_mark(name: &str) -> Option<[&'static str; 3]> {
+    MASTERS
+        .iter()
+        .find(|(product, ..)| *product == name && *product != UMBRELLA)
+        .map(|(_, l, m, s)| [*l, *m, *s])
+}
+
+/// Whether a master is the umbrella mark's L, whatever its line endings.
+pub fn is_umbrella_l(master: &[u8]) -> bool {
+    let strip = |b: &[u8]| -> Vec<u8> { b.iter().copied().filter(|&c| c != b'\r').collect() };
+    MASTERS
+        .iter()
+        .find(|(product, ..)| *product == UMBRELLA)
+        .is_some_and(|(_, l, ..)| strip(master) == strip(l.as_bytes()))
+}
+
 /// The dowel-ui release the copies were taken from, as `tools/vendor-dowel.mjs`
 /// wrote it.
 #[cfg(test)]

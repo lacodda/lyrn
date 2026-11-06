@@ -4,6 +4,7 @@ use std::path::{Path, PathBuf};
 use std::process::Command as Process;
 
 use crate::cli::{IdentityArgs, NewArgs, ProjectArgs};
+use crate::commands::assets;
 use crate::generate::{self, GenerateError, Plan};
 use crate::host;
 use crate::model::{Context, Form, Hook, Placement};
@@ -11,6 +12,7 @@ use crate::naming::{self, PLACEHOLDER_ACCENT};
 use crate::template::cargo_generate::{Answers, Facts};
 use crate::template::{self, Kind, Native, Origin, Template};
 use crate::templates;
+use crate::templates::dowel;
 
 /// Everything a generation is asked for, whichever command asked.
 pub struct Wanted<'a> {
@@ -67,9 +69,13 @@ pub fn build_context(wanted: &Wanted, native: &Native, origin: &Origin, interact
         (None, false) => None,
     };
 
-    let accent = match &identity.accent {
+    let asked = match &identity.accent {
+        Some(value) => Some(value.clone()),
+        None if interactive => Some(prompt_accent()?),
+        None => None,
+    };
+    let accent = match &asked {
         Some(value) => naming::resolve_accent(value)?,
-        None if interactive => prompt_accent()?,
         None => PLACEHOLDER_ACCENT.to_string(),
     };
 
@@ -78,8 +84,10 @@ pub fn build_context(wanted: &Wanted, native: &Native, origin: &Origin, interact
     // `lyrn doctor` to infer: the alternative is the doctor comparing icon
     // bytes against a copy of the placeholder it carries, which goes stale the
     // first time the placeholder is redrawn and then reports every project as
-    // branded. The generator knows the answer; it says so.
-    let mark_chosen = accent != PLACEHOLDER_ACCENT;
+    // branded. The generator knows the answer, since it is what lays the
+    // masters: a product of the line brings its mark, and a colour alone leaves
+    // the umbrella mark on.
+    let mark_chosen = asked.as_deref().is_some_and(|value| dowel::product_mark(value).is_some());
 
     // A documentation site describes a product that already exists, so its
     // default says that rather than calling the site "a docs".
@@ -198,7 +206,11 @@ pub fn build_context(wanted: &Wanted, native: &Native, origin: &Origin, interact
                 host.targets.iter().map(|t| format!("\"{}\"", t.key)).collect::<Vec<_>>().join(", "),
             )
             .set("command_key", "run")
-            .set("command_label", format!("Run {}", naming::title_from_name(args.name)))
+            // The slug as it is: a product's casing - GitLab - cannot be read
+            // from `gitlab`, and a plugin is known by its executable's name.
+            .set("command_label", format!("Run {}", args.name))
+            .set("title", format!("{}{}", host.prefix(), args.name))
+            .set("title_json", naming::json_string(&format!("{}{}", host.prefix(), args.name)))
             .set("bin_name", format!("{}{}", host.prefix(), args.name));
     }
 
@@ -329,6 +341,9 @@ pub fn generate_project(name: &str, template: &Template, project: &ProjectArgs, 
     if project.dry_run {
         println!("Would {verb} {} in `{}`:\n", plural(plan.files.len()), root.display());
         println!("{}", indent(&plan.tree()));
+        if !adds && let Some(product) = project.identity.accent.as_deref().filter(|a| dowel::product_mark(a).is_some()) {
+            println!("\nWearing the mark of {product}: `lyrn assets` draws its rasters beside these.");
+        }
         return Ok(());
     }
 
@@ -358,6 +373,16 @@ pub fn generate_project(name: &str, template: &Template, project: &ProjectArgs, 
     generate::write(plan, root)?;
     let done = if adds { "Added" } else { "Created" };
     println!("{done} {} in `{}`.", plural(plan.files.len()), root.display());
+
+    // A product of the line brings its mark: the masters and what is drawn from
+    // them replace the umbrella mark, before the first commit. A documentation
+    // site added to a repository draws from that repository's masters instead.
+    if adds {
+        assets::draw_the_site_s_copies(root, "docs")?;
+    } else if let Some(product) = project.identity.accent.as_deref().filter(|a| dowel::product_mark(a).is_some()) {
+        assets::wear_product_mark(root, product)?;
+        println!("Wearing the mark of {product}, every raster drawn from it.");
+    }
 
     if !project.no_hooks {
         run_hooks(&planned.hooks, root, in_a_repository)?;
@@ -663,7 +688,7 @@ fn prompt_accent() -> Result<String, Box<dyn Error>> {
         .with_prompt("Accent (a product of the line, or #rrggbb)")
         .default(PLACEHOLDER_ACCENT.to_string())
         .interact_text()?;
-    Ok(naming::resolve_accent(&raw)?)
+    Ok(raw)
 }
 
 fn confirm(prompt: &str) -> Result<bool, Box<dyn Error>> {
@@ -816,21 +841,18 @@ mod tests {
         assert_eq!(context.get("mark"), Some("placeholder"));
     }
 
-    /// Naming a colour is what choosing a mark looks like from here: the
-    /// accent is the one thing `lyrn new` learns about a product's identity,
-    /// and dowel derives the rest of the palette from it.
+    /// `mark` says what is in `assets/`: a product of the line brings its mark,
+    /// and a colour alone leaves the umbrella mark on, whatever it colours.
     #[test]
-    fn choosing_an_accent_is_choosing_a_mark() {
+    fn the_mark_is_what_the_project_wears() {
         let manifest = TemplateManifest::default();
         let mut a = args("demo-app");
         a.identity.accent = Some("kilna".to_string());
         assert_eq!(context(&a, manifest.clone()).unwrap().get("mark"), Some("chosen"));
 
-        // A literal colour counts too - a product may have a mark before it
-        // has a place in the line's registry.
         let mut b = args("demo-app");
         b.identity.accent = Some("#123456".to_string());
-        assert_eq!(context(&b, manifest.clone()).unwrap().get("mark"), Some("chosen"));
+        assert_eq!(context(&b, manifest.clone()).unwrap().get("mark"), Some("placeholder"));
     }
 
     /// The placeholder's own hex, given explicitly, is still the placeholder.

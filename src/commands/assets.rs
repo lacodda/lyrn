@@ -105,6 +105,39 @@ pub fn run(args: AssetsArgs) -> Result<(), Box<dyn Error>> {
     Ok(())
 }
 
+/// A new project wearing a product's mark: its masters in `assets/`, and every
+/// raster the project keeps drawn from them. Read off the disk rather than from
+/// git: `lyrn new` is here before the repository's first commit, and possibly
+/// inside some other repository.
+pub fn wear_product_mark(root: &Path, product: &str) -> Result<(), Box<dyn Error>> {
+    let [l, m, s] = crate::templates::dowel::product_mark(product).ok_or_else(|| format!("the line has no mark for `{product}`"))?;
+    for (path, master) in [(L, l), (M, m), (S, s)] {
+        std::fs::write(root.join(path), master).map_err(|e| format!("{path}: {e}"))?;
+    }
+    let repo = Repo::on_disk(root);
+    let mark = read_mark(root)?;
+    for output in outputs(&repo, &mark) {
+        let file = root.join(&output.path);
+        if let Some(parent) = file.parent() {
+            std::fs::create_dir_all(parent)?;
+        }
+        std::fs::write(&file, &output.bytes).map_err(|e| format!("{}: {e}", output.path))?;
+    }
+    Ok(())
+}
+
+/// A documentation site just added to a repository with masters: its header,
+/// favicon and touch icon are copies of them rather than of the umbrella mark.
+/// A repository with no masters keeps what the form wrote.
+pub fn draw_the_site_s_copies(root: &Path, dir: &str) -> Result<(), Box<dyn Error>> {
+    let Ok(mark) = read_mark(root) else { return Ok(()) };
+    let repo = Repo::on_disk(root);
+    for output in outputs(&repo, &mark).into_iter().filter(|o| o.path.starts_with(&format!("{dir}/"))) {
+        std::fs::write(root.join(&output.path), &output.bytes).map_err(|e| format!("{}: {e}", output.path))?;
+    }
+    Ok(())
+}
+
 /// The four masters a mark's generator writes - `<mark>-L.svg`, `-M`, `-S`
 /// and `-banner` - as the files the canon keeps them in. A mark with no
 /// banner, as the umbrella mark has none, is taken without one.

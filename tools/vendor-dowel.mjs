@@ -30,12 +30,6 @@ const DOWEL = join(ROOT, 'src/templates/dowel')
  * the work; the other half is a `SourceFile` in the form that uses it. */
 const PRIMITIVES = ['button', 'field', 'input', 'panel', 'alert']
 
-/** The mark a project starts with: the line's umbrella mark, at all three
- * levels, until the product has one of its own. S is the favicon - the level
- * for 27px and under - and the three together are the masters in `assets/`
- * that `lyrn assets` draws every icon from. */
-const MARKS = ['lacodda-L.svg', 'lacodda-M.svg', 'lacodda-S.svg']
-
 const version = process.argv[2] ?? readFileSync(join(DOWEL, 'VERSION'), 'utf8').trim()
 if (!/^\d+\.\d+\.\d+$/.test(version)) {
   console.error(`not a version: ${version}`)
@@ -60,7 +54,12 @@ try {
   if (tiles.length === 0) throw new Error(`dowel-ui ${version} carries no marks in dist/marks`)
   // A relative archive name and `-C`: Windows' bsdtar reads `C:\...` as a
   // remote host, and GNU tar does the same with any colon in the path.
-  const wanted = new Set(['package/dist/registry.json', ...MARKS.map((mark) => `package/dist/marks/${mark}`), ...tiles])
+  // Every mark at all three levels: the umbrella mark a project starts with,
+  // and the product's own for `lyrn new --accent <product>`. S is the favicon -
+  // the level for 27px and under - and the three together are the masters in
+  // `assets/` that `lyrn assets` draws every icon from.
+  const masters = tiles.flatMap((tile) => ['L', 'M', 'S'].map((level) => tile.replace(/-S\.svg$/, `-${level}.svg`)))
+  const wanted = new Set(['package/dist/registry.json', ...masters])
   execFileSync('tar', ['-xzf', tarball, ...wanted], { cwd: scratch })
 
   const registry = JSON.parse(readFileSync(join(scratch, 'package/dist/registry.json'), 'utf8'))
@@ -126,10 +125,10 @@ try {
   console.log(`marks: ${marks.length} in the registry`)
 
   mkdirSync(join(DOWEL, 'marks'), { recursive: true })
-  for (const mark of MARKS) {
-    writeFileSync(join(DOWEL, 'marks', mark), readFileSync(join(scratch, 'package/dist/marks', mark)))
+  for (const master of masters) {
+    writeFileSync(join(DOWEL, 'marks', master.replace(/^.*\//, '')), readFileSync(join(scratch, master)))
   }
-  console.log(`marks: ${MARKS.join(', ')}`)
+  console.log(`masters: ${masters.length}, three for each mark`)
 
   writeFileSync(join(DOWEL, 'VERSION'), `${version}\n`)
   console.log(`vendored ${PRIMITIVES.length} primitives from dowel-ui ${version}`)

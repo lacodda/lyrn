@@ -345,6 +345,27 @@ impl Repo {
         }
     }
 
+    /// The files in a directory as they stand, whatever repository it is in: a
+    /// project being generated has no history, and may sit inside another's.
+    pub fn on_disk(root: &Path) -> Repo {
+        let files = {
+            let mut files = walk(root);
+            files.sort();
+            files
+        };
+        let (workflows, broken_workflows) = workflows::load(root, &files);
+        Repo {
+            facts: Facts::read(root).map_err(|e| e.to_string()),
+            git: None,
+            files,
+            workflows,
+            broken_workflows,
+            on_ci: false,
+            root: root.to_path_buf(),
+            texts: OnceCell::new(),
+        }
+    }
+
     /// The tracked files whose name is `name`, at any depth.
     pub fn files_named<'a>(&'a self, name: &'a str) -> impl Iterator<Item = &'a str> + 'a {
         self.files.iter().map(String::as_str).filter(move |path| path.rsplit('/').next() == Some(name))

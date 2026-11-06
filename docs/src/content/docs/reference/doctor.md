@@ -121,7 +121,8 @@ is more than one paragraph of two to four lines.
 
 The project wears a mark of its own. `lyrn.toml` records `mark = "placeholder"`
 while it still wears the line's lambda on graphite, and the doctor warns until
-it says `chosen`.
+it says `chosen`. `chosen` over the umbrella mark's own masters warns too, and
+`--fix` says what `assets/` holds.
 
 ### assets
 
@@ -132,9 +133,10 @@ with only the first fails: one drawing at every size is the defect itself.
 Copies are held to their masters byte for byte - a site's header
 (`src/assets/logo.svg`) to L, every `favicon.svg` to S, the documentation
 site's `apple-touch-icon.png` to the one in `assets/`. Each image inside an
-`.ico` is judged by how much of it is the line's plate, `#1B2126`: M and L
-stand on it, the S tile is filled with the product's colour, so a 48px image
-with no plate in it is the S tile where the plated mark belongs. The images
+`.ico` is read against the levels the masters draw at its size, which tells all
+three apart: L at 32px is as much a finding as the S tile at 48px. An image close
+to none of them was not drawn from them, and is held only by how much of it is
+the line's plate, `#1B2126`, which M and L stand on and the S tile hardly has. The images
 are listed largest first - Tauri takes the first one as the window's icon -
 and an `.ico` without 16, 24, 32, 48 and 256 warns. A touch icon and
 `assets/logo-512.png` are drawn large and must be plated. Templates and test
@@ -192,6 +194,14 @@ pnpm and Node at the majors the templates use. A project with a
 `setup-node` runs the line's Node or later; `pnpm/action-setup` is not asked
 for an older pnpm. No pin at all, a pin ahead of the line and `setup-node`
 without a version warn; `--fix` adds the missing pin.
+
+A `pnpm/action-setup` with a `version:` beside a `packageManager` in the top
+`package.json` fails: the action stops with "Multiple versions of pnpm
+specified", so the job is red before anything runs. `--fix` drops it, and a job
+in a directory of its own names the `package.json` it runs in with
+`package_json_file`. `pnpm install --ignore-workspace` beside a
+`pnpm-workspace.yaml` of the directory's own warns: it reads past the file the
+line keeps pnpm's settings in, so its accepted advisories apply to nothing.
 
 Every pnpm project also holds `node_modules` to its lockfile before a script
 runs: `verifyDepsBeforeRun: install` in its `pnpm-workspace.yaml` (or

@@ -106,7 +106,28 @@ fn a_product_of_the_line_is_given_its_accent() {
 
     let lyrn_toml = fs::read_to_string(dir.path().join("lyrn.toml")).unwrap();
     assert!(lyrn_toml.contains("accent = \"#D64550\""), "{lyrn_toml}");
-    assert!(lyrn_toml.contains("mark = \"chosen\""), "{lyrn_toml}");
+    assert!(lyrn_toml.contains("mark = \"placeholder\""), "no masters in assets/: {lyrn_toml}");
+}
+
+/// `mark` says what is in assets/: masters of its own are a mark of its own,
+/// and the umbrella mark's are not.
+#[test]
+fn the_mark_is_read_from_the_masters_it_keeps() {
+    let own = tempfile::tempdir().unwrap();
+    old_cli(own.path());
+    write(own.path(), "assets/logo.svg", "<svg xmlns=\"http://www.w3.org/2000/svg\"/>\n");
+    adopt(own.path()).assert().success();
+    assert!(fs::read_to_string(own.path().join("lyrn.toml")).unwrap().contains("mark = \"chosen\""));
+
+    let umbrella = tempfile::tempdir().unwrap();
+    old_cli(umbrella.path());
+    write(umbrella.path(), "assets/logo.svg", include_str!("../src/templates/dowel/marks/lacodda-L.svg"));
+    adopt(umbrella.path()).assert().success();
+    assert!(
+        fs::read_to_string(umbrella.path().join("lyrn.toml"))
+            .unwrap()
+            .contains("mark = \"placeholder\"")
+    );
 }
 
 #[test]

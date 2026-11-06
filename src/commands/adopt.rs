@@ -28,6 +28,7 @@ use std::io::IsTerminal;
 use std::path::{Path, PathBuf};
 
 use crate::cli::{AdoptArgs, IdentityArgs};
+use crate::commands::assets;
 use crate::commands::check::site::Site;
 use crate::commands::doctor::{Repo, audit};
 use crate::commands::init::name_of;
@@ -36,7 +37,7 @@ use crate::generate::{self, Plan, PlannedFile};
 use crate::naming;
 use crate::repo::{Facts, already_there, origin_repo};
 use crate::template::{self, Kind};
-use crate::templates::{self, community, docs};
+use crate::templates::{self, community, docs, dowel};
 
 pub fn run(args: AdoptArgs) -> Result<(), Box<dyn Error>> {
     let root = args.path.clone().unwrap_or_else(|| PathBuf::from("."));
@@ -97,7 +98,11 @@ pub fn run(args: AdoptArgs) -> Result<(), Box<dyn Error>> {
         unreachable!("a form's template is a lyrn template; `for_form` refuses anything else")
     };
     let interactive = !args.assume_yes && std::io::stdin().is_terminal();
-    let context = build_context(&wanted, native, &template.origin, interactive)?;
+    let mut context = build_context(&wanted, native, &template.origin, interactive)?;
+    // A repository with masters of its own wears them, whatever its accent.
+    if std::fs::read(root.join(assets::L)).is_ok_and(|master| !dowel::is_umbrella_l(&master)) {
+        context.set("mark", "chosen");
+    }
     let standard = generate::plan_with(&templates::standard_files(&native.files), &native.manifest, &context, &[])?;
 
     let mut missing = Plan::default();

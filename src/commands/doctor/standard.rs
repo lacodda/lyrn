@@ -6,10 +6,11 @@
 
 use std::path::Path;
 
-use super::{Finding, Outcome, Repo, plural, some_of};
+use super::{Finding, Outcome, Repair, Repo, plural, some_of};
+use crate::commands::assets;
 use crate::repo::already_there;
 use crate::template::{self, Kind};
-use crate::templates;
+use crate::templates::{self, dowel};
 
 pub fn check(repo: &Repo) -> Outcome {
     // A place `lyrn upgrade` left for a person, still waiting: the file is
@@ -100,6 +101,19 @@ pub fn check_mark(repo: &Repo) -> Outcome {
         return Outcome::Skip("no lyrn.toml to say".to_string());
     }
     match facts.mark.as_deref() {
+        // `chosen` over the umbrella mark's masters says what is not so.
+        Some("chosen") if repo.read_bytes(assets::L).is_some_and(|master| dowel::is_umbrella_l(&master)) => {
+            let mut finding = Finding::warn("lyrn.toml says `mark = \"chosen\"`, and assets/ holds the line's umbrella mark")
+                .fix("`lyrn assets --from <directory>` takes in a mark of its own; until then `mark = \"placeholder\"`");
+            if let Some(text) = repo.read_text("lyrn.toml") {
+                finding = finding.repair(Repair::new(
+                    "lyrn.toml",
+                    text.replace("mark = \"chosen\"", "mark = \"placeholder\""),
+                    "says what assets/ holds",
+                ));
+            }
+            Outcome::Found(vec![finding])
+        }
         Some("chosen") => Outcome::Pass("a mark of its own".to_string()),
         Some("placeholder") => Outcome::Found(vec![
             Finding::warn("the project wears the line's placeholder mark, not one of its own")
@@ -114,4 +128,37 @@ pub fn check_mark(repo: &Repo) -> Outcome {
 
 fn first_line(text: &str) -> &str {
     text.lines().next().unwrap_or_default()
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    fn repo_with(files: &[(&str, &str)]) -> (tempfile::TempDir, Repo) {
+        let dir = tempfile::tempdir().unwrap();
+        for (path, text) in files {
+            let file = dir.path().join(path);
+            std::fs::create_dir_all(file.parent().unwrap()).unwrap();
+            std::fs::write(file, text).unwrap();
+        }
+        let repo = Repo::on_disk(dir.path());
+        (dir, repo)
+    }
+
+    const CHOSEN: &str = "[project]\nname = \"demo\"\nform = \"cli\"\nmark = \"chosen\"\n";
+    const UMBRELLA: &str = include_str!("../../templates/dowel/marks/lacodda-L.svg");
+
+    /// `chosen` over the umbrella mark says what is not so, and is said back.
+    #[test]
+    fn chosen_over_the_umbrella_mark_is_said_back() {
+        let (_dir, repo) = repo_with(&[("lyrn.toml", CHOSEN), ("assets/logo.svg", UMBRELLA)]);
+        let Outcome::Found(findings) = check_mark(&repo) else {
+            panic!("the umbrella mark passed for a mark of its own");
+        };
+        let repair = findings[0].repair.as_ref().expect("it can be said right by a repair");
+        assert!(String::from_utf8_lossy(&repair.contents).contains("mark = \"placeholder\""));
+
+        let (_dir, repo) = repo_with(&[("lyrn.toml", CHOSEN), ("assets/logo.svg", "<svg/>")]);
+        assert!(matches!(check_mark(&repo), Outcome::Pass(_)));
+    }
 }

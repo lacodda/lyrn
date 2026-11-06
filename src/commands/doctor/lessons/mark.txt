@@ -7,6 +7,9 @@ lyrn records the fact in lyrn.toml when it generates the project, rather than
 leaving the doctor to compare icon bytes against a copy of the placeholder,
 which would go stale the first time the placeholder is redrawn.
 
-Choose the product's mark, put its masters in assets/, and set
-`mark = "chosen"` under [project] in lyrn.toml. This only warns: the mark is a
-matter of taste, not of correctness.
+Choose the product's mark, and `lyrn assets --from <directory>` takes its
+masters into assets/ and sets `mark = "chosen"` under [project] in lyrn.toml.
+`lyrn new --accent <product>` starts on that product's mark; a colour alone
+leaves the umbrella mark on. And `chosen` over the umbrella mark's masters is
+said back, with a repair: the file says what assets/ holds. This only warns: the
+mark is a matter of taste, not of correctness.

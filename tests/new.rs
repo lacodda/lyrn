@@ -221,3 +221,54 @@ fn walk(root: &Path) -> Vec<std::path::PathBuf> {
     }
     found
 }
+
+/// `--accent <product>` is that product's identity whole: its masters, and every
+/// raster drawn from them, before the first commit.
+#[test]
+fn a_product_of_the_line_brings_its_mark() {
+    let (_dir, root) = generate("demo-app", &["--accent", "kilna"]);
+    let tile = include_str!("../src/templates/dowel/marks/kilna-S.svg");
+
+    assert_eq!(fs::read_to_string(root.join("assets/logo-s.svg")).unwrap(), tile);
+    assert_eq!(
+        fs::read_to_string(root.join("public/favicon.svg")).unwrap(),
+        tile,
+        "the favicon is still the umbrella's"
+    );
+    assert_eq!(
+        fs::read_to_string(root.join("assets/logo.svg")).unwrap(),
+        include_str!("../src/templates/dowel/marks/kilna-L.svg")
+    );
+    assert!(root.join("assets/logo-512.png").is_file(), "the rasters were not drawn");
+    assert!(!root.join("assets/banner.svg").exists(), "the banner says the product's name");
+    assert!(fs::read_to_string(root.join("lyrn.toml")).unwrap().contains("mark = \"chosen\""));
+}
+
+/// A colour colours the palette and draws nothing: the umbrella mark stays on,
+/// and lyrn.toml says so.
+#[test]
+fn a_colour_alone_leaves_the_umbrella_mark_on() {
+    let (_dir, root) = generate("demo-app", &["--accent", "#a1b2c3"]);
+    assert_eq!(
+        fs::read_to_string(root.join("assets/logo-s.svg")).unwrap(),
+        include_str!("../src/templates/dowel/marks/lacodda-S.svg")
+    );
+    assert!(fs::read_to_string(root.join("lyrn.toml")).unwrap().contains("mark = \"placeholder\""));
+}
+
+/// A plugin is known by its executable, and a product's casing cannot be read
+/// from a slug: `gitlab` is not `Gitlab`, and neither is it GitLab.
+#[test]
+fn a_plugin_goes_by_its_executable_s_name() {
+    let (_dir, root) = generate("gitlab", &["--form", "plugin", "--host", "kasl"]);
+    let readme = fs::read_to_string(root.join("README.md")).unwrap();
+    assert!(readme.starts_with("# kasl-plugin-gitlab\n"), "{readme}");
+    assert!(readme.contains("**Run gitlab**"), "{readme}");
+    assert!(readme.contains("beside its own executable"), "kasl's lookup is behind:\n{readme}");
+    let contributing = fs::read_to_string(root.join("CONTRIBUTING.md")).unwrap();
+    assert!(contributing.starts_with("# Contributing to kasl-plugin-gitlab\n"), "{contributing}");
+    for file in ["README.md", "CONTRIBUTING.md", "llms.txt", "src/main.rs"] {
+        let text = fs::read_to_string(root.join(file)).unwrap();
+        assert!(!text.contains("Gitlab"), "{file} title-cased the slug:\n{text}");
+    }
+}
