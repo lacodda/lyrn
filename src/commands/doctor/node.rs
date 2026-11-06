@@ -176,6 +176,8 @@ pub fn check(repo: &Repo) -> Outcome {
             .fix("drop `version:` and let pnpm/action-setup read packageManager"),
         );
     }
+    findings.extend(pnpm_named_twice(repo));
+    findings.extend(ignored_workspaces(repo));
     if !unpinned.is_empty() {
         findings.push(
             Finding::warn(format!(
@@ -218,6 +220,148 @@ pub fn check(repo: &Repo) -> Outcome {
             plural(lockfiles.len().max(1), "project", "projects")
         )
     })
+}
+
+/// `pnpm/action-setup` with a `version:` where the action also reads one from a
+/// package.json: it stops with "Multiple versions of pnpm specified", and the
+/// job goes red. The action reads the top of the repository's package.json
+/// wherever the job runs, so a project's own version is named by its path.
+fn pnpm_named_twice(repo: &Repo) -> Vec<Finding> {
+    let top_names_it = repo
+        .read_text("package.json")
+        .and_then(|t| serde_json::from_str::<serde_json::Value>(&t).ok())
+        .is_some_and(|json| json.get("packageManager").is_some());
+    if !top_names_it {
+        return Vec::new();
+    }
+    let mut findings = Vec::new();
+    for workflow in &repo.workflows {
+        let mut repaired = workflow.text.clone();
+        let mut twice = 0;
+        for job in workflow.jobs() {
+            for step in &job.steps {
+                if !step.uses.is_some_and(|u| u.starts_with("pnpm/action-setup@")) || step.input("version").is_none() {
+                    continue;
+                }
+                twice += 1;
+                let dir = step.working_directory.or(job.working_directory).unwrap_or(".");
+                repaired = without_pnpm_version(&repaired, dir);
+            }
+        }
+        if twice == 0 {
+            continue;
+        }
+        let mut finding = Finding::fail(format!(
+            "{} names a pnpm version beside the packageManager of package.json: pnpm/action-setup stops with \"Multiple versions of pnpm specified\"",
+            workflow.name()
+        ))
+        .fix("drop `version:`; a job in a directory of its own says `package_json_file: <dir>/package.json`");
+        if repaired != workflow.text {
+            finding = finding.repair(Repair::new(
+                workflow.file.clone(),
+                repaired,
+                "reads pnpm's version from the package.json the job runs in",
+            ));
+        }
+        findings.push(finding);
+    }
+    findings
+}
+
+/// The workflow with the first `version:` under a `pnpm/action-setup` step gone:
+/// for a job at the top the action reads package.json by itself, and for one in
+/// `dir` it is told where. A `with:` left empty goes too.
+fn without_pnpm_version(text: &str, dir: &str) -> String {
+    let newline = newline_of(text);
+    let lines: Vec<&str> = text.split_inclusive('\n').collect();
+    let setup = Regex::new(r"^\s*(-\s+)?uses:\s*pnpm/action-setup@").expect("a valid pattern");
+    let version = Regex::new(r"^(\s+)version:").expect("a valid pattern");
+    let mut out = String::with_capacity(text.len());
+    let mut i = 0;
+    let mut done = false;
+    while i < lines.len() {
+        let line = lines[i];
+        out.push_str(line);
+        i += 1;
+        if done || !setup.is_match(line) {
+            continue;
+        }
+        // The step's `with:` right below it, and its entries.
+        let Some(with) = lines.get(i).filter(|l| l.trim_start().starts_with("with:")) else {
+            continue;
+        };
+        let mut entries: Vec<&str> = Vec::new();
+        let mut j = i + 1;
+        let with_depth = with.len() - with.trim_start().len();
+        while let Some(entry) = lines.get(j) {
+            let depth = entry.len() - entry.trim_start().len();
+            if entry.trim().is_empty() || depth <= with_depth {
+                break;
+            }
+            entries.push(entry);
+            j += 1;
+        }
+        let Some(at) = entries.iter().position(|e| version.is_match(e)) else {
+            continue;
+        };
+        let indent = version.captures(entries[at]).map(|c| c[1].to_string()).unwrap_or_default();
+        let replacement = (dir != ".").then(|| format!("{indent}package_json_file: {dir}/package.json{newline}"));
+        let kept: Vec<String> = entries
+            .iter()
+            .enumerate()
+            .filter_map(|(k, e)| if k == at { replacement.clone() } else { Some((*e).to_string()) })
+            .collect();
+        if !kept.is_empty() {
+            out.push_str(with);
+            out.extend(kept);
+        }
+        i = j;
+        done = true;
+    }
+    if done && out != text { without_pnpm_version(&out, dir) } else { out }
+}
+
+/// `pnpm install --ignore-workspace` in a directory with a pnpm-workspace.yaml
+/// of its own: that file is where the line keeps pnpm's settings, and the flag
+/// makes pnpm read past it, so its accepted advisories and its verification
+/// apply to nothing.
+fn ignored_workspaces(repo: &Repo) -> Vec<Finding> {
+    let mut findings = Vec::new();
+    for workflow in &repo.workflows {
+        let mut repaired = workflow.text.clone();
+        let mut ignoring = Vec::new();
+        for job in workflow.jobs() {
+            for step in &job.steps {
+                let Some(script) = step.run else { continue };
+                if !script.contains("pnpm install") || !script.contains("--ignore-workspace") {
+                    continue;
+                }
+                let dir = step.working_directory.or(job.working_directory).unwrap_or(".");
+                let settings = if dir == "." {
+                    "pnpm-workspace.yaml".to_string()
+                } else {
+                    format!("{dir}/pnpm-workspace.yaml")
+                };
+                if repo.has_file(&settings) {
+                    ignoring.push(settings);
+                    repaired = repaired.replace(" --ignore-workspace", "");
+                }
+            }
+        }
+        if ignoring.is_empty() {
+            continue;
+        }
+        findings.push(
+            Finding::warn(format!(
+                "{} installs with --ignore-workspace beside {}: its settings apply to nothing",
+                workflow.name(),
+                some_of(&ignoring, 2)
+            ))
+            .fix("drop `--ignore-workspace`: the directory is a workspace of its own")
+            .repair(Repair::new(workflow.file.clone(), repaired, "lets pnpm read the directory's own settings")),
+        );
+    }
+    findings
 }
 
 /// The manifest with `packageManager` as its last field, written the way the
@@ -354,6 +498,77 @@ pub(super) fn major(version: &str) -> Option<u32> {
 #[cfg(test)]
 mod tests {
     use super::*;
+
+    fn repo_with(files: &[(&str, &str)]) -> (tempfile::TempDir, Repo) {
+        let dir = tempfile::tempdir().unwrap();
+        for (path, text) in files {
+            let file = dir.path().join(path);
+            std::fs::create_dir_all(file.parent().unwrap()).unwrap();
+            std::fs::write(file, text).unwrap();
+        }
+        let repo = Repo::on_disk(dir.path());
+        (dir, repo)
+    }
+
+    const NAMED_TWICE: &str = "jobs:\n  site:\n    runs-on: ubuntu-latest\n    defaults:\n      run:\n        working-directory: docs\n    steps:\n      - uses: pnpm/action-setup@v6\n        with:\n          version: 10\n      - run: pnpm install --ignore-workspace\n";
+
+    /// Red on furca's release commit: `version:` beside a top package.json that
+    /// names packageManager stops the action before anything runs.
+    #[test]
+    fn a_pnpm_version_beside_package_manager_is_a_failure_with_a_repair() {
+        let (_dir, repo) = repo_with(&[
+            ("package.json", "{\"packageManager\": \"pnpm@10.34.9\"}\n"),
+            (".github/workflows/docs-audit.yml", NAMED_TWICE),
+        ]);
+        let findings = pnpm_named_twice(&repo);
+        assert_eq!(findings.len(), 1, "{findings:?}");
+        let repaired = String::from_utf8_lossy(&findings[0].repair.as_ref().unwrap().contents).into_owned();
+        assert!(repaired.contains("package_json_file: docs/package.json"), "{repaired}");
+        assert!(!repaired.contains("version:"), "{repaired}");
+
+        // With no packageManager at the top there is one version, and it stands.
+        let (_dir, repo) = repo_with(&[("package.json", "{}\n"), (".github/workflows/docs-audit.yml", NAMED_TWICE)]);
+        assert!(pnpm_named_twice(&repo).is_empty());
+    }
+
+    /// `--ignore-workspace` is said about only where it hides something.
+    #[test]
+    fn ignoring_a_workspace_the_directory_has_is_named() {
+        let (_dir, repo) = repo_with(&[
+            ("docs/pnpm-workspace.yaml", "verifyDepsBeforeRun: install\n"),
+            (".github/workflows/docs.yml", NAMED_TWICE),
+        ]);
+        let findings = ignored_workspaces(&repo);
+        assert_eq!(findings.len(), 1, "{findings:?}");
+        assert!(!String::from_utf8_lossy(&findings[0].repair.as_ref().unwrap().contents).contains("--ignore-workspace"));
+
+        let (_dir, repo) = repo_with(&[(".github/workflows/docs.yml", NAMED_TWICE)]);
+        assert!(ignored_workspaces(&repo).is_empty());
+    }
+
+    #[test]
+    fn a_pnpm_version_gives_way_to_the_package_json_it_runs_in() {
+        let at_the_top = "      - uses: pnpm/action-setup@v6\n        with:\n          version: 10\n      - run: pnpm test\n";
+        assert_eq!(
+            without_pnpm_version(at_the_top, "."),
+            "      - uses: pnpm/action-setup@v6\n      - run: pnpm test\n"
+        );
+
+        let in_docs = "      - uses: pnpm/action-setup@v6\n        with:\n          version: 10\n          run_install: false\n      - run: pnpm test\n";
+        assert_eq!(
+            without_pnpm_version(in_docs, "docs"),
+            "      - uses: pnpm/action-setup@v6\n        with:\n          package_json_file: docs/package.json\n          run_install: false\n      - run: pnpm test\n"
+        );
+
+        let crlf = "      - uses: pnpm/action-setup@v6\r\n        with:\r\n          version: 10\r\n";
+        assert_eq!(
+            without_pnpm_version(crlf, "docs"),
+            "      - uses: pnpm/action-setup@v6\r\n        with:\r\n          package_json_file: docs/package.json\r\n"
+        );
+
+        let settled = "      - uses: pnpm/action-setup@v6\n        with:\n          package_json_file: docs/package.json\n";
+        assert_eq!(without_pnpm_version(settled, "docs"), settled);
+    }
 
     /// If this fails, the templates stopped saying what the rule reads.
     #[test]

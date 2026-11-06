@@ -9,6 +9,13 @@ pnpm 11 line would not install on Windows for months, while `pnpm self-update`
 reported success and rewrote packageManager - breaks every other machine that
 builds the project.
 
+A pnpm version in a workflow beside a `packageManager` in the top package.json
+stops pnpm/action-setup with "Multiple versions of pnpm specified", so the job
+is red before anything runs; a job in a directory of its own names the
+package.json it runs in with `package_json_file`. And `pnpm install
+--ignore-workspace` beside a pnpm-workspace.yaml of the directory's own reads
+past the file the line keeps pnpm's settings in.
+
 A third is about the runner rather than the project. `node-version: 22` is
 whatever 22.x the runner has cached, and that lags: Astro 7.4.2 asked for
 Node 22.23.4 while GitHub's runners had 22.23.3, and every docs build of the
