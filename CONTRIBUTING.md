@@ -51,18 +51,31 @@ index - goes into `FROZEN` in `src/standard/mod.rs` with the release commit,
 and the test refuses any change to it from then on. Starting the next version
 without that line is refused too, with the line to add.
 
+## The README's transcripts
+
+The console blocks marked `<!-- snap -->` in the README are what this commit's
+build prints, taken in a scratch directory by the command itself. After a change
+to what they show:
+
+```console
+$ cargo run -- readme snap
+```
+
+then read the diff before committing it. `--check` says what no longer matches
+and writes nothing.
+
 ## Where things live
 
 | Path | What lives there |
 | --- | --- |
 | `src/cli.rs` | The command surface: every flag and subcommand |
-| `src/commands/` | Each command: `new`, `init`, `adopt`, `upgrade`, `doctor`, `check`, `ci`, `stage`, `status`, `versions`, `deps`, `template` |
+| `src/commands/` | Each command: `new`, `init`, `adopt`, `upgrade`, `doctor`, `check`, `ci`, `stage`, `status`, `versions`, `deps`, `adr`, `docs`, `readme`, `changelog`, `template` |
 | `src/standard/` | Every version of the standard: what it changed, and its templates, which `upgrade` merges from |
 | `src/workflows/` | GitHub workflows read as GitHub reads them: jobs, matrices, triggers, expressions |
 | `src/rigger.rs`, `src/registries.rs` | What lyrn asks rigger's record, and crates.io, npm and GitHub |
 | `src/templates/` | The built-in forms: one module and one directory of template files each |
 | `src/templates/community.rs` | What every repository a form starts carries, written once |
-| `src/templates/dowel/` | Copies taken from a published dowel-ui: primitives, accents, marks |
+| `src/templates/dowel/` | Copies taken from a published dowel-ui: primitives, accents, every product's masters |
 | `src/mark/` | The mark drawn: levels, the `.ico`, the social preview, and the font it is set in |
 | `src/template/` | Templates from outside: a directory, a GitHub tag, cargo-generate |
 | `src/generate.rs`, `src/render.rs` | From a template and a context to files on disk |

@@ -16,7 +16,7 @@
 
 mod copy;
 mod run;
-mod shell;
+pub mod shell;
 
 use std::error::Error;
 use std::path::{Path, PathBuf};

@@ -24,6 +24,7 @@ made, and made the same way for every product on the line.
 
 ## A day in the life
 
+<!-- snap -->
 ```console
 $ lyrn new demo-app --accent kilna --yes
 Created 48 files in `demo-app`.
@@ -37,6 +38,7 @@ Next:
   pnpm dev
 ```
 
+<!-- snap: keep ^(> eslint|registry:| *Test Files| *Tests) -->
 ```console
 $ cd demo-app && pnpm lint
 > eslint . && tsc --noEmit && pnpm registry && pnpm test
@@ -49,6 +51,7 @@ registry: 1 copy matches dowel-ui 0.40.0
 That gate is the same one CI runs, so a green terminal means a green pull
 request.
 
+<!-- snap -->
 ```console
 $ lyrn doctor
 lyrn doctor: ~/demo-app, a `spa` project on standard 2026.11.3
@@ -111,6 +114,12 @@ $ lyrn status                    # where the repository stands, on one screen
 $ lyrn versions                  # where the version is written, and where it went
 $ lyrn deps                      # how old the stack is, and which dependencies are behind
 $ lyrn msrv                      # the oldest Rust the code builds on, measured and written
+$ lyrn adr new <title>           # a decision written down, under the next number of the log
+$ lyrn docs ref [command]        # a command's page, from its own --help
+$ lyrn docs check                # the site held to the program: every command, flag and link
+$ lyrn docs dev                  # the site served as you write it
+$ lyrn readme snap               # the README's marked transcripts, taken again from the build
+$ lyrn changelog --screens       # a version's images, into its section of the changelog
 $ lyrn forms                     # the forms, their add-ons, and your own templates
 $ lyrn template check [path]     # hold a template to what lyrn accepts
 ```
@@ -147,7 +156,8 @@ greys carry, and what colour text has to be on an accent fill:
 ```
 
 `--accent` takes either a colour or the name of a product on the line, in which
-case its mark's colour is used.
+case the project wears that product's mark too; a colour alone leaves the line's
+umbrella mark on until the project has one of its own.
 
 ## Forms
 
