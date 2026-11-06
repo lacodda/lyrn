@@ -1,5 +1,6 @@
 import { StrictMode } from 'react'
 import { createRoot } from 'react-dom/client'
+import { overlayScrollbars } from 'dowel-ui'
 {{#i18n}}
 import '@/i18n'
 {{/i18n}}
@@ -10,6 +11,10 @@ const container = document.getElementById('root')
 if (!container) {
   throw new Error('The #root element is missing from index.html')
 }
+
+// The window asks WebView2 for its overlay bar in tauri.conf.json; this measures
+// the bar it got, and the theme stands aside when it takes no width.
+overlayScrollbars()
 
 createRoot(container).render(
   <StrictMode>
