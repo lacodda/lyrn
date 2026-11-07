@@ -68,6 +68,14 @@ pub fn build_context(wanted: &Wanted, native: &Native, origin: &Origin, interact
         }
         (None, false) => None,
     };
+    // The plugin form offers every add-on some host's protocol has; which of
+    // them this host asks for is the host's to say. Generating `source` for a
+    // host that never sends a request would write code nothing ever calls.
+    if let Some(host) = host {
+        for addon in args.with.iter().filter(|a| Form::Plugin.addons().iter().any(|o| o.as_str() == a.as_str())) {
+            host.takes(addon)?;
+        }
+    }
 
     let asked = match &identity.accent {
         Some(value) => Some(value.clone()),
@@ -187,34 +195,53 @@ pub fn build_context(wanted: &Wanted, native: &Native, origin: &Origin, interact
     }
 
     if let Some(host) = host {
-        let target = host.primary_target();
         context
             .set("host", host.name)
             .set("prefix", host.prefix())
             .set("host_about", host.about)
             .set("host_lookup", host.lookup)
             .set("protocol_version", host.protocol_version.to_string())
-            .set("subject_about", host.subject)
-            .set("meta_about", host.meta)
-            .set("target", target.key)
-            .set("target_about", target.about)
-            // Every point the host offers, for the generated protocol test to
-            // hold a command against. Written out as the Rust literal the test
-            // reads, so the test needs no parsing of its own.
-            .set(
-                "target_list",
-                host.targets.iter().map(|t| format!("\"{}\"", t.key)).collect::<Vec<_>>().join(", "),
-            )
-            .set("command_key", "run")
             // The slug as it is: a product's casing - GitLab - cannot be read
             // from `gitlab`, and a plugin is known by its executable's name.
-            .set("command_label", format!("Run {}", args.name))
             .set("title", format!("{}{}", host.prefix(), args.name))
             .set("title_json", naming::json_string(&format!("{}{}", host.prefix(), args.name)))
             .set("bin_name", format!("{}{}", host.prefix(), args.name));
+        match &host.shape {
+            host::Shape::Command(commands) => {
+                let target = commands.primary_target();
+                context
+                    .set("subject_about", commands.subject)
+                    .set("meta_about", commands.meta)
+                    .set("target", target.key)
+                    .set("target_about", target.about)
+                    // Every point the host offers, for the generated protocol
+                    // test to hold a command against. Written out as the Rust
+                    // literal the test reads, so the test needs no parsing.
+                    .set("target_list", quoted(commands.targets))
+                    .set("command_key", "run")
+                    .set("command_label", format!("Run {}", args.name));
+            }
+            host::Shape::Transport(transport) => {
+                context
+                    .set("operation_list", quoted(transport.operations))
+                    .set("request_about", transport.request)
+                    // Where the generated transport keeps a copy, the way
+                    // sefy's own sftp transport is told: an environment
+                    // variable named after the host and the plugin.
+                    .set(
+                        "destination_env",
+                        format!("{}_{}_DESTINATION", host.name.to_uppercase(), args.name.to_uppercase().replace('-', "_")),
+                    );
+            }
+        }
     }
 
     Ok(context)
+}
+
+/// The keys of a host's targets or operations as the items of a Rust array.
+fn quoted(targets: &[host::Target]) -> String {
+    targets.iter().map(|t| format!("\"{}\"", t.key)).collect::<Vec<_>>().join(", ")
 }
 
 /// The template a project is generated from: the one `--template` names, or
@@ -222,7 +249,12 @@ pub fn build_context(wanted: &Wanted, native: &Native, origin: &Origin, interact
 pub fn template_for(project: &ProjectArgs) -> Result<Template, Box<dyn Error>> {
     match &project.template {
         Some(spec) => template::resolve(spec),
-        None => template::for_form(project.form.unwrap_or(Form::Spa)),
+        // A host this lyrn does not know is refused with its reason when the
+        // context is built; the template is the form's own until then.
+        None => template::for_host(
+            project.form.unwrap_or(Form::Spa),
+            project.host.as_deref().and_then(|name| host::find(name).ok()),
+        ),
     }
 }
 

@@ -1,0 +1,167 @@
+//! The wire between {{ host }} and this transport.
+//!
+//! Both sides of one call: a request read from stdin, a report written to
+//! stdout. Kept in its own module so that the transport's own work is a
+//! function of a value rather than a function of a process.
+
+use std::path::PathBuf;
+
+use serde::{Deserialize, Serialize};
+
+/// What {{ host }} can ask a transport to do.
+///
+/// A closed set, as the host reads it: a manifest declaring anything else is
+/// unreadable to the host, and the transport is listed with that reason.
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Deserialize)]
+#[serde(rename_all = "snake_case")]
+pub enum Operation {
+    /// Read the sealed file and keep it under the request's name.
+    Push,
+    /// Write the copy kept under the request's name to the file.
+    Pull,
+}
+
+impl Operation {
+    /// Every operation this transport declares, in the order the manifest
+    /// lists them.
+    pub const ALL: &'static [Operation] = &[Operation::Push, Operation::Pull];
+
+    /// The operation as the wire spells it.
+    pub fn as_str(self) -> &'static str {
+        match self {
+            Operation::Push => "push",
+            Operation::Pull => "pull",
+        }
+    }
+}
+
+/// What {{ host }} sends when an operation runs: {{ request_about }}.
+#[derive(Debug, Clone, Deserialize)]
+pub struct Request {
+    /// What to do.
+    pub operation: Operation,
+    /// The local path of the sealed file: read it to push, write it to pull.
+    pub file: PathBuf,
+    /// What the remote copy is called. The local file's name is a poor handle
+    /// for it: a sealed file is named like anything else on purpose, and two
+    /// machines' copies would collide under it.
+    pub name: String,
+}
+
+impl Request {
+    /// Read one request from a reader, usually stdin.
+    pub fn read(mut source: impl std::io::Read) -> Result<Self, String> {
+        let mut input = String::new();
+        source.read_to_string(&mut input).map_err(|error| format!("could not read the request: {error}"))?;
+
+        serde_json::from_str(&input).map_err(|error| format!("could not read the request: {error}"))
+    }
+}
+
+/// The name a copy is kept under, when it can be one: a single plain name,
+/// never a path. A name that reached outside the place the copies are kept -
+/// `../somewhere`, an absolute path - would let a request write anywhere the
+/// transport can.
+pub fn remote_name(name: &str) -> Result<&str, String> {
+    let plain = !name.is_empty() && !name.starts_with('.') && !name.chars().any(|c| matches!(c, '/' | '\\' | ':') || c.is_control());
+    if plain { Ok(name) } else { Err(format!("`{name}` cannot name a copy: use a plain name without a slash or a leading dot")) }
+}
+
+/// What this transport sends back.
+///
+/// Both fields are optional and omitted when empty: silence is success with
+/// nothing to say, and the host treats it as such.
+#[derive(Debug, Default, Serialize)]
+pub struct Report {
+    /// One line shown to the person.
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub message: Option<String>,
+    /// Failure reported without a non-zero exit: the transport worked, the
+    /// answer is that it could not.
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub error: Option<String>,
+}
+
+impl Report {
+    /// A report of success, with a line to show.
+    pub fn message(text: impl Into<String>) -> Self {
+        Self { message: Some(text.into()), error: None }
+    }
+
+    /// A report of failure, in the transport's own words.
+    pub fn error(text: impl Into<String>) -> Self {
+        Self { message: None, error: Some(text.into()) }
+    }
+}
+
+/// Write the report to stdout.
+pub fn emit(report: &Report) {
+    match serde_json::to_string(report) {
+        Ok(json) => print!("{json}"),
+        Err(error) => fail(&format!("could not write the report: {error}")),
+    }
+}
+
+/// Stop with a reason on stderr. The host shows it to the person.
+pub fn fail(message: &str) -> ! {
+    eprintln!("{message}");
+    std::process::exit(1);
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    #[test]
+    fn a_request_is_read_from_the_bytes_the_host_writes() {
+        let raw = r#"{"operation":"push","file":"sealed.bin","name":"vault"}"#;
+
+        let request = Request::read(raw.as_bytes()).unwrap();
+
+        assert_eq!(request.operation, Operation::Push);
+        assert_eq!(request.file, PathBuf::from("sealed.bin"));
+        assert_eq!(request.name, "vault");
+    }
+
+    #[test]
+    fn an_operation_the_host_does_not_have_is_refused() {
+        let raw = r#"{"operation":"teleport","file":"sealed.bin","name":"vault"}"#;
+
+        assert!(Request::read(raw.as_bytes()).is_err());
+    }
+
+    #[test]
+    fn nonsense_on_stdin_is_refused_rather_than_guessed() {
+        assert!(Request::read(b"not json at all".as_slice()).is_err());
+    }
+
+    #[test]
+    fn a_name_is_a_name_and_never_a_path() {
+        assert_eq!(remote_name("vault"), Ok("vault"));
+        assert_eq!(remote_name("work-laptop.v2"), Ok("work-laptop.v2"));
+        for name in ["", ".hidden", "..", "../vault", "a/b", "a\\b", "C:vault", "line\nbreak"] {
+            assert!(remote_name(name).is_err(), "`{name}` was taken as a name");
+        }
+    }
+
+    #[test]
+    fn an_empty_report_serialises_to_an_empty_object() {
+        // The host reads "{}" as success with nothing to say. Serialising
+        // nulls instead would hand it fields it has to tell from absent ones.
+        assert_eq!(serde_json::to_string(&Report::default()).unwrap(), "{}");
+    }
+
+    #[test]
+    fn a_report_says_one_thing() {
+        assert_eq!(serde_json::to_string(&Report::message("pushed")).unwrap(), r#"{"message":"pushed"}"#);
+        assert_eq!(serde_json::to_string(&Report::error("no server")).unwrap(), r#"{"error":"no server"}"#);
+    }
+
+    #[test]
+    fn every_operation_is_spelled_as_the_wire_spells_it() {
+        for operation in Operation::ALL {
+            let raw = serde_json::json!({"operation": operation.as_str(), "file": "f", "name": "n"}).to_string();
+            assert_eq!(Request::read(raw.as_bytes()).unwrap().operation, *operation);
+        }
+    }
+}

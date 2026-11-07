@@ -272,3 +272,79 @@ fn a_plugin_goes_by_its_executable_s_name() {
         assert!(!text.contains("Gitlab"), "{file} title-cased the slug:\n{text}");
     }
 }
+
+/// sefy hands a plugin a sealed file to carry, not a subject to run a command
+/// on: the form writes a transport, with the operations sefy reads and none of
+/// a command plugin's words.
+#[test]
+fn a_plugin_for_sefy_is_a_transport() {
+    let (_dir, root) = generate("dropbox", &["--form", "plugin", "--host", "sefy", "--repo", "owner/sefy-plugin-dropbox"]);
+    let readme = fs::read_to_string(root.join("README.md")).unwrap();
+    assert!(readme.starts_with("# sefy-plugin-dropbox\n"), "{readme}");
+    assert!(readme.contains("SEFY_DROPBOX_DESTINATION"), "{readme}");
+    assert!(readme.contains("\"operations\": [\"push\", \"pull\"]"), "{readme}");
+
+    let main = fs::read_to_string(root.join("src/main.rs")).unwrap();
+    assert!(main.contains("\"operations\""), "{main}");
+    assert!(!main.contains("\"commands\""), "a transport declared a command:\n{main}");
+    assert!(main.contains("const DESTINATION: &str = \"SEFY_DROPBOX_DESTINATION\";"), "{main}");
+    let test = fs::read_to_string(root.join("tests/protocol.rs")).unwrap();
+    assert!(test.contains("const HOST_OPERATIONS: &[&str] = &[\"push\", \"pull\"];"), "{test}");
+
+    for entry in walk(&root) {
+        let relative = entry.strip_prefix(&root).unwrap();
+        if relative == Path::new("cliff.toml") || relative.starts_with(".github/workflows") {
+            continue;
+        }
+        let Ok(contents) = fs::read_to_string(&entry) else { continue };
+        assert!(
+            !contents.contains("{{"),
+            "{} has an unrendered placeholder or a section marker",
+            relative.display()
+        );
+    }
+}
+
+/// `--with source` writes the rest of kasl's protocol: the requests, the
+/// source's own work and the test that asks every request as kasl does.
+#[test]
+fn a_kasl_plugin_with_source_answers_the_requests() {
+    let (_dir, root) = generate(
+        "tracker",
+        &["--form", "plugin", "--host", "kasl", "--with", "source", "--repo", "owner/kasl-plugin-tracker"],
+    );
+    for file in ["src/requests.rs", "src/source.rs", "tests/requests.rs"] {
+        assert!(root.join(file).is_file(), "{file} was not written");
+    }
+    let main = fs::read_to_string(root.join("src/main.rs")).unwrap();
+    assert!(main.contains("mod requests;") && main.contains("mod source;"), "{main}");
+    assert!(main.contains("\"requests\": requests::ANSWERED,"), "{main}");
+    assert!(main.contains("\"commands\""), "the source lost the command every plugin has:\n{main}");
+    let contributing = fs::read_to_string(root.join("CONTRIBUTING.md")).unwrap();
+    assert!(contributing.contains("`src/source.rs`"), "{contributing}");
+
+    let (_plain_dir, plain) = generate("tracker", &["--form", "plugin", "--host", "kasl", "--repo", "owner/kasl-plugin-tracker"]);
+    assert!(!plain.join("src/requests.rs").exists(), "the requests came without the add-on");
+    assert!(!fs::read_to_string(plain.join("src/main.rs")).unwrap().contains("requests"));
+}
+
+/// The add-on is part of one host's protocol: asking for it with another host
+/// is refused with who takes it, rather than writing code nothing calls.
+#[test]
+fn source_is_refused_for_a_host_that_asks_no_requests() {
+    for host in ["kilna", "sefy"] {
+        let dir = tempfile::tempdir().unwrap();
+        let output = lyrn()
+            .args(["new", "demo", "--yes", "--no-hooks", "--form", "plugin", "--host", host, "--with", "source"])
+            .arg("--path")
+            .arg(dir.path().join("demo"))
+            .assert()
+            .failure()
+            .get_output()
+            .stderr
+            .clone();
+        let stderr = String::from_utf8_lossy(&output);
+        assert!(stderr.contains("a kasl plugin"), "{host}: {stderr}");
+        assert!(!dir.path().join("demo").exists(), "{host}: a refused project was written");
+    }
+}

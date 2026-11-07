@@ -144,12 +144,23 @@ project writes the translation runtime and puts the locale gate into
 ## The host
 
 `--form plugin` is generated against the application the plugin extends, and
-`--host` names it. There is no default: the host decides the protocol version
-the plugin declares, the point it extends and the name it is discovered by, so
-a guess would produce a plugin nothing runs.
+`--host` names it. There is no default: the host decides what the plugin is -
+a command run on something the host hands over, or a transport for a file -
+the protocol version it declares, and the name it is discovered by, so a guess
+would produce a plugin nothing runs.
 
 ```console
 $ lyrn new wordcount --form plugin --host kilna
+$ lyrn new dropbox --form plugin --host sefy
+```
+
+An add-on of the plugin form is part of one host's protocol, and asking for it
+with another host is refused with who takes it:
+
+```console
+$ lyrn new gitlab --form plugin --host kasl --with source
+$ lyrn new demo --form plugin --host kilna --with source
+error: `--with source` is part of the protocol of a kasl plugin; kilna asks its plugins nothing beyond the call every plugin answers
 ```
 
 `lyrn forms` lists the hosts on offer. They are the applications that accept
@@ -158,7 +169,7 @@ is `--host` on a form that has no host:
 
 ```console
 $ lyrn new demo --form plugin --host turnout
-error: `turnout` does not accept plugins yet; when it does it will be listed here (known: kilna, kasl)
+error: `turnout` does not accept plugins yet; when it does it will be listed here (known: kilna, kasl, sefy)
 
 $ lyrn new demo --form cli --host kilna
 error: the `cli` form is not generated against a host, so `--host kilna` means nothing

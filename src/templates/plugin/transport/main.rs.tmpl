@@ -1,0 +1,172 @@
+//! {{ title }}: a transport for {{ host }}, {{ host_about }}.
+//!
+//! Two calls, following the line's plugin convention:
+//!
+//!   {{ bin_name }} --manifest   -> what this transport does, as JSON on stdout
+//!   {{ bin_name }} run          -> a request as JSON on stdin, a report on stdout
+//!
+//! {{ host }} hands it {{ request_about }}. It lives for the duration of one
+//! call and holds no state. Nothing here starts a service.
+//!
+//! # Configuration
+//!
+//! `{{ destination_env }}` names the directory the copies are kept in. This is
+//! the place to start: replace the directory with wherever your transport
+//! carries the file - a server, a bucket, a repository - and keep the rest.
+
+mod protocol;
+
+use std::path::{Path, PathBuf};
+
+use protocol::{Operation, Report, Request};
+
+/// The protocol version {{ host }} speaks. A transport declaring anything else
+/// is listed by the host and refused, with the mismatch shown - so the number
+/// is a promise, not a decoration.
+const PROTOCOL_VERSION: u32 = {{ protocol_version }};
+
+/// The environment variable that says where the copies live.
+const DESTINATION: &str = "{{ destination_env }}";
+
+fn main() {
+    let argument = std::env::args().nth(1).unwrap_or_default();
+
+    match argument.as_str() {
+        "--manifest" => print!("{}", manifest()),
+        "run" => run(),
+        other => {
+            // A transport that cannot be understood says so on stderr and
+            // exits non-zero: the host shows the reason rather than hiding the
+            // transport, because one that is silently missing is
+            // indistinguishable from one that was never installed.
+            eprintln!("unknown argument `{other}`; expected --manifest or run");
+            std::process::exit(2);
+        }
+    }
+}
+
+/// What this transport tells {{ host }} about itself.
+///
+/// The operations are declared rather than tried: {{ host }} refuses one this
+/// transport did not declare, instead of running it and reading whatever comes
+/// back. A transport that can only publish declares `push` alone.
+fn manifest() -> String {
+    serde_json::json!({
+        "protocol_version": PROTOCOL_VERSION,
+        "name": "{{ name }}",
+        "version": env!("CARGO_PKG_VERSION"),
+        "description": {{ description_rust }},
+        "operations": Operation::ALL.iter().map(|operation| operation.as_str()).collect::<Vec<_>>(),
+    })
+    .to_string()
+}
+
+fn run() {
+    let request = match Request::read(std::io::stdin()) {
+        Ok(request) => request,
+        Err(message) => protocol::fail(&message),
+    };
+    let destination = std::env::var_os(DESTINATION).map(PathBuf::from);
+
+    protocol::emit(&carry(&request, destination.as_deref()));
+}
+
+/// The transport's own work, kept apart from the plumbing so that it can be
+/// tested without a process: everything above reads and writes, this decides.
+///
+/// Replace it with what your transport is for. What it moves is sealed: it
+/// cannot read it, and has no reason to try.
+fn carry(request: &Request, destination: Option<&Path>) -> Report {
+    let Some(directory) = destination.filter(|d| !d.as_os_str().is_empty()) else {
+        return Report::error(format!("{DESTINATION} is not set; set it to the directory the copies are kept in"));
+    };
+    let copy = match protocol::remote_name(&request.name) {
+        Ok(name) => directory.join(name),
+        Err(reason) => return Report::error(reason),
+    };
+
+    match request.operation {
+        Operation::Push => {
+            if let Err(error) = std::fs::create_dir_all(directory) {
+                return Report::error(format!("could not make {}: {error}", directory.display()));
+            }
+            match std::fs::copy(&request.file, &copy) {
+                Ok(bytes) => Report::message(format!("pushed {bytes} bytes as `{}`", request.name)),
+                Err(error) => Report::error(format!("could not push {}: {error}", request.file.display())),
+            }
+        }
+        Operation::Pull => {
+            if !copy.is_file() {
+                return Report::error(format!("there is no copy called `{}` yet; push from a machine that has it first", request.name));
+            }
+            match std::fs::copy(&copy, &request.file) {
+                Ok(bytes) => Report::message(format!("pulled {bytes} bytes of `{}`", request.name)),
+                Err(error) => Report::error(format!("could not pull into {}: {error}", request.file.display())),
+            }
+        }
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+    use serde_json::{Value, json};
+
+    fn request(operation: Operation, file: &Path, name: &str) -> Request {
+        Request { operation, file: file.to_path_buf(), name: name.to_string() }
+    }
+
+    #[test]
+    fn the_manifest_is_valid_json_and_declares_the_protocol() {
+        let parsed: Value = serde_json::from_str(&manifest()).unwrap();
+
+        assert_eq!(parsed["protocol_version"], json!(PROTOCOL_VERSION));
+        assert_eq!(parsed["name"], json!("{{ name }}"));
+        assert_eq!(parsed["operations"], json!([{{ operation_list }}]));
+    }
+
+    #[test]
+    fn the_manifest_reports_the_version_the_package_was_built_at() {
+        // A hard-coded version would drift from Cargo.toml at the first
+        // release and the host would show the wrong number for ever after.
+        let parsed: Value = serde_json::from_str(&manifest()).unwrap();
+
+        assert_eq!(parsed["version"], json!(env!("CARGO_PKG_VERSION")));
+    }
+
+    #[test]
+    fn a_pushed_file_comes_back_byte_for_byte() {
+        let dir = std::env::temp_dir().join(format!("{{ lib_name }}-{}", std::process::id()));
+        let kept = dir.join("kept");
+        std::fs::create_dir_all(&dir).unwrap();
+        let sealed = dir.join("sealed");
+        std::fs::write(&sealed, [0u8, 159, 146, 150, 255]).unwrap();
+
+        let pushed = carry(&request(Operation::Push, &sealed, "vault"), Some(&kept));
+        assert!(pushed.error.is_none(), "{pushed:?}");
+
+        let back = dir.join("back");
+        let pulled = carry(&request(Operation::Pull, &back, "vault"), Some(&kept));
+        assert!(pulled.error.is_none(), "{pulled:?}");
+        assert_eq!(std::fs::read(&back).unwrap(), std::fs::read(&sealed).unwrap());
+
+        std::fs::remove_dir_all(&dir).unwrap();
+    }
+
+    #[test]
+    fn without_a_destination_it_says_what_to_set() {
+        let report = carry(&request(Operation::Push, Path::new("sealed"), "vault"), None);
+
+        assert!(report.error.as_deref().is_some_and(|e| e.contains(DESTINATION)), "{report:?}");
+    }
+
+    #[test]
+    fn pulling_what_was_never_pushed_is_refused_rather_than_an_empty_file() {
+        let dir = std::env::temp_dir().join(format!("{{ lib_name }}-empty-{}", std::process::id()));
+
+        let report = carry(&request(Operation::Pull, &dir.join("back"), "vault"), Some(&dir));
+
+        assert!(report.error.as_deref().is_some_and(|e| e.contains("no copy")), "{report:?}");
+        assert!(!dir.join("back").exists(), "a pull with nothing to pull wrote a file");
+    }
+}

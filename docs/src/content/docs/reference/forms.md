@@ -24,8 +24,10 @@ workspace      Cargo workspace: a library crate plus the CLI that uses it
 mono           pnpm monorepo publishing a TypeScript package to npm
   --with stand            A Vite page in the workspace where the package runs
 plugin         Plugin for a host of the line: an executable speaking JSON over stdio
+  --with source           The requests kasl asks besides: its inbox, and the day's tasks
   --host kilna            a desktop workbench for content makers
   --host kasl             a work activity tracker for the command line
+  --host sefy             an inconspicuous encrypted store for notes, credentials and files
 tauri-plugin   Tauri 2 plugin: a Rust crate and the npm package that calls it
 docs           Documentation site added to an existing repository: Starlight, llms.txt
 ```
@@ -413,20 +415,49 @@ than accepted:
 
 ```console
 $ lyrn new demo --form plugin --host turnout
-error: `turnout` does not accept plugins yet; when it does it will be listed here (known: kilna, kasl)
+error: `turnout` does not accept plugins yet; when it does it will be listed here (known: kilna, kasl, sefy)
 ```
 
-The hosts differ in what a plugin is handed and in what becomes of the fields
-it answers with under `meta`, and the generated README and code say which:
+A host's plugin is one of two programs. kilna and kasl run a **command** the
+plugin declares on something they hand over whole; sefy hands a **transport** a
+sealed file to carry somewhere and back. The form writes the program of the
+host's shape - the project around it, its gate, release and record, is the
+same for both.
+
+The command hosts differ in what a plugin is handed and in what becomes of the
+fields it answers with under `meta`, and the generated README and code say
+which:
 
 | Host | A command runs on | `subject` | `meta` |
 | --- | --- | --- | --- |
 | kilna | a work (first), a release | the row, with each version role's latest text under `bodies` | merged into the subject's fields |
 | kasl | a day (first), an inbox issue | the day as `kasl report --json` prints it, or the issue as `kasl inbox show --json` prints it | shown under the plugin's message, never kept |
 
-A kasl plugin may also hear events and answer as an inbox source; those parts
-of its manifest are written by hand, from kasl's "Writing a plugin" page - a
-form generates the one command every plugin has.
+kasl also asks requests of its own, and `--with source` writes them beside the
+command: `list_issues`, `transition` and `comment` make the plugin an inbox
+source, and `find_tasks` offers the day's tasks to `kasl task find`.
+`src/requests.rs` is the wire, with types that only let through a reply kasl
+reads - a key it can put on a command line, an issue with an address, every key
+once - and `src/source.rs` is the part to write; until it asks somewhere, the
+plugin lists nothing and finds nothing. `tests/requests.rs` asks every request
+as kasl does. A kasl plugin's events are written by hand, from kasl's "Writing
+a plugin" page: what to do at a moment is the plugin's own to say.
+
+```console
+$ lyrn new gitlab --form plugin --host kasl --with source
+```
+
+A sefy transport is handed the path of the sealed vault and the name of its
+remote copy, and never the password, a key or an item. It declares the
+operations it does - `push`, `pull` - and the generated one keeps its copies in
+the directory an environment variable names, `SEFY_<NAME>_DESTINATION`: a
+working transport to replace with a server, a bucket or a repository. Its
+`tests/protocol.rs` pushes a file and pulls it back byte for byte, and refuses
+a name that would reach outside where the copies are kept.
+
+```console
+$ lyrn new dropbox --form plugin --host sefy
+```
 
 A preset written against a protocol nobody implements cannot be checked by
 anything: the project would compile and its protocol test would pass, because

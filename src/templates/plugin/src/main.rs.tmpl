@@ -7,8 +7,18 @@
 //!
 //! It lives for the duration of one call and holds no state. Nothing here
 //! starts a service.
+{{#source}}
+//!
+//! Besides its command it answers the requests {{ host }} asks on its own:
+//! `requests.rs` is the wire, `source.rs` is where the issues and the day's
+//! tasks come from.
+{{/source}}
 
 mod protocol;
+{{#source}}
+mod requests;
+mod source;
+{{/source}}
 
 use protocol::{Invocation, Outcome};
 
@@ -41,6 +51,9 @@ fn manifest() -> String {
         "name": "{{ name }}",
         "version": env!("CARGO_PKG_VERSION"),
         "description": {{ description_rust }},
+{{#source}}
+        "requests": requests::ANSWERED,
+{{/source}}
         "commands": [{
             "key": "{{ command_key }}",
             "label": "{{ command_label }}",
@@ -52,7 +65,18 @@ fn manifest() -> String {
 }
 
 fn run() {
-    let invocation = match Invocation::read(std::io::stdin()) {
+    let mut input = String::new();
+    if let Err(error) = std::io::Read::read_to_string(&mut std::io::stdin(), &mut input) {
+        protocol::fail(&format!("could not read the request: {error}"));
+    }
+{{#source}}
+    // A request names itself; anything else is a command.
+    if let Some(reply) = requests::answer(&input) {
+        print!("{reply}");
+        return;
+    }
+{{/source}}
+    let invocation = match Invocation::read(input.as_bytes()) {
         Ok(invocation) => invocation,
         Err(message) => protocol::fail(&message),
     };
@@ -90,6 +114,15 @@ mod tests {
         assert_eq!(parsed["commands"][0]["target"], json!("{{ target }}"));
         assert_eq!(parsed["commands"][0]["key"], json!("{{ command_key }}"));
     }
+{{#source}}
+
+    #[test]
+    fn the_manifest_declares_the_requests_it_answers() {
+        let parsed: Value = serde_json::from_str(&manifest()).unwrap();
+
+        assert_eq!(parsed["requests"], json!(requests::ANSWERED));
+    }
+{{/source}}
 
     #[test]
     fn the_manifest_reports_the_version_the_package_was_built_at() {

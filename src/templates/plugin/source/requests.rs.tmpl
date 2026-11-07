@@ -1,0 +1,364 @@
+//! The requests {{ host }} asks, beside the command.
+//!
+//! A request is a call {{ host }} makes on its own: `list_issues` on every poll
+//! of the inbox, `transition` and `comment` on an issue this plugin listed,
+//! `find_tasks` when the day's tasks are gathered. One that answers
+//! `list_issues` is an inbox source.
+//!
+//! The replies are read whole or refused whole, so the types here only let
+//! through what {{ host }} accepts: a key it can put on a command line, an
+//! issue with what opening it opens, a listing with every key once. The work
+//! of answering is in `source.rs`.
+
+// The types a source's replies are built from. Until `source.rs` asks
+// somewhere it builds none of them, and the compiler would call them dead:
+// drop this line once it does.
+#![allow(dead_code)]
+
+use serde::{Deserialize, Serialize};
+use serde_json::{Map, Value, json};
+
+use crate::source;
+
+/// The requests this plugin answers, as its manifest declares them.
+///
+/// `transition` and `comment` are asked only of an issue this plugin listed;
+/// drop the ones your source cannot do, and {{ host }} says so instead of
+/// asking.
+pub const ANSWERED: &[&str] = &["list_issues", "transition", "comment", "find_tasks"];
+
+/// One request as {{ host }} sends it.
+#[derive(Debug, Clone, Default, Deserialize)]
+pub struct Request {
+    /// Which request it is.
+    pub request: String,
+    /// The issue a `transition` or a `comment` is about, or the day
+    /// `find_tasks` looks at, as `{{ host }} report --json` prints it.
+    #[serde(default)]
+    pub subject: Value,
+    /// Every declared setting that has a value; one never set is absent.
+    #[serde(default)]
+    pub settings: Map<String, Value>,
+    /// `transition`: `start` or `close`.
+    #[serde(default)]
+    pub to: Option<String>,
+    /// `transition`: the status the person named, if they named one.
+    #[serde(default)]
+    pub status: Option<String>,
+    /// `transition`: the resolution the person named, if they named one.
+    #[serde(default)]
+    pub resolution: Option<String>,
+    /// `transition` (the text a close comes with) and `comment`.
+    #[serde(default)]
+    pub comment: Option<String>,
+}
+
+impl Request {
+    /// A setting's text, trimmed, with a blank one read as absent.
+    pub fn setting(&self, key: &str) -> Option<&str> {
+        self.settings.get(key).and_then(Value::as_str).map(str::trim).filter(|value| !value.is_empty())
+    }
+
+    /// The key of the issue a `transition` or a `comment` is about.
+    pub fn issue_key(&self) -> Result<&str, String> {
+        self.subject.get("key").and_then(Value::as_str).ok_or_else(|| "the request names no issue".to_string())
+    }
+}
+
+/// The reply to `input` when it is a request, or `None` when it is a call of
+/// another kind - a command - for the rest of the plugin to answer.
+pub fn answer(input: &str) -> Option<Value> {
+    let call: Value = serde_json::from_str(input).ok()?;
+    call.get("request")?;
+    let reply = match serde_json::from_value::<Request>(call) {
+        Ok(request) => handle(&request),
+        Err(error) => Err(format!("could not read the request: {error}")),
+    };
+    // A failure is the reply's `error`, which {{ host }} shows as the plugin's
+    // own words; the exit code stays for a call that could not be read at all.
+    Some(reply.unwrap_or_else(|error| json!({ "error": error })))
+}
+
+fn handle(request: &Request) -> Result<Value, String> {
+    let reply = match request.request.as_str() {
+        "list_issues" => serde_json::to_value(source::list_issues(request)?),
+        "transition" => serde_json::to_value(source::transition(request, Transition::read(request)?)?),
+        "comment" => {
+            let text = request.comment.as_deref().map(str::trim).filter(|text| !text.is_empty()).ok_or("the request carries no comment")?;
+            Ok(json!({ "message": source::comment(request, text)? }))
+        }
+        "find_tasks" => serde_json::to_value(source::find_tasks(request)?),
+        other => return Err(format!("this plugin does not answer `{other}`")),
+    };
+    reply.map_err(|error| format!("could not write the reply: {error}"))
+}
+
+/// An inbox issue's key: one word {{ host }} can put on a command line, into
+/// a notification's buttons and into a file name.
+///
+/// ASCII letters, digits and `- _ . / # ! : @ + ~`, 1 to 200 characters -
+/// `PROJ-12` and `group/app#14` both are. {{ host }} refuses a listing with
+/// one key outside the rule, whole, so a key is checked where it is made.
+#[derive(Debug, Clone, PartialEq, Eq, Serialize)]
+#[serde(transparent)]
+pub struct Key(String);
+
+impl Key {
+    /// The longest key {{ host }} keeps.
+    pub const LONGEST: usize = 200;
+
+    /// The punctuation a key may hold besides ASCII letters and digits.
+    const PUNCTUATION: &'static [char] = &['-', '_', '.', '/', '#', '!', ':', '@', '+', '~'];
+
+    pub fn new(key: impl Into<String>) -> Result<Self, String> {
+        let key = key.into();
+        if key.is_empty() || key.len() > Self::LONGEST {
+            return Err(format!("an issue key has to be 1 to {} characters long: {key:?}", Self::LONGEST));
+        }
+        if let Some(bad) = key.chars().find(|c| !(c.is_ascii_alphanumeric() || Self::PUNCTUATION.contains(c))) {
+            return Err(format!(
+                "an issue key is letters, digits and {} only; {key:?} has {bad:?}",
+                Self::PUNCTUATION.iter().collect::<String>()
+            ));
+        }
+        Ok(Self(key))
+    }
+
+    pub fn as_str(&self) -> &str {
+        &self.0
+    }
+}
+
+/// One issue, as `list_issues` lists it.
+///
+/// The key, the summary and the address are required, and made with the
+/// issue; the rest is optional, and a rule or a filter in {{ host }} that
+/// reads a field the source does not give finds nothing there.
+#[derive(Debug, Clone, Serialize)]
+pub struct Issue {
+    key: Key,
+    summary: String,
+    url: String,
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub id: Option<String>,
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub status: Option<String>,
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub priority: Option<String>,
+    /// Lower is more urgent.
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub priority_rank: Option<u32>,
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub score: Option<i64>,
+    #[serde(rename = "type", skip_serializing_if = "Option::is_none")]
+    pub kind: Option<String>,
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub project: Option<String>,
+    /// When it last changed, as RFC 3339.
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub updated: Option<String>,
+}
+
+impl Issue {
+    /// An issue with what it is called, what it says and what opening it
+    /// opens.
+    pub fn new(key: Key, summary: impl Into<String>, url: impl Into<String>) -> Result<Self, String> {
+        let (summary, url) = (summary.into(), url.into());
+        if summary.trim().is_empty() {
+            return Err(format!("the issue {} has no summary", key.as_str()));
+        }
+        if !(url.starts_with("https://") || url.starts_with("http://")) {
+            return Err(format!("the issue {} opens `{url}`, which is not an address", key.as_str()));
+        }
+        Ok(Self {
+            key,
+            summary,
+            url,
+            id: None,
+            status: None,
+            priority: None,
+            priority_rank: None,
+            score: None,
+            kind: None,
+            project: None,
+            updated: None,
+        })
+    }
+
+    pub fn key(&self) -> &Key {
+        &self.key
+    }
+}
+
+/// The reply to `list_issues`: every issue assigned now.
+///
+/// It decides which of this source's issues are gone, so it is the whole
+/// list or nothing: `issues` is always there, `[]` when nothing is assigned,
+/// and no key is listed twice.
+#[derive(Debug, Default, Serialize)]
+pub struct Issues {
+    /// What a summary notification opens: the list in the source's own pages.
+    #[serde(skip_serializing_if = "Option::is_none")]
+    list_url: Option<String>,
+    issues: Vec<Issue>,
+}
+
+impl Issues {
+    pub fn new(issues: Vec<Issue>, list_url: Option<String>) -> Result<Self, String> {
+        for (at, issue) in issues.iter().enumerate() {
+            if issues[..at].iter().any(|earlier| earlier.key == issue.key) {
+                return Err(format!("the issue {} is listed twice", issue.key.as_str()));
+            }
+        }
+        Ok(Self { list_url, issues })
+    }
+}
+
+/// Where `transition` moves an issue.
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+pub enum Transition {
+    /// The person started work on it.
+    Start,
+    /// The person closed it.
+    Close,
+}
+
+impl Transition {
+    fn read(request: &Request) -> Result<Self, String> {
+        match request.to.as_deref() {
+            Some("start") => Ok(Self::Start),
+            Some("close") => Ok(Self::Close),
+            Some(other) => Err(format!("an issue cannot be moved to `{other}`; it is started or closed")),
+            None => Err("the request says nowhere to move the issue".to_string()),
+        }
+    }
+
+    pub fn as_str(self) -> &'static str {
+        match self {
+            Self::Start => "start",
+            Self::Close => "close",
+        }
+    }
+}
+
+/// The reply to `transition`: where the issue is now, and whether this
+/// request is what put it there - `false` when it was there already.
+#[derive(Debug, Serialize)]
+pub struct Moved {
+    pub status: String,
+    pub moved: bool,
+}
+
+/// One task `find_tasks` offers, with a short reference shown beside it.
+#[derive(Debug, Clone, Serialize)]
+pub struct Task {
+    name: String,
+    #[serde(rename = "ref", skip_serializing_if = "Option::is_none")]
+    reference: Option<String>,
+}
+
+impl Task {
+    pub fn new(name: impl Into<String>, reference: Option<String>) -> Result<Self, String> {
+        let name = name.into();
+        if name.trim().is_empty() {
+            return Err("a task has no name".to_string());
+        }
+        Ok(Self { name, reference })
+    }
+}
+
+/// The reply to `find_tasks`: the tasks found, `[]` when there are none, and
+/// a line {{ host }} shows as a warning - what could not be read, say.
+#[derive(Debug, Default, Serialize)]
+pub struct Tasks {
+    pub tasks: Vec<Task>,
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub message: Option<String>,
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    #[test]
+    fn the_trackers_keys_are_keys() {
+        for key in ["PROJ-12", "ABC_DEF-7", "group/app#14", "group/sub/app!31", "me/my.project#2", "gh:owner/repo#5"] {
+            assert!(Key::new(key).is_ok(), "{key}");
+        }
+    }
+
+    #[test]
+    fn what_a_command_line_would_read_as_structure_is_not_a_key() {
+        for key in ["", "two words", "tab\tkey", "quote\"d", "50%", "back\\slash", "semi;colon", "a&b", "a|b", "<a>", "café#1"] {
+            assert!(Key::new(key).is_err(), "{key:?} was taken as a key");
+        }
+        assert!(Key::new("a".repeat(Key::LONGEST)).is_ok());
+        assert!(Key::new("a".repeat(Key::LONGEST + 1)).is_err());
+    }
+
+    #[test]
+    fn an_issue_needs_a_summary_and_an_address() {
+        let key = || Key::new("PROJ-1").unwrap();
+        assert!(Issue::new(key(), "Login fails", "https://tracker.example.com/PROJ-1").is_ok());
+        assert!(Issue::new(key(), "  ", "https://tracker.example.com/PROJ-1").is_err());
+        assert!(Issue::new(key(), "Login fails", "PROJ-1").is_err());
+    }
+
+    #[test]
+    fn a_listing_lists_a_key_once() {
+        let issue = |key: &str| Issue::new(Key::new(key).unwrap(), "A summary", "https://tracker.example.com/").unwrap();
+
+        assert!(Issues::new(vec![issue("A-1"), issue("A-2")], None).is_ok());
+        assert!(Issues::new(vec![issue("A-1"), issue("A-1")], None).unwrap_err().contains("twice"));
+    }
+
+    #[test]
+    fn an_empty_listing_still_says_issues() {
+        // Silence is refused: a source with nothing assigned answers `[]`,
+        // and a reply without `issues` would fail the sync.
+        let json = serde_json::to_value(Issues::default()).unwrap();
+
+        assert_eq!(json, json!({ "issues": [] }));
+    }
+
+    #[test]
+    fn an_issue_reaches_the_wire_with_only_the_fields_it_has() {
+        let mut issue =
+            Issue::new(Key::new("group/app#14").unwrap(), "Login fails", "https://tracker.example.com/group/app/issues/14").unwrap();
+        issue.kind = Some("Bug".to_string());
+
+        let json = serde_json::to_value(&issue).unwrap();
+
+        assert_eq!(
+            json,
+            json!({ "key": "group/app#14", "summary": "Login fails", "url": "https://tracker.example.com/group/app/issues/14", "type": "Bug" })
+        );
+    }
+
+    #[test]
+    fn a_task_has_a_name_and_its_reference_is_ref() {
+        assert!(Task::new(" ", None).is_err());
+        let task = Task::new("Refresh the session", Some("c1a2b3c".to_string())).unwrap();
+
+        assert_eq!(serde_json::to_value(task).unwrap(), json!({ "name": "Refresh the session", "ref": "c1a2b3c" }));
+    }
+
+    #[test]
+    fn a_command_is_left_to_the_rest_of_the_plugin() {
+        assert!(answer(r#"{"protocol_version":1,"command":"run","subject":{}}"#).is_none());
+    }
+
+    #[test]
+    fn a_request_it_does_not_answer_is_named() {
+        let reply = answer(r#"{"protocol_version":1,"request":"list_projects"}"#).unwrap();
+
+        assert!(reply["error"].as_str().unwrap().contains("`list_projects`"), "{reply}");
+    }
+
+    #[test]
+    fn a_transition_to_nowhere_is_refused_before_the_source_is_asked() {
+        let reply = answer(r#"{"request":"transition","subject":{"key":"A-1"},"to":"sideways"}"#).unwrap();
+
+        assert!(reply["error"].as_str().unwrap().contains("`sideways`"), "{reply}");
+    }
+}

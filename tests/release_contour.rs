@@ -28,9 +28,7 @@ fn generate(form: &str, addons: &[&str]) -> (tempfile::TempDir, PathBuf) {
     cmd.args(["new", "demo-tool", "--yes", "--no-hooks", "--repo", "owner/demo-tool", "--form", form])
         .arg("--path")
         .arg(&root);
-    if form == "plugin" {
-        cmd.args(["--host", "kilna"]);
-    }
+    cmd.args(common::host_args(form, addons));
     if !addons.is_empty() {
         cmd.arg("--with").arg(addons.join(","));
     }

@@ -74,6 +74,9 @@ pub const VARIABLES: &[&str] = &[
     "target",
     "target_about",
     "target_list",
+    "operation_list",
+    "request_about",
+    "destination_env",
     "command_key",
     "command_label",
     "command_fn",
@@ -211,6 +214,12 @@ fn home_dir() -> Option<PathBuf> {
 /// The template a form means here: your local one of the same name if you
 /// have one, else the one built in.
 pub fn for_form(form: Form) -> Result<Template, Box<dyn Error>> {
+    for_host(form, None)
+}
+
+/// The template of a form, for a plugin of `host` where the form has one: the
+/// files of the host's shape when it is the built-in form.
+pub fn for_host(form: Form, host: Option<&crate::host::Host>) -> Result<Template, Box<dyn Error>> {
     if let Some(dir) = local_templates_dir().map(|d| d.join(form.as_str())).filter(|d| d.is_dir()) {
         let origin = Origin::Local {
             name: form.as_str().to_string(),
@@ -235,7 +244,7 @@ pub fn for_form(form: Form) -> Result<Template, Box<dyn Error>> {
             .into()),
         };
     }
-    Ok(builtin(form))
+    Ok(builtin_for(form, host))
 }
 
 /// A built-in form's manifest.
@@ -245,13 +254,18 @@ pub fn builtin_manifest(form: Form) -> TemplateManifest {
 
 /// A built-in form as a template.
 pub fn builtin(form: Form) -> Template {
+    builtin_for(form, None)
+}
+
+/// A built-in form, with the files it writes for a plugin of `host`.
+pub fn builtin_for(form: Form, host: Option<&crate::host::Host>) -> Template {
     let manifest = builtin_manifest(form);
     Template {
         origin: Origin::BuiltIn,
         kind: Kind::Lyrn(Native {
             form,
             manifest,
-            files: templates::sources_for(form).into_iter().map(TemplateFile::from).collect(),
+            files: templates::sources_for_host(form, host).into_iter().map(TemplateFile::from).collect(),
             addons: form
                 .addons()
                 .iter()
@@ -661,6 +675,17 @@ mod tests {
             let problems = problems(&native, &every_builtin_addon());
             assert!(problems.is_empty(), "{form}:\n  {}", problems.join("\n  "));
             assert!(!native.manifest.standard.is_empty(), "{form} declares no standard version");
+        }
+    }
+
+    #[test]
+    fn the_plugin_form_is_a_template_without_problems_for_every_host() {
+        // A host of another shape writes other files; each set is checked as
+        // `lyrn template check` would check it.
+        for host in crate::host::ALL {
+            let native = native(builtin_for(Form::Plugin, Some(host)));
+            let problems = problems(&native, &every_builtin_addon());
+            assert!(problems.is_empty(), "plugin for {}:\n  {}", host.name, problems.join("\n  "));
         }
     }
 

@@ -28,7 +28,21 @@ pub fn combinations(form: &str) -> Vec<Vec<&'static str>> {
         "service" => subsets(&["spa", "demo"]),
         "workspace" => vec![vec![], vec!["keyring"], vec!["self-update"], vec!["keyring", "self-update"]],
         "mono" => vec![vec![], vec!["stand"]],
+        // `source` is the rest of kasl's protocol; the host is chosen by
+        // `host_args` to be one that takes it.
+        "plugin" => vec![vec![], vec!["source"]],
         _ => vec![vec![]],
+    }
+}
+
+/// The `--host` a form needs with these add-ons: none outside the plugin
+/// form, kasl for the add-on only kasl takes, and kilna - the first host -
+/// otherwise.
+pub fn host_args(form: &str, addons: &[&str]) -> Vec<&'static str> {
+    match form {
+        "plugin" if addons.contains(&"source") => vec!["--host", "kasl"],
+        "plugin" => vec!["--host", "kilna"],
+        _ => vec![],
     }
 }
 

@@ -1,0 +1,55 @@
+//! The source's own work: where its issues and tasks come from.
+//!
+//! Each function answers one request, and is a function of the request alone
+//! so that it can be tested without a process. The wire, and the rules a reply
+//! is held to, are in `requests.rs`. Until these ask somewhere, the plugin
+//! lists nothing and finds nothing - which {{ host }} reads as an empty inbox
+//! and no tasks, not as a failure.
+
+use crate::requests::{Issues, Moved, Request, Tasks, Transition};
+
+/// Every issue assigned now, whole. {{ host }} asks on every poll, and an
+/// issue missing from the list is one it marks gone.
+///
+/// Build each issue with `Issue::new(Key::new("PROJ-12")?, summary, url)?`,
+/// and the listing with `Issues::new(issues, list_url)`. A setting the
+/// manifest declares - an address, a token - is `request.setting("url")`.
+pub fn list_issues(_request: &Request) -> Result<Issues, String> {
+    Issues::new(Vec::new(), None)
+}
+
+/// Moves an issue this source listed - `request.issue_key()` - to `to`, and
+/// says where it is now.
+pub fn transition(_request: &Request, to: Transition) -> Result<Moved, String> {
+    Err(format!("{{ bin_name }} cannot {} an issue yet: `transition` in src/source.rs is still to write", to.as_str()))
+}
+
+/// Leaves `comment` on an issue this source listed, and says so in a line.
+pub fn comment(_request: &Request, _comment: &str) -> Result<String, String> {
+    Err("{{ bin_name }} cannot comment yet: `comment` in src/source.rs is still to write".to_string())
+}
+
+/// What this source finds in the day `request.subject` names - its `date` -
+/// for `{{ host }} task find` to offer.
+pub fn find_tasks(_request: &Request) -> Result<Tasks, String> {
+    Ok(Tasks::default())
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    #[test]
+    fn a_source_that_asks_nowhere_yet_lists_nothing_rather_than_failing() {
+        let listed = serde_json::to_value(list_issues(&Request::default()).unwrap()).unwrap();
+
+        assert_eq!(listed["issues"], serde_json::json!([]));
+    }
+
+    #[test]
+    fn a_move_it_cannot_make_says_what_is_left_to_write() {
+        let refused = transition(&Request::default(), Transition::Start).unwrap_err();
+
+        assert!(refused.contains("src/source.rs"), "{refused}");
+    }
+}

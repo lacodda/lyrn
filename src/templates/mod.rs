@@ -36,6 +36,16 @@ pub fn manifest_for(form: Form) -> &'static str {
 /// The files a form writes: its own, and what every repository of the line
 /// carries beside them.
 pub fn sources_for(form: Form) -> Vec<SourceFile> {
+    sources_for_host(form, None)
+}
+
+/// Every file a form writes, for a plugin of `host` where the form has one.
+///
+/// A plugin is a different program for a host that runs commands and for one
+/// that hands it a file to carry, so the plugin form writes the files of the
+/// host's shape. With no host - a check of the templates, the files of the
+/// standard - it is the command plugin, the shape most hosts have.
+pub fn sources_for_host(form: Form, host: Option<&crate::host::Host>) -> Vec<SourceFile> {
     let mut files = match form {
         Form::Spa => spa::sources(),
         Form::Cli => cli::sources(),
@@ -43,7 +53,10 @@ pub fn sources_for(form: Form) -> Vec<SourceFile> {
         Form::Service => service::sources(),
         Form::Workspace => workspace::sources(),
         Form::Mono => mono::sources(),
-        Form::Plugin => plugin::sources(),
+        Form::Plugin => match host.map(|h| &h.shape) {
+            Some(crate::host::Shape::Transport(_)) => plugin::transport_sources(),
+            _ => plugin::sources(),
+        },
         Form::TauriPlugin => tauri_plugin::sources(),
         Form::Docs => docs::sources(),
     };

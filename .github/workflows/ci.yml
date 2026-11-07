@@ -373,13 +373,20 @@ jobs:
   # rules. A plugin that passes `cargo test` and fails here is one the host
   # would list and refuse.
   template-plugin:
-    name: template plugin (${{ matrix.host }}) on ${{ matrix.os }}
+    name: template plugin (${{ matrix.host }}${{ matrix.with && ' +' || '' }}${{ matrix.with }}) on ${{ matrix.os }}
     runs-on: ${{ matrix.os }}
     strategy:
       fail-fast: false
       matrix:
         os: [ubuntu-latest, windows-latest, macos-latest]
-        host: [kilna]
+        # One host of each shape and protocol: kilna and kasl run commands,
+        # sefy hands a transport a file, and kasl asks requests besides.
+        host: [kilna, kasl, sefy]
+        with: ['']
+        include:
+          - { os: ubuntu-latest, host: kasl, with: source }
+          - { os: windows-latest, host: kasl, with: source }
+          - { os: macos-latest, host: kasl, with: source }
     steps:
       - uses: actions/checkout@v7
       - uses: dtolnay/rust-toolchain@stable
@@ -391,9 +398,12 @@ jobs:
       - name: Generate a project
         shell: bash
         run: |
+          with=()
+          if [ -n "${{ matrix.with }}" ]; then with=(--with "${{ matrix.with }}"); fi
           ./target/release/lyrn new demo-count \
             --form plugin \
             --host ${{ matrix.host }} \
+            "${with[@]}" \
             --yes --no-hooks \
             --repo owner/demo-count \
             --path "$RUNNER_TEMP/demo-count"
@@ -403,10 +413,10 @@ jobs:
           cargo fmt --check
           cargo clippy --all-targets -- -D warnings
           cargo test
-      # The two calls the host makes, against the built binary rather than the
+      # The calls the host makes, against the built binary rather than the
       # test harness: `--manifest` has to parse and declare the host's protocol
-      # version, and `run` has to answer a JSON invocation on stdin with JSON
-      # on stdout. Checked here with jq so that a plugin whose own tests were
+      # version, and `run` has to answer a JSON call on stdin with JSON on
+      # stdout. Checked here with jq so that a plugin whose own tests were
       # weakened is still held to the wire.
       - name: Speak the protocol the way the host does
         shell: bash
@@ -419,13 +429,41 @@ jobs:
 
           manifest="$("$bin" --manifest)"
           echo "$manifest" | jq -e '.protocol_version == 1' > /dev/null
-          echo "$manifest" | jq -e '.commands | length > 0' > /dev/null
-          key="$(echo "$manifest" | jq -r '.commands[0].key')"
 
-          outcome="$(echo "{\"command\":\"$key\",\"target\":\"work\",\"subject\":{\"title\":\"A subject\"}}" | "$bin" run)"
+          if [ "${{ matrix.host }}" = sefy ]; then
+            # A transport: the operations sefy reads, no command, and a file
+            # carried away and back unchanged. Relative paths, so the same
+            # request reads the same on every runner.
+            echo "$manifest" | jq -e '.operations == ["push", "pull"]' > /dev/null
+            echo "$manifest" | jq -e 'has("commands") | not' > /dev/null
+            printf 'sealed\000\377bytes' > sealed
+            export SEFY_DEMO_COUNT_DESTINATION=kept
+            pushed="$(jq -cn '{operation: "push", file: "sealed", name: "vault"}' | "$bin" run)"
+            echo "$pushed" | jq -e 'has("error") | not' > /dev/null
+            pulled="$(jq -cn '{operation: "pull", file: "back", name: "vault"}' | "$bin" run)"
+            echo "$pulled" | jq -e 'has("error") | not' > /dev/null
+            cmp sealed back
+            echo "carried a file there and back: $pushed $pulled"
+            exit 0
+          fi
+
+          echo "$manifest" | jq -e '.commands | length > 0' > /dev/null
+          call="$(echo "$manifest" | jq -c '{command: .commands[0].key, target: .commands[0].target, subject: {title: "A subject"}}')"
+          outcome="$(echo "$call" | "$bin" run)"
           echo "$outcome" | jq -e 'has("meta") or has("message")' > /dev/null
           echo "$outcome" | jq -e 'has("error") | not' > /dev/null
           echo "spoke the protocol: $outcome"
+
+          if [ "${{ matrix.with }}" = source ]; then
+            # The requests: a listing kasl reads whole even when it is empty,
+            # and the day's tasks as a list.
+            echo "$manifest" | jq -e '.requests | index("list_issues") != null' > /dev/null
+            listed="$(echo '{"protocol_version":1,"request":"list_issues","settings":{}}' | "$bin" run)"
+            echo "$listed" | jq -e '.issues | type == "array"' > /dev/null
+            found="$(echo '{"protocol_version":1,"request":"find_tasks","subject":{"date":"2026-10-27"},"settings":{}}' | "$bin" run)"
+            echo "$found" | jq -e '.tasks | type == "array"' > /dev/null
+            echo "answered the requests: $listed $found"
+          fi
 
   # The tauri-plugin form is two halves that only work if they agree, so both
   # gates run and neither one alone is the answer. The Rust half needs the

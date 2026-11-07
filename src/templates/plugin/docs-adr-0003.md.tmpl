@@ -20,7 +20,7 @@ git, cargo and kubectl already use.
 
 A plugin is an executable named `{{ prefix }}*`, found on `PATH` or in
 {{ host }}'s own plugins directory. It answers `--manifest` with JSON on stdout
-and `run` with an invocation on stdin and an outcome on stdout.
+and `run` with a call on stdin and a reply on stdout.
 
 It lives for the duration of one call and holds no state. It may be written in
 any language; this one is written in Rust because the line is.
@@ -29,6 +29,6 @@ any language; this one is written in Rust because the line is.
 
 The plugin ships as its own repository with its own releases, and a host
 upgrade cannot break it as long as the protocol version holds. Any language
-will do. The price is a process per call, which is why the host sends the whole
-subject rather than an identifier: without it, the first thing every plugin
-would do is ask for the data back.
+will do. The price is a process per call, which is why the host hands over
+everything one call needs rather than an identifier: without it, the first
+thing every plugin would do is ask for the data back.

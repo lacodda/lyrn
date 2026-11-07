@@ -104,8 +104,11 @@ impl Form {
             Form::Workspace => &[Addon::Keyring, Addon::SelfUpdate],
             Form::Mono => &[Addon::Stand],
             // A plugin lives for the duration of one call: it has nothing to
-            // keep in a keyring and nothing to update itself from.
-            Form::Plugin => &[],
+            // keep in a keyring and nothing to update itself from. What it
+            // can add is the rest of its host's protocol, where the host has
+            // more than the one call every plugin answers - which hosts do is
+            // the host table's to say.
+            Form::Plugin => &[Addon::Source],
             Form::TauriPlugin => &[],
             Form::Docs => &[],
         }
@@ -166,6 +169,9 @@ pub enum Addon {
     /// Made-up data for a demonstration, behind a flag that refuses to touch
     /// a database holding real data.
     Demo,
+    /// The requests a host asks a plugin, beside the command every plugin
+    /// has: an inbox source's issues, and the day's tasks it finds.
+    Source,
 }
 
 impl Addon {
@@ -181,6 +187,7 @@ impl Addon {
         Addon::Auth,
         Addon::Pwa,
         Addon::Demo,
+        Addon::Source,
     ];
 
     pub fn as_str(self) -> &'static str {
@@ -195,6 +202,7 @@ impl Addon {
             Addon::Auth => "auth",
             Addon::Pwa => "pwa",
             Addon::Demo => "demo",
+            Addon::Source => "source",
         }
     }
 
@@ -210,6 +218,7 @@ impl Addon {
             Addon::Auth => "A cookie session and a sign-in screen until someone signs in",
             Addon::Pwa => "Installable and offline: a manifest, its icons, a service worker",
             Addon::Demo => "Made-up data in an empty database; one with real data refuses it",
+            Addon::Source => "The requests kasl asks besides: its inbox, and the day's tasks",
         }
     }
 }
@@ -235,6 +244,7 @@ impl std::str::FromStr for Addon {
             "auth" => Ok(Addon::Auth),
             "pwa" => Ok(Addon::Pwa),
             "demo" => Ok(Addon::Demo),
+            "source" => Ok(Addon::Source),
             other => Err(format!(
                 "unknown add-on `{other}` (known: {})",
                 Addon::ALL.iter().map(|a| a.as_str()).collect::<Vec<_>>().join(", ")

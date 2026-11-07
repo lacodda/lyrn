@@ -17,7 +17,12 @@ fails there is one {{ host }} would list and refuse.
 | Path | What lives there |
 | --- | --- |
 | `src/main.rs` | The manifest and the plugin's own work |
-| `src/protocol.rs` | The wire: an invocation in, an outcome out |
+| `src/protocol.rs` | The wire: one call in on stdin, one reply out on stdout |
 | `tests/protocol.rs` | The plugin run as the host runs it |
+{{#source}}
+| `src/requests.rs` | The requests {{ host }} asks on its own, and the rules a reply is held to |
+| `src/source.rs` | Where the issues and the day's tasks come from |
+| `tests/requests.rs` | Every request asked as the host asks it |
+{{/source}}
 | `assets/` | The mark's three master SVGs |
 | `docs/adr/` | Architecture decisions, newest last |

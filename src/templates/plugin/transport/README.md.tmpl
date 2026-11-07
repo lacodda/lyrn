@@ -1,0 +1,58 @@
+# {{ title }}
+
+> {{ description }}
+
+A transport for [{{ host }}](https://github.com/lacodda/{{ host }}), {{ host_about }}.
+Scaffolded with [lyrn](https://github.com/lacodda/lyrn).
+
+## Install
+
+Download the binary for your platform from [Releases](https://github.com/{{ repo }}/releases)
+and put it where {{ host }} looks: {{ host_lookup }}.
+
+{{ host }} finds anything named `{{ prefix }}*` there, and lists this one by
+its name, `{{ name }}`.
+
+## Configure
+
+Set `{{ destination_env }}` to the directory the copies are kept in:
+
+```console
+$ export {{ destination_env }}=/mnt/backup/{{ name }}
+```
+
+## The protocol
+
+A transport is an ordinary executable. {{ host }} runs it twice:
+
+```console
+$ {{ bin_name }} --manifest   # what it does, as JSON on stdout
+$ {{ bin_name }} run          # a request as JSON on stdin, a report on stdout
+```
+
+The manifest declares the protocol version, a name, and the operations this
+transport offers:
+
+```jsonc
+{
+  "protocol_version": {{ protocol_version }},
+  "name": "{{ name }}",
+  "version": "0.1.0",
+  "operations": [{{ operation_list }}]
+}
+```
+
+A request arrives as `{"operation": "push", "file": "…", "name": "…"}`: {{ request_about }}.
+The report may carry `message` (shown to the person) or `error`; printing
+nothing is success with nothing to say.
+
+Transports live for the duration of one call. Nothing here starts a service.
+
+## Contributing
+
+The gate, the layout and how commits are written are in
+[CONTRIBUTING.md](https://github.com/{{ repo }}/blob/main/CONTRIBUTING.md).
+
+## License
+
+MIT - see [LICENSE](https://github.com/{{ repo }}/blob/main/LICENSE).

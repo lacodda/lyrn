@@ -24,10 +24,8 @@ fn generate(form: &str, root: &Path) {
     let mut cmd = common::lyrn();
     cmd.args(["new", "demo-tool", "--form", form, "--yes", "--no-hooks", "--repo", "owner/demo-tool"])
         .args(["--description", HOSTILE]);
-    if form == "plugin" {
-        cmd.args(["--host", "kilna"]);
-    }
     let with: Vec<&str> = common::combinations(form).into_iter().max_by_key(Vec::len).unwrap_or_default();
+    cmd.args(common::host_args(form, &with));
     if !with.is_empty() {
         cmd.arg("--with").arg(with.join(","));
     }

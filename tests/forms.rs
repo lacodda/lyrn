@@ -24,6 +24,7 @@ fn generate(form: &str, addons: &[&str], root: &Path) {
         .arg("owner/demo-tool")
         .arg("--path")
         .arg(root);
+    cmd.args(common::host_args(form, addons));
     if !addons.is_empty() {
         cmd.arg("--with").arg(addons.join(","));
     }
@@ -32,7 +33,7 @@ fn generate(form: &str, addons: &[&str], root: &Path) {
 
 #[test]
 fn every_combination_renders_completely() {
-    for form in ["spa", "cli", "desktop", "service", "workspace", "mono"] {
+    for form in ["spa", "cli", "desktop", "service", "workspace", "mono", "plugin"] {
         for addons in combinations(form) {
             let dir = tempfile::tempdir().unwrap();
             let root = dir.path().join("demo-tool");
@@ -77,6 +78,7 @@ fn every_rust_module_a_project_declares_exists() {
     for (form, roots) in [
         ("cli", vec!["src/main.rs", "src/commands/mod.rs"]),
         ("service", vec!["src/main.rs"]),
+        ("plugin", vec!["src/main.rs"]),
         ("desktop", vec!["src-tauri/src/main.rs", "src-tauri/src/lib.rs"]),
         (
             "workspace",

@@ -36,9 +36,7 @@ fn dry_run(form: &str, addons: &[&str]) -> String {
     cmd.arg("new")
         .arg("demo-tool")
         .args(["--form", form, "--yes", "--dry-run", "--repo", "owner/demo-tool"]);
-    if form == "plugin" {
-        cmd.args(["--host", "kilna"]);
-    }
+    cmd.args(common::host_args(form, addons));
     if !addons.is_empty() {
         cmd.arg("--with").arg(addons.join(","));
     }

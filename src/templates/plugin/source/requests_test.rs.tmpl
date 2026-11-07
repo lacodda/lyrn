@@ -1,0 +1,146 @@
+//! The requests against the host's side of the protocol.
+//!
+//! These run the built binary the way {{ host }} asks a request of it - `run`
+//! with JSON on stdin - and hold every reply to the rules {{ host }} reads it
+//! with. A listing {{ host }} would refuse fails the whole sync, so a reply
+//! that slips past the types in `requests.rs` is caught here.
+
+use std::io::Write;
+use std::process::{Command, Stdio};
+
+use assert_cmd::cargo::cargo_bin;
+use serde_json::{Value, json};
+
+/// The requests {{ host }} knows. A manifest naming anything else is
+/// unreadable to the host.
+const HOST_REQUESTS: &[&str] = &["list_issues", "transition", "comment", "find_tasks"];
+
+/// The longest key {{ host }} keeps, and the punctuation it allows besides
+/// ASCII letters and digits. Written out rather than read from the plugin: a
+/// test that asks the code what the rule is agrees with any rule.
+const LONGEST_KEY: usize = 200;
+const KEY_PUNCTUATION: &str = "-_./#!:@+~";
+
+fn plugin() -> Command {
+    Command::new(cargo_bin("{{ bin_name }}"))
+}
+
+fn manifest() -> Value {
+    let output = plugin().arg("--manifest").output().expect("the plugin should run");
+    assert!(output.status.success(), "`--manifest` failed: {}", String::from_utf8_lossy(&output.stderr));
+    serde_json::from_slice(&output.stdout).expect("the manifest should be JSON")
+}
+
+/// Ask a request the way the host does, and read the reply.
+fn ask(request: &Value) -> Value {
+    let mut child =
+        plugin().arg("run").stdin(Stdio::piped()).stdout(Stdio::piped()).stderr(Stdio::piped()).spawn().expect("the plugin should run");
+    child
+        .stdin
+        .take()
+        .expect("stdin should be open")
+        .write_all(request.to_string().as_bytes())
+        .expect("the plugin should take its request");
+    let output = child.wait_with_output().expect("the plugin should finish");
+
+    assert!(output.status.success(), "`run` failed: {}", String::from_utf8_lossy(&output.stderr));
+    let reply: Value = serde_json::from_slice(&output.stdout).expect("a request is answered with JSON, never with silence");
+    assert!(reply.is_object(), "the reply should be a JSON object: {reply}");
+    reply
+}
+
+fn is_key(key: &str) -> bool {
+    (1..=LONGEST_KEY).contains(&key.len()) && key.chars().all(|c| c.is_ascii_alphanumeric() || KEY_PUNCTUATION.contains(c))
+}
+
+fn declared() -> Vec<String> {
+    manifest()["requests"].as_array().map(|r| r.iter().filter_map(|r| r.as_str().map(str::to_string)).collect()).unwrap_or_default()
+}
+
+#[test]
+fn it_declares_only_requests_the_host_knows() {
+    let requests = declared();
+
+    for request in &requests {
+        assert!(HOST_REQUESTS.contains(&request.as_str()), "`{request}` is not a request {{ host }} asks ({HOST_REQUESTS:?})");
+    }
+    // `transition` and `comment` act on an issue the plugin listed: without
+    // `list_issues` the host refuses the manifest.
+    if requests.iter().any(|r| r == "transition" || r == "comment") {
+        assert!(requests.iter().any(|r| r == "list_issues"), "`transition` and `comment` without `list_issues`");
+    }
+}
+
+#[test]
+fn a_listing_is_one_the_host_reads_whole() {
+    if !declared().iter().any(|r| r == "list_issues") {
+        return;
+    }
+    let reply = ask(&json!({"protocol_version": 1, "request": "list_issues", "settings": {}}));
+    if reply.get("error").is_some() {
+        // A source that cannot reach its tracker without settings says so;
+        // the shape of what it lists is then the unit tests' to hold.
+        return;
+    }
+
+    let issues = reply["issues"].as_array().expect("a listing without `issues` fails the sync - nothing assigned is `[]`");
+    let mut seen = Vec::new();
+    for issue in issues {
+        let key = issue["key"].as_str().expect("an issue without a key");
+        assert!(is_key(key), "`{key}` is not a key {{ host }} keeps");
+        assert!(!seen.contains(&key), "`{key}` is listed twice");
+        seen.push(key);
+        assert!(issue["summary"].as_str().is_some_and(|s| !s.trim().is_empty()), "{key} has no summary");
+        assert!(issue["url"].as_str().is_some_and(|u| !u.is_empty()), "{key} opens nothing");
+    }
+}
+
+#[test]
+fn a_move_says_where_the_issue_is_or_why_it_could_not() {
+    if !declared().iter().any(|r| r == "transition") {
+        return;
+    }
+    let reply = ask(&json!({"protocol_version": 1, "request": "transition", "subject": {"key": "PROJ-1"}, "to": "start", "settings": {}}));
+
+    if reply.get("error").is_none() {
+        assert!(reply["status"].is_string(), "a move that says no status: {reply}");
+        assert!(reply["moved"].is_boolean(), "a move that does not say whether it moved: {reply}");
+    }
+}
+
+#[test]
+fn the_days_tasks_are_a_list_of_names() {
+    if !declared().iter().any(|r| r == "find_tasks") {
+        return;
+    }
+    let reply =
+        ask(&json!({"protocol_version": 1, "request": "find_tasks", "subject": {"date": "2026-10-27", "tasks": []}, "settings": {}}));
+    if reply.get("error").is_some() {
+        return;
+    }
+
+    let tasks = reply["tasks"].as_array().expect("a reply without `tasks` fails the request - nothing found is `[]`");
+    for task in tasks {
+        assert!(task["name"].as_str().is_some_and(|n| !n.trim().is_empty()), "a task without a name: {task}");
+    }
+}
+
+#[test]
+fn a_request_it_does_not_answer_is_refused_by_name() {
+    let reply = ask(&json!({"protocol_version": 1, "request": "list_projects", "settings": {}}));
+
+    let error = reply["error"].as_str().expect("an unknown request was answered");
+    assert!(error.contains("list_projects"), "{error}");
+}
+
+#[test]
+fn the_rule_this_test_holds_keys_to_is_the_hosts() {
+    // The check above is only as good as its rule.
+    for key in ["PROJ-12", "group/app#14", "group/app!31"] {
+        assert!(is_key(key), "{key}");
+    }
+    for key in ["", "two words", "a;b", "50%"] {
+        assert!(!is_key(key), "{key:?}");
+    }
+    assert!(!is_key(&"a".repeat(LONGEST_KEY + 1)));
+}

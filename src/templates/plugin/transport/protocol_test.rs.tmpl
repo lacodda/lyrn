@@ -1,0 +1,157 @@
+//! The transport against the host's side of the protocol.
+//!
+//! The unit tests check that the pieces are right. These run the built binary
+//! exactly as {{ host }} runs it - `--manifest`, then `run` with JSON on stdin -
+//! and hold the answers to what the host will accept. A transport that passes
+//! its unit tests and fails here is one {{ host }} would list and refuse.
+
+use std::io::Write;
+use std::path::{Path, PathBuf};
+use std::process::{Command, Stdio};
+
+use assert_cmd::cargo::cargo_bin;
+use serde_json::{Value, json};
+
+/// The protocol version {{ host }} speaks. Written out rather than read from
+/// the transport: a test that asks the code what it should be agrees with any
+/// answer, including a wrong one.
+const HOST_PROTOCOL_VERSION: u32 = {{ protocol_version }};
+
+/// The operations {{ host }} knows. A manifest declaring anything else is
+/// unreadable to the host, which reads the list as a closed set.
+const HOST_OPERATIONS: &[&str] = &[{{ operation_list }}];
+
+/// Where the copies go, as the person sets it.
+const DESTINATION: &str = "{{ destination_env }}";
+
+fn transport() -> Command {
+    Command::new(cargo_bin("{{ bin_name }}"))
+}
+
+fn manifest() -> Value {
+    let output = transport().arg("--manifest").output().expect("the transport should run");
+
+    assert!(output.status.success(), "`--manifest` failed: {}", String::from_utf8_lossy(&output.stderr));
+
+    serde_json::from_slice(&output.stdout).expect("the manifest should be JSON")
+}
+
+/// Run the transport the way the host does: the request in over stdin, the
+/// report out over stdout.
+fn request(request: &Value, destination: Option<&Path>) -> Value {
+    let mut command = transport();
+    command.arg("run").stdin(Stdio::piped()).stdout(Stdio::piped()).stderr(Stdio::piped());
+    match destination {
+        Some(directory) => command.env(DESTINATION, directory),
+        None => command.env_remove(DESTINATION),
+    };
+    let mut child = command.spawn().expect("the transport should run");
+
+    child
+        .stdin
+        .take()
+        .expect("stdin should be open")
+        .write_all(request.to_string().as_bytes())
+        .expect("the transport should take its request");
+
+    let output = child.wait_with_output().expect("the transport should finish");
+
+    assert!(output.status.success(), "`run` failed: {}", String::from_utf8_lossy(&output.stderr));
+
+    let stdout = String::from_utf8_lossy(&output.stdout);
+    if stdout.trim().is_empty() {
+        // Silence is success with nothing to say, and the host reads it so.
+        return json!({});
+    }
+
+    serde_json::from_str(&stdout).expect("the report should be JSON")
+}
+
+/// A directory of this test's own, gone when the test is.
+struct Scratch(PathBuf);
+
+impl Scratch {
+    fn new(name: &str) -> Self {
+        let dir = std::env::temp_dir().join(format!("{{ lib_name }}-{name}-{}", std::process::id()));
+        let _ = std::fs::remove_dir_all(&dir);
+        std::fs::create_dir_all(&dir).unwrap();
+        Self(dir)
+    }
+}
+
+impl Drop for Scratch {
+    fn drop(&mut self) {
+        let _ = std::fs::remove_dir_all(&self.0);
+    }
+}
+
+#[test]
+fn it_describes_itself_in_the_shape_the_host_reads() {
+    let manifest = manifest();
+
+    assert_eq!(manifest["protocol_version"], json!(HOST_PROTOCOL_VERSION), "{{ host }} would list this transport and refuse it");
+    assert!(manifest["name"].is_string(), "the manifest declares no name");
+    assert!(manifest["version"].is_string(), "the manifest declares no version");
+}
+
+#[test]
+fn it_declares_only_operations_the_host_knows() {
+    let manifest = manifest();
+    let operations = manifest["operations"].as_array().expect("a transport that declares no operation is unusable");
+
+    assert!(!operations.is_empty(), "the manifest declares no operation, and the host would refuse it");
+    for operation in operations {
+        let operation = operation.as_str().expect("an operation is a word");
+        assert!(HOST_OPERATIONS.contains(&operation), "`{operation}` is not an operation {{ host }} knows ({HOST_OPERATIONS:?})");
+    }
+}
+
+#[test]
+fn what_is_pushed_is_what_is_pulled_back() {
+    let scratch = Scratch::new("round-trip");
+    let kept = scratch.0.join("kept");
+    let sealed = scratch.0.join("sealed");
+    // Bytes no text encoding would carry unchanged: a transport that read the
+    // file as text would get these wrong.
+    std::fs::write(&sealed, [0u8, 13, 10, 159, 146, 150, 255, 0]).unwrap();
+
+    let pushed = request(&json!({"operation": "push", "file": sealed, "name": "vault"}), Some(&kept));
+    assert!(pushed.get("error").is_none(), "the push failed: {pushed}");
+
+    let back = scratch.0.join("back");
+    let pulled = request(&json!({"operation": "pull", "file": back, "name": "vault"}), Some(&kept));
+    assert!(pulled.get("error").is_none(), "the pull failed: {pulled}");
+
+    assert_eq!(std::fs::read(&back).unwrap(), std::fs::read(&sealed).unwrap(), "the file came back changed");
+}
+
+#[test]
+fn a_transport_that_cannot_work_says_why_in_its_report() {
+    // The host shows an `error` as the transport's own words. A transport
+    // that panicked instead would fail with an exit status and no reason.
+    let scratch = Scratch::new("unset");
+    let report = request(&json!({"operation": "push", "file": scratch.0.join("sealed"), "name": "vault"}), None);
+
+    let error = report["error"].as_str().expect("an unconfigured transport answered without an error");
+    assert!(error.contains(DESTINATION), "the error does not say what to set: {error}");
+}
+
+#[test]
+fn a_name_that_reaches_outside_is_refused() {
+    let scratch = Scratch::new("outside");
+    let sealed = scratch.0.join("sealed");
+    std::fs::write(&sealed, b"sealed").unwrap();
+
+    let report = request(&json!({"operation": "push", "file": sealed, "name": "../escaped"}), Some(&scratch.0.join("kept")));
+
+    assert!(report.get("error").is_some(), "a name with a path in it was taken: {report}");
+    assert!(!scratch.0.join("escaped").exists(), "the copy was written outside the place copies are kept");
+}
+
+#[test]
+fn an_unknown_argument_is_refused_rather_than_treated_as_run() {
+    let output = transport().arg("nonesuch").output().expect("the transport should run");
+
+    assert!(!output.status.success(), "an unknown argument was accepted");
+    assert!(!output.stderr.is_empty(), "the host would show an empty reason");
+}

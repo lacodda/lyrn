@@ -10,6 +10,7 @@
 //! `crate::host`. The templates never name a host; they name `{{ host }}`.
 
 use crate::generate::{Contents, SourceFile};
+use crate::model::Addon;
 use crate::templates::cli;
 
 /// The manifest text shipped with this form.
@@ -23,86 +24,88 @@ pub const MANIFEST: &str = include_str!("plugin/template.toml");
 /// workflows that name the binary.
 const SHARED_WITH_CLI: &[&str] = &["LICENSE", "CHANGELOG.md", "cliff.toml", ".editorconfig", ".gitattributes"];
 
-/// Every file the `plugin` form writes.
+/// Every file the `plugin` form writes for a host that runs commands.
 pub fn sources() -> Vec<SourceFile> {
+    let mut files = shared();
+    files.extend([
+        text("src/main.rs", include_str!("plugin/src/main.rs.tmpl")),
+        text("src/protocol.rs", include_str!("plugin/src/protocol.rs.tmpl")),
+        text("tests/protocol.rs", include_str!("plugin/tests/protocol.rs.tmpl")),
+        text("README.md", include_str!("plugin/README.md.tmpl")),
+        // The rest of a host's protocol, for a host that asks more than the
+        // command: which hosts take it is the host table's to say.
+        SourceFile {
+            addon: Some(Addon::Source),
+            ..text("src/requests.rs", include_str!("plugin/source/requests.rs.tmpl"))
+        },
+        SourceFile {
+            addon: Some(Addon::Source),
+            ..text("src/source.rs", include_str!("plugin/source/source.rs.tmpl"))
+        },
+        SourceFile {
+            addon: Some(Addon::Source),
+            ..text("tests/requests.rs", include_str!("plugin/source/requests_test.rs.tmpl"))
+        },
+    ]);
+    files
+}
+
+/// Every file the `plugin` form writes for a host that hands a plugin a file
+/// to carry: the same project, around a different program.
+pub fn transport_sources() -> Vec<SourceFile> {
+    let mut files = shared();
+    files.extend([
+        text("src/main.rs", include_str!("plugin/transport/main.rs.tmpl")),
+        text("src/protocol.rs", include_str!("plugin/transport/protocol.rs.tmpl")),
+        text("tests/protocol.rs", include_str!("plugin/transport/protocol_test.rs.tmpl")),
+        text("README.md", include_str!("plugin/transport/README.md.tmpl")),
+    ]);
+    files
+}
+
+/// The files a plugin is the same project for whatever its host: a Rust
+/// binary, its gate, its release and its record.
+fn shared() -> Vec<SourceFile> {
     let mut files: Vec<SourceFile> = cli::sources().into_iter().filter(|f| SHARED_WITH_CLI.contains(&f.path)).collect();
 
     files.extend([
-        SourceFile {
-            path: "Cargo.toml",
-            contents: Contents::Text(include_str!("plugin/Cargo.toml.tmpl")),
-            executable: false,
-            addon: None,
-        },
-        SourceFile {
-            path: "rustfmt.toml",
-            contents: Contents::Text(include_str!("plugin/rustfmt.toml.tmpl")),
-            executable: false,
-            addon: None,
-        },
-        SourceFile {
-            path: "src/main.rs",
-            contents: Contents::Text(include_str!("plugin/src/main.rs.tmpl")),
-            executable: false,
-            addon: None,
-        },
-        SourceFile {
-            path: "src/protocol.rs",
-            contents: Contents::Text(include_str!("plugin/src/protocol.rs.tmpl")),
-            executable: false,
-            addon: None,
-        },
-        SourceFile {
-            path: "tests/protocol.rs",
-            contents: Contents::Text(include_str!("plugin/tests/protocol.rs.tmpl")),
-            executable: false,
-            addon: None,
-        },
-        SourceFile {
-            path: "README.md",
-            contents: Contents::Text(include_str!("plugin/README.md.tmpl")),
-            executable: false,
-            addon: None,
-        },
-        SourceFile {
-            path: ".gitignore",
-            contents: Contents::Text(concat!(include_str!("plugin/gitignore.tmpl"), include_str!("community/gitignore.tmpl"))),
-            executable: false,
-            addon: None,
-        },
-        SourceFile {
-            path: ".github/workflows/ci.yml",
-            contents: Contents::Text(include_str!("plugin/github/ci.yml.tmpl")),
-            executable: false,
-            addon: None,
-        },
-        SourceFile {
-            path: ".github/workflows/release.yml",
-            contents: Contents::Text(include_str!("plugin/github/release.yml.tmpl")),
-            executable: false,
-            addon: None,
-        },
-        SourceFile {
-            path: "docs/adr/0003-the-plugin-is-a-subprocess.md",
-            contents: Contents::Text(include_str!("plugin/docs-adr-0003.md.tmpl")),
-            executable: false,
-            addon: None,
-        },
-        SourceFile {
-            path: "lyrn.toml",
-            // The line's lyrn.toml, and what only a plugin has to say.
-            contents: Contents::Text(concat!(include_str!("community/lyrn.toml.tmpl"), include_str!("plugin/lyrn-plugin.toml.tmpl"))),
-            executable: false,
-            addon: None,
-        },
+        text("Cargo.toml", include_str!("plugin/Cargo.toml.tmpl")),
+        text("rustfmt.toml", include_str!("plugin/rustfmt.toml.tmpl")),
+        text(
+            ".gitignore",
+            concat!(include_str!("plugin/gitignore.tmpl"), include_str!("community/gitignore.tmpl")),
+        ),
+        text(".github/workflows/ci.yml", include_str!("plugin/github/ci.yml.tmpl")),
+        text(".github/workflows/release.yml", include_str!("plugin/github/release.yml.tmpl")),
+        text("docs/adr/0003-the-plugin-is-a-subprocess.md", include_str!("plugin/docs-adr-0003.md.tmpl")),
+        // The line's lyrn.toml, and what only a plugin has to say.
+        text(
+            "lyrn.toml",
+            concat!(include_str!("community/lyrn.toml.tmpl"), include_str!("plugin/lyrn-plugin.toml.tmpl")),
+        ),
     ]);
 
     files
 }
 
+/// A text file every plugin of its shape writes.
+fn text(path: &'static str, contents: &'static str) -> SourceFile {
+    SourceFile {
+        path,
+        contents: Contents::Text(contents),
+        executable: false,
+        addon: None,
+    }
+}
+
 #[cfg(test)]
 mod tests {
     use super::*;
+
+    /// Both shapes, for the checks that hold every file the form can write.
+    fn every_shape() -> [Vec<SourceFile>; 2] {
+        [sources(), transport_sources()]
+    }
 
     #[test]
     fn every_shared_entry_names_a_file_the_cli_form_writes() {
@@ -117,11 +120,25 @@ mod tests {
 
     #[test]
     fn the_plugin_form_writes_no_file_twice() {
-        let mut paths: Vec<&str> = sources().iter().map(|s| s.path).collect();
-        let count = paths.len();
-        paths.sort_unstable();
-        paths.dedup();
-        assert_eq!(paths.len(), count, "the plugin form writes some path more than once");
+        for files in every_shape() {
+            let mut paths: Vec<&str> = files.iter().map(|s| s.path).collect();
+            let count = paths.len();
+            paths.sort_unstable();
+            paths.dedup();
+            assert_eq!(paths.len(), count, "the plugin form writes some path more than once");
+        }
+    }
+
+    #[test]
+    fn both_shapes_are_the_same_project_around_a_different_program() {
+        // What a plugin is to its host changes the program, not the project:
+        // the gate, the release and the record are one standard for both.
+        let paths = |files: &[SourceFile]| files.iter().filter(|f| f.addon.is_none()).map(|f| f.path).collect::<Vec<_>>();
+        let mut command = paths(&sources());
+        let mut transport = paths(&transport_sources());
+        command.sort_unstable();
+        transport.sort_unstable();
+        assert_eq!(command, transport);
     }
 
     #[test]
@@ -129,7 +146,7 @@ mod tests {
         // Every host-specific word arrives through the context. A template
         // that spelled `kilna` would generate a plugin for kilna no matter
         // what `--host` said, and only the person running it would find out.
-        for source in sources() {
+        for source in every_shape().into_iter().flatten() {
             let Contents::Text(text) = source.contents else { continue };
             for host in crate::host::ALL.iter().map(|h| h.name).chain(crate::host::PLANNED.iter().copied()) {
                 assert!(
