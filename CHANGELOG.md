@@ -8,6 +8,16 @@ last release, which follow [Conventional Commits](https://www.conventionalcommit
 $ git cliff --unreleased --tag vX.Y.Z --prepend CHANGELOG.md
 ```
 
+## 🎉 [2.18.0] - 2026-11-07
+
+### ✨ Features
+
+- Write a transport for sefy, and kasl's requests with --with source
+
+### 🛠️ Bug Fixes
+
+- Take furca-release 0.12, which needs Rust 1.89
+
 ## 🎉 [2.17.0] - 2026-11-06
 
 ### ✨ Features
