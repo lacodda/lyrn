@@ -101,7 +101,7 @@ impl GitHub {
             ),
             (_, path) => {
                 if let Some(id) = path.strip_prefix("/repos/owner/demo/rulesets/")
-                    && let Some(ruleset) = self.rulesets.iter().find(|r| r["id"].to_string() == id)
+                    && let Some(ruleset) = self.rulesets.iter().find(|r| r["id"].as_u64() == id.parse().ok())
                 {
                     return (200, ruleset.clone());
                 }
