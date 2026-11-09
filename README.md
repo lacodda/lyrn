@@ -205,7 +205,9 @@ $ lyrn new my-app --template lacodda/template-spa@v1.0.0
 ```
 
 `lyrn template export spa` writes a built-in form out as a template repository
-to start from: [Templates](https://lyrn.lacodda.com/reference/template/).
+to start from, `lyrn template follow` keeps it up with the form, and `lyrn
+upgrade` takes a project made from it to its newest green tag:
+[Templates](https://lyrn.lacodda.com/reference/template/).
 
 More forms — egui — follow in 2.x.
 

@@ -165,18 +165,32 @@ pub enum TemplateCommand {
         /// The template's directory; defaults to the current one
         path: Option<PathBuf>,
     },
-    /// Write a built-in form out as a template repository of its own
+    /// Write a built-in form out as a template repository of its own, or over
+    /// an earlier export of it
     Export {
         /// The form to write out
         form: Form,
 
-        /// Where to write it; defaults to `template-<form>`
+        /// Where to write it: a new directory, or an earlier export of the
+        /// form; defaults to `template-<form>`
         #[arg(long, value_name = "PATH")]
         path: Option<PathBuf>,
 
-        /// The GitHub repository the template will live in, as `owner/name`
+        /// The GitHub repository the template will live in, as `owner/name`;
+        /// over an earlier export, its origin
         #[arg(long, value_name = "OWNER/NAME")]
         repo: Option<String>,
+    },
+    /// Keep exported templates up with their form: write the form over each,
+    /// push it, and tag it once its CI passes
+    Follow {
+        /// Clones of the template repositories
+        #[arg(required = true, value_name = "PATH")]
+        paths: Vec<PathBuf>,
+
+        /// Say what would change, and write, push and tag nothing
+        #[arg(long)]
+        dry_run: bool,
     },
 }
 

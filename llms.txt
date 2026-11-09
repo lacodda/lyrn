@@ -11,7 +11,7 @@ on the commit before it is pushed, `lyrn stage`, `status`, `versions` and
 `deps` say where it stands, `lyrn adr` writes a decision down, `lyrn docs` writes
 and checks the documentation site, `lyrn readme snap` retakes the README's
 transcripts, `lyrn changelog` shows a version's section and its screens, and
-`lyrn template` checks or exports templates. Everything below is written for
+`lyrn template` checks, exports or follows templates. Everything below is written for
 people and agents alike: there is no second set of instructions kept elsewhere.
 
 ## Docs

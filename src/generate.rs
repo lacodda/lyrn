@@ -454,7 +454,7 @@ pub fn write(plan: &Plan, root: &Path) -> Result<(), GenerateError> {
 }
 
 #[cfg(unix)]
-fn set_executable(path: &Path, executable: bool) -> io::Result<()> {
+pub fn set_executable(path: &Path, executable: bool) -> io::Result<()> {
     use std::os::unix::fs::PermissionsExt;
     if !executable {
         return Ok(());
@@ -465,7 +465,7 @@ fn set_executable(path: &Path, executable: bool) -> io::Result<()> {
 }
 
 #[cfg(not(unix))]
-fn set_executable(_path: &Path, _executable: bool) -> io::Result<()> {
+pub fn set_executable(_path: &Path, _executable: bool) -> io::Result<()> {
     // Windows has no executable bit; git carries the mode instead.
     Ok(())
 }

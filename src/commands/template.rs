@@ -22,6 +22,8 @@ use crate::model::{AddonManifest, Context, Form};
 use crate::template::{self, FILES_DIR, Kind, Origin, VARIABLES};
 use crate::templates;
 
+mod follow;
+
 pub fn run(command: TemplateCommand) -> Result<(), Box<dyn Error>> {
     match command {
         TemplateCommand::Check { path } => check(&path.unwrap_or_else(|| PathBuf::from("."))),
@@ -29,6 +31,7 @@ pub fn run(command: TemplateCommand) -> Result<(), Box<dyn Error>> {
             let root = path.unwrap_or_else(|| PathBuf::from(format!("template-{form}")));
             export(form, &root, repo.as_deref())
         }
+        TemplateCommand::Follow { paths, dry_run } => follow::run(&paths, dry_run),
     }
 }
 
@@ -75,14 +78,35 @@ fn sample_context(form: Form) -> Context {
     context
 }
 
-/// Write a built-in form out as a template repository.
+/// Write a built-in form out as a template repository - into a new
+/// directory, or over an earlier export of the same form.
 fn export(form: Form, root: &Path, repo: Option<&str>) -> Result<(), Box<dyn Error>> {
+    if let Some(earlier) = Exported::read(root)? {
+        if earlier.form != form {
+            return Err(format!(
+                "`{}` is a template of the {} form; writing the {form} form over it would make it another template - export into a new directory",
+                root.display(),
+                earlier.form
+            )
+            .into());
+        }
+        follow::require_clean(root)?;
+        let repo = repo
+            .map(str::to_string)
+            .or_else(|| crate::repo::origin_repo(root))
+            .unwrap_or_else(|| new::repo(&dir_name(root, form), None));
+        let over = Over::plan(form, root, &repo)?;
+        over.write(root)?;
+        println!(
+            "Wrote the {form} form of lyrn {} over the template in `{}`: {}.",
+            env!("CARGO_PKG_VERSION"),
+            root.display(),
+            over.counts()
+        );
+        return Ok(());
+    }
     generate::check_destination(root)?;
-    let name = root
-        .file_name()
-        .map(|n| n.to_string_lossy().into_owned())
-        .unwrap_or_else(|| format!("template-{form}"));
-    let repo = new::repo(&name, repo);
+    let repo = new::repo(&dir_name(root, form), repo);
     let plan = export_plan(form, &repo)?;
     generate::write(&plan, root)?;
     println!("Wrote the {form} form as a template in `{}` ({} files).", root.display(), plan.files.len());
@@ -91,6 +115,137 @@ fn export(form: Form, root: &Path, repo: Option<&str>) -> Result<(), Box<dyn Err
     println!("  push it to {repo}, tag it once its CI is green, and use it:");
     println!("  lyrn new my-app --template {repo}@v1.0.0");
     Ok(())
+}
+
+fn dir_name(root: &Path, form: Form) -> String {
+    root.file_name()
+        .map(|n| n.to_string_lossy().into_owned())
+        .unwrap_or_else(|| format!("template-{form}"))
+}
+
+/// What an earlier export says it is: its form, the lyrn that wrote it, and
+/// the standard it carries.
+#[derive(Debug, Clone, PartialEq, Eq)]
+pub(crate) struct Exported {
+    pub form: Form,
+    pub lyrn: Option<String>,
+    pub standard: String,
+}
+
+impl Exported {
+    /// The template at `root`, if one is there: `None` for a directory that
+    /// does not exist or holds no `template.toml`.
+    pub fn read(root: &Path) -> Result<Option<Self>, Box<dyn Error>> {
+        let path = root.join("template.toml");
+        let text = match std::fs::read_to_string(&path) {
+            Ok(text) => text,
+            Err(e) if e.kind() == std::io::ErrorKind::NotFound => return Ok(None),
+            Err(e) => return Err(format!("cannot read `{}`: {e}", path.display()).into()),
+        };
+        // Read as data, not as a template: a manifest an older lyrn wrote may
+        // carry what this one no longer accepts, and it is about to be
+        // written over all the same.
+        let table: toml::Table = toml::from_str(&text).map_err(|e| format!("`{}` does not parse: {e}", path.display()))?;
+        let field = |key: &str| table.get(key).and_then(|v| v.as_str()).map(str::to_string);
+        let form = field("form")
+            .ok_or_else(|| format!("`{}` names no form, so it is not an export of one", path.display()))?
+            .parse()
+            .map_err(|e| format!("`{}`: {e}", path.display()))?;
+        Ok(Some(Self {
+            form,
+            lyrn: field("lyrn"),
+            standard: field("standard").unwrap_or_default(),
+        }))
+    }
+}
+
+/// An export written over an earlier one: every file the form writes now,
+/// and the files under `template/` it no longer writes, to go.
+///
+/// The licence is left as it is: it names whoever holds the copyright, which
+/// is the repository's to say once it has one.
+pub(crate) struct Over {
+    pub plan: Plan,
+    pub changed: Vec<PathBuf>,
+    pub added: Vec<PathBuf>,
+    pub removed: Vec<PathBuf>,
+}
+
+impl Over {
+    pub fn plan(form: Form, root: &Path, repo: &str) -> Result<Self, Box<dyn Error>> {
+        let mut plan = export_plan(form, repo)?;
+        if root.join("LICENSE").exists() {
+            plan.files.retain(|f| f.path != Path::new("LICENSE"));
+        }
+        let (mut changed, mut added) = (Vec::new(), Vec::new());
+        for file in &plan.files {
+            match std::fs::read(root.join(&file.path)) {
+                Ok(bytes) if bytes == file.contents => {}
+                Ok(_) => changed.push(file.path.clone()),
+                Err(_) => added.push(file.path.clone()),
+            }
+        }
+        let mut removed = Vec::new();
+        let files = root.join(FILES_DIR);
+        if files.is_dir() {
+            for path in walk(&files)? {
+                let relative = Path::new(FILES_DIR).join(path.strip_prefix(&files).unwrap_or(&path));
+                if !plan.files.iter().any(|f| f.path == relative) {
+                    removed.push(relative);
+                }
+            }
+        }
+        removed.sort();
+        Ok(Self { plan, changed, added, removed })
+    }
+
+    pub fn counts(&self) -> String {
+        format!("{} changed, {} added, {} removed", self.changed.len(), self.added.len(), self.removed.len())
+    }
+
+    pub fn write(&self, root: &Path) -> Result<(), Box<dyn Error>> {
+        for path in &self.removed {
+            std::fs::remove_file(root.join(path))?;
+        }
+        // Directories under template/ left empty go with their files: git
+        // keeps none of them, and a checkout elsewhere would not have them.
+        for path in &self.removed {
+            let mut dir = path.parent();
+            while let Some(d) = dir.filter(|d| d.starts_with(FILES_DIR) && *d != Path::new(FILES_DIR)) {
+                if std::fs::remove_dir(root.join(d)).is_err() {
+                    break;
+                }
+                dir = d.parent();
+            }
+        }
+        for file in &self.plan.files {
+            let target = root.join(&file.path);
+            if let Some(parent) = target.parent() {
+                std::fs::create_dir_all(parent)?;
+            }
+            std::fs::write(&target, &file.contents)?;
+            generate::set_executable(&target, file.executable)?;
+        }
+        Ok(())
+    }
+}
+
+/// Every file under `dir`, by its full path.
+fn walk(dir: &Path) -> Result<Vec<PathBuf>, Box<dyn Error>> {
+    let mut files = Vec::new();
+    let mut stack = vec![dir.to_path_buf()];
+    while let Some(at) = stack.pop() {
+        for entry in std::fs::read_dir(&at)? {
+            let entry = entry?;
+            let path = entry.path();
+            if entry.file_type()?.is_dir() {
+                stack.push(path);
+            } else {
+                files.push(path);
+            }
+        }
+    }
+    Ok(files)
 }
 
 /// Everything `export` writes, before any of it is written.
@@ -364,10 +519,12 @@ fn workflow(form: Form, addons: &[AddonManifest]) -> String {
         "\
 name: CI
 
+# On the commits of main, not on tags: lyrn asks about the CI of the commit a
+# tag points at, so a run on the tag would build the same files again, and
+# until it finished the tag would read as still running.
 on:
   push:
     branches: [main]
-    tags: ['v*']
   pull_request:
 
 jobs:

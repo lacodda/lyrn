@@ -6,13 +6,15 @@ description: Templates from outside the binary - where they come from, what they
 ```console
 $ lyrn template check [path]
 $ lyrn template export <form> [--path <path>] [--repo <owner/name>]
+$ lyrn template follow <path>... [--dry-run]
 ```
 
 Every form lyrn carries is built into the binary, so `lyrn new` works offline.
 `--template` generates from one that is not: a directory, one of yours under
 `~/.lyrn/templates`, or a tag of a GitHub repository. `lyrn template check` holds
-a template to what lyrn will accept, and `lyrn template export` writes a
-built-in form out as a template repository to start from.
+a template to what lyrn will accept, `lyrn template export` writes a built-in
+form out as a template repository to start from, and `lyrn template follow`
+keeps such a repository up with the form once lyrn moves on.
 
 ## Where a template comes from
 
@@ -219,6 +221,77 @@ Wrote the spa form as a template in `template-spa` (53 files).
 Generating from the export gives the same project as the built-in form, byte
 for byte - lyrn's own tests hold it to that for every form. Push it, tag it once
 its CI is green, and it is usable as `myorg/template-spa@v1.0.0`.
+
+The template's CI runs on the commits of `main` and on pull requests, not on
+tags: lyrn asks about the CI of the commit a tag points at, so a run on the tag
+would build the same files again, and the tag would read as still running
+until it finished.
+
+### Over an earlier export
+
+`--path` may name an earlier export of the same form. The form is written over
+it as this lyrn writes it: every file the form writes now, and the files under
+`template/` it no longer writes removed. The licence stays as it is - it names
+whoever holds the copyright, which is the repository's to say. `--repo`
+defaults to the repository's `origin`.
+
+```console
+$ lyrn template export cli --path ../template-cli
+Wrote the cli form of lyrn 2.19.0 over the template in `../template-cli`: 9 changed, 3 added, 0 removed.
+```
+
+An export of another form is refused, and so is a repository with changes not
+yet committed: written over, the two would be mixed, and nobody could tell
+afterwards which was which. A template you have changed by hand is not an
+export any more; writing the form over it takes your changes out, and git is
+where they are then.
+
+## `lyrn template follow`
+
+A template exported from a form is a copy of it at one version of lyrn, and the
+form moves on - the [standard](/concepts/the-standard-by-version/) most of all.
+`follow` takes each clone it is given through the whole of a release:
+
+1. It brings the clone level with its upstream - its work tree has to be clean.
+2. It writes the form over it, as `export --path` does.
+3. It commits that as `feat: the cli form of lyrn 2.19.0`, with the standards
+   it moved between in the body, and pushes it.
+4. It waits for the CI of that commit, asking GitHub every fifteen seconds.
+5. Once the CI has passed, it tags the commit with the next minor version - after
+   `v1.1.0`, `v1.2.0` - and pushes the tag.
+
+```console
+$ lyrn template follow ../template-cli ../template-spa
+lacodda/template-cli: the cli form, from lyrn 2.10.0 to 2.19.0, the standard 2026.10 to 2026.11.4: 9 changed, 3 added, 0 removed
+  changed  .github/workflows/ci.yml
+  ...
+Pushed 4be1c7d0a9e2 to lacodda/template-cli: feat: the cli form of lyrn 2.19.0
+Waiting for the CI of 4be1c7d0a9e2...
+The CI of 4be1c7d0a9e2 passed.
+Tagged lacodda/template-cli@v1.2.0 on 4be1c7d0a9e2, whose CI passed:
+  lyrn new my-app --template lacodda/template-cli@v1.2.0
+```
+
+A form that writes nothing new leaves the template alone: a change of the
+version of lyrn the template names, and nothing else, is not a release of it -
+otherwise every release of lyrn would be one of every template. So a tag of a
+template always says something in it changed, and a project made from it that
+[`lyrn upgrade`](/reference/upgrade/#a-project-made-from-a-template) carries to
+that tag has something to take.
+
+A red CI stops it with the commit pushed and no tag, and names the jobs that
+failed; mend the form in lyrn and follow again with the lyrn that has the fix.
+No CI on the commit for five minutes, or a CI still running after an hour, stops
+it the same way. Each clone is followed on its own, and the run ends non-zero
+when one was not.
+
+Pushing and tagging are done with your own git credentials; GitHub is asked
+about the CI as for [a template from GitHub](#from-github-only-at-a-tag-whose-ci-passed).
+
+| Option | What it does |
+| --- | --- |
+| `<path>...` | The clones of the template repositories, each the top of its own |
+| `--dry-run` | Say what would change in each, and write, push and tag nothing |
 
 ## cargo-generate templates
 

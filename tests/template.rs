@@ -775,3 +775,146 @@ fn a_project_from_a_template_directory_is_refused_by_name() {
         "came from the template `path:template-cli`, which keeps no revision to upgrade from",
     ));
 }
+
+/// A clone of `remotes/owner/template-cli.git` by the address lyrn would
+/// read it at, with the template as an older lyrn wrote it: another standard,
+/// a line of `.editorconfig` since changed, a file since dropped.
+fn older_template_clone(remotes: &Path) -> (PathBuf, PathBuf) {
+    let (template, bare) = cli_template(remotes);
+    let version = env!("CARGO_PKG_VERSION");
+    release(&template, "v1.1.0", |t| {
+        let manifest = read(t.join("template.toml"))
+            .replace(&format!("lyrn = \"{version}\""), "lyrn = \"2.10.0\"")
+            .replace(&format!("lyrn {version}"), "lyrn 2.10.0");
+        let standard = manifest.lines().find(|l| l.starts_with("standard = ")).unwrap().to_string();
+        fs::write(t.join("template.toml"), manifest.replace(&standard, "standard = \"2026.10\"")).unwrap();
+        append(t.join("template/.editorconfig"), "# written by an older lyrn");
+        fs::write(t.join("template/OLD.md"), "a file the form no longer writes\n").unwrap();
+        fs::write(t.join("LICENSE"), "The owner's own licence\n").unwrap();
+    });
+    let clone = remotes.join("clone");
+    let url = format!("{}/owner/template-cli.git", remotes.display());
+    git(remotes, &["clone", "--quiet", &url, clone.to_str().unwrap()]);
+    (clone, bare)
+}
+
+/// Following a form: the export over the template, one commit pushed, its
+/// CI waited for, and the next tag on that commit once it passed. The
+/// licence is the repository's and stays.
+#[test]
+fn follow_writes_the_form_over_its_template_and_tags_it_once_the_ci_passed() {
+    let identity = Identity::new();
+    let remotes = tempfile::tempdir().unwrap();
+    let (clone, bare) = older_template_clone(remotes.path());
+    let api = api(GREEN);
+
+    let assert = identity.lyrn(remotes.path(), &api).args(["template", "follow"]).arg(&clone).assert().success();
+    let report = String::from_utf8_lossy(&assert.get_output().stdout).into_owned();
+    assert!(report.contains("the standard 2026.10 to"), "{report}");
+    assert!(report.contains("removed  template/OLD.md"), "{report}");
+    assert!(report.contains("Tagged owner/template-cli@v1.2.0"), "{report}");
+
+    let head = git(&bare, &["rev-parse", "main"]);
+    assert_eq!(git(&bare, &["rev-parse", "v1.2.0^{commit}"]), head, "the tag is not on the commit pushed");
+    assert_eq!(
+        git(&bare, &["log", "-1", "--format=%s", "main"]),
+        format!("feat: the cli form of lyrn {}", env!("CARGO_PKG_VERSION"))
+    );
+    assert!(!clone.join("template/OLD.md").exists());
+    assert!(!read(clone.join("template/.editorconfig")).contains("older lyrn"));
+    assert!(read(clone.join("template.toml")).contains(&format!("lyrn = \"{}\"", env!("CARGO_PKG_VERSION"))));
+    assert_eq!(read(clone.join("LICENSE")), "The owner's own licence\n");
+
+    // Followed, the template has nothing more to take.
+    identity
+        .lyrn(remotes.path(), &api)
+        .args(["template", "follow"])
+        .arg(&clone)
+        .assert()
+        .success()
+        .stdout(predicate::str::contains("nothing to follow"));
+    assert_eq!(git(&bare, &["rev-parse", "main"]), head);
+}
+
+/// A red CI leaves the commit pushed and untagged: a tag is what says a
+/// template can be used.
+#[test]
+fn follow_tags_nothing_when_the_ci_fails() {
+    let identity = Identity::new();
+    let remotes = tempfile::tempdir().unwrap();
+    let (clone, bare) = older_template_clone(remotes.path());
+    identity
+        .lyrn(remotes.path(), &api(RED))
+        .args(["template", "follow"])
+        .arg(&clone)
+        .assert()
+        .failure()
+        .stderr(predicate::str::contains("failed: generate (keyring) (failure); nothing was tagged"));
+    assert!(git(&bare, &["tag", "--list"]).lines().all(|t| t != "v1.2.0"), "a red commit was tagged");
+}
+
+/// A form that changed nothing but the version of lyrn it names is not a
+/// release of the template: otherwise every release of lyrn would be one.
+#[test]
+fn follow_leaves_a_template_whose_form_moved_only_its_version_alone() {
+    let identity = Identity::new();
+    let remotes = tempfile::tempdir().unwrap();
+    let (template, bare) = cli_template(remotes.path());
+    let version = env!("CARGO_PKG_VERSION");
+    release(&template, "v1.1.0", |t| {
+        for file in ["template.toml", ".github/workflows/ci.yml"] {
+            let text = read(t.join(file));
+            assert!(text.contains(version), "{file} names no version of lyrn");
+            fs::write(t.join(file), text.replace(version, "2.10.0")).unwrap();
+        }
+    });
+    let clone = remotes.path().join("clone");
+    let url = format!("{}/owner/template-cli.git", remotes.path().display());
+    git(remotes.path(), &["clone", "--quiet", &url, clone.to_str().unwrap()]);
+    let head = git(&bare, &["rev-parse", "main"]);
+
+    identity
+        .lyrn(remotes.path(), &api(GREEN))
+        .args(["template", "follow"])
+        .arg(&clone)
+        .assert()
+        .success()
+        .stdout(predicate::str::contains("nothing to follow"));
+    assert_eq!(git(&bare, &["rev-parse", "main"]), head, "a version alone was pushed as a release");
+}
+
+#[test]
+fn export_writes_over_an_earlier_export_of_its_form_only() {
+    let dir = tempfile::tempdir().unwrap();
+    let template = exported("cli", dir.path());
+    fs::write(template.join("template/OLD.md"), "gone after the export\n").unwrap();
+    append(template.join("template/.editorconfig"), "# changed by hand");
+    lyrn()
+        .args(["template", "export", "cli", "--repo", "owner/template-x", "--path"])
+        .arg(&template)
+        .assert()
+        .success()
+        .stdout(predicate::str::contains("over the template").and(predicate::str::contains("1 changed, 0 added, 1 removed")));
+    assert!(!template.join("template/OLD.md").exists());
+    assert!(!read(template.join("template/.editorconfig")).contains("by hand"));
+
+    lyrn()
+        .args(["template", "export", "spa", "--path"])
+        .arg(&template)
+        .assert()
+        .failure()
+        .stderr(predicate::str::contains("is a template of the cli form"));
+
+    // In a repository, changes not yet committed are not written over.
+    git(&template, &["init", "--quiet"]);
+    git(&template, &["add", "-A"]);
+    git(&template, &["commit", "--quiet", "-m", "feat: the cli form"]);
+    append(template.join("template/.editorconfig"), "# not committed");
+    lyrn()
+        .args(["template", "export", "cli", "--repo", "owner/template-x", "--path"])
+        .arg(&template)
+        .assert()
+        .failure()
+        .stderr(predicate::str::contains("changes not yet committed"));
+    assert!(read(template.join("template/.editorconfig")).contains("# not committed"));
+}

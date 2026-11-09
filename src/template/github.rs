@@ -23,8 +23,25 @@ const GITHUB_API: &str = "https://api.github.com";
 /// The base both are read from. The variables exist for the tests, which
 /// stand a local repository and a local API in for GitHub's; nothing else
 /// should need them.
-fn git_base() -> String {
+pub fn git_base() -> String {
     std::env::var("LYRN_GITHUB_GIT").unwrap_or_else(|_| GITHUB.to_string())
+}
+
+/// `owner/name` of a repository by its remote: GitHub's over HTTPS or SSH,
+/// or one under the base the tests stand in for GitHub.
+pub fn slug_of(url: &str) -> Option<String> {
+    if let Some(slug) = crate::repo::github_repo(url) {
+        return Some(slug);
+    }
+    let base = git_base();
+    if base == GITHUB {
+        return None;
+    }
+    let posix = |s: &str| s.replace('\\', "/");
+    let rest = posix(url).strip_prefix(posix(&base).trim_end_matches('/'))?.trim_matches('/').to_string();
+    let rest = rest.strip_suffix(".git").unwrap_or(&rest);
+    let (owner, name) = rest.split_once('/')?;
+    (!owner.is_empty() && !name.is_empty() && !name.contains('/')).then(|| format!("{owner}/{name}"))
 }
 
 fn api_base() -> String {
