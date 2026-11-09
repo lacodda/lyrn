@@ -94,7 +94,11 @@ changed into the repository's files and commits it as one change.
 ## Install
 
 ```console
-$ npm install -g lyrn          # or: cargo install lyrn
+$ brew install lacodda/tap/lyrn                                    # macOS, Linux
+$ scoop bucket add lacodda https://github.com/lacodda/scoop-bucket  # Windows
+$ scoop install lyrn
+$ npm install -g lyrn                                              # anywhere with Node
+$ cargo install lyrn                                               # from source
 ```
 
 ## Usage

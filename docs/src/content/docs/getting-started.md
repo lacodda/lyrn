@@ -10,6 +10,21 @@ had them — a CI gate, a changelog, an ADR directory, an editor config.
 
 ## Install
 
+On macOS and Linux, with Homebrew:
+
+```console
+$ brew install lacodda/tap/lyrn
+```
+
+On Windows, with Scoop:
+
+```console
+$ scoop bucket add lacodda https://github.com/lacodda/scoop-bucket
+$ scoop install lyrn
+```
+
+Anywhere with Node:
+
 ```console
 $ npm install -g lyrn
 ```
