@@ -107,6 +107,7 @@ $ lyrn upgrade [path]            # the newest standard, merged into the files an
 $ lyrn doctor [path...] [--fix]  # what is off against the standard, why, and the safe repairs
 $ lyrn check [path...]           # the shopfronts held to each other; --release: what went out
 $ lyrn repo [path]               # the repository on GitHub, kept the way the project says; tags on green CI
+$ lyrn open [place]              # a shopfront in the browser: repo, docs, ci, release, crate, npm
 $ lyrn assets [--from <dir>]     # the mark laid out by the canon, every raster drawn from its masters
 $ lyrn brand pick [name]         # a new mark's code and colour, held to the line's marks
 $ lyrn ci [job...]               # the CI a push of this commit would start, run here first

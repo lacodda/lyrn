@@ -34,6 +34,8 @@ pub enum Command {
     Check(CheckArgs),
     /// Put the repository on GitHub, or bring the one there in line: what it says, its pages, its rules
     Repo(RepoArgs),
+    /// Open one of the repository's shopfronts in the browser
+    Open(OpenArgs),
     /// Lay the mark out by the line's canon and draw every raster of it from its masters
     Assets(AssetsArgs),
     /// A new product's mark, held to the line's: its code, its colour, and the two together
@@ -291,6 +293,21 @@ pub struct RepoArgs {
     /// Create the repository private rather than public; one that exists keeps its visibility
     #[arg(long)]
     pub private: bool,
+}
+
+#[derive(clap::Args)]
+pub struct OpenArgs {
+    /// Which shopfront [default: repo]
+    #[arg(value_name = "PLACE")]
+    pub place: Option<crate::commands::open::Place>,
+
+    /// The repository; defaults to the one the current directory is in
+    #[arg(long, value_name = "PATH")]
+    pub path: Option<PathBuf>,
+
+    /// Print the address instead of opening it
+    #[arg(long)]
+    pub print: bool,
 }
 
 #[derive(Subcommand)]

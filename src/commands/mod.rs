@@ -11,6 +11,7 @@ pub mod doctor;
 pub mod init;
 pub mod msrv;
 pub mod new;
+pub mod open;
 pub mod readme;
 pub mod repo;
 pub mod stage;

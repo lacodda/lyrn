@@ -321,3 +321,32 @@ fn a_new_repository_is_created_and_kept_the_way_the_project_says() {
     assert_eq!(written(&github).len(), before, "nothing is left to set: {again}");
     assert!(again.contains("8 already so"), "{again}");
 }
+
+fn lyrn_in(dir: &Path, args: &[&str]) -> (String, bool) {
+    let out = common::lyrn().args(args).current_dir(dir).output().unwrap();
+    let text = format!("{}{}", String::from_utf8_lossy(&out.stdout), String::from_utf8_lossy(&out.stderr));
+    (text, out.status.success())
+}
+
+/// `lyrn open --print` says where each shopfront is from the repository's
+/// own files, and refuses one the repository has not got.
+#[test]
+fn every_shopfront_is_where_the_repository_says() {
+    let dir = tempfile::tempdir().unwrap();
+    project(dir.path());
+    git(dir.path(), &["tag", "v0.1.0"]);
+    git(dir.path(), &["tag", "v0.10.0"]);
+    git(dir.path(), &["tag", "v0.9.0"]);
+    for (place, address) in [
+        ("repo", "https://github.com/owner/demo"),
+        ("ci", "https://github.com/owner/demo/actions/workflows/ci.yml"),
+        ("release", "https://github.com/owner/demo/releases/tag/v0.10.0"),
+        ("crate", "https://crates.io/crates/demo"),
+    ] {
+        let (text, ok) = lyrn_in(dir.path(), &["open", place, "--print"]);
+        assert!(ok, "{place}: {text}");
+        assert_eq!(text.trim(), address, "{place}");
+    }
+    let (text, ok) = lyrn_in(dir.path(), &["open", "npm", "--print"]);
+    assert!(!ok && text.contains("no package here that npm would take"), "{text}");
+}

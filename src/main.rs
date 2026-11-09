@@ -55,6 +55,7 @@ fn main() -> ExitCode {
             Ok(false) => return ExitCode::FAILURE,
             Err(e) => Err(e),
         },
+        cli::Command::Open(args) => commands::open::run(args),
         cli::Command::Ci(args) => match commands::ci::run(args) {
             Ok(true) => return ExitCode::SUCCESS,
             Ok(false) => return ExitCode::FAILURE,
