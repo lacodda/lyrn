@@ -247,6 +247,14 @@ pub fn outputs(repo: &Repo, mark: &Mark) -> Vec<Output> {
             Some(size) => add(path, mark.png(size), format!("{} at {size}px, the bundle's icon", level_name(size))),
         }
     }
+    // A toast's icon: Windows shows it beside a notification at 48 DIP
+    // whatever the file's pixels, so it is M - not the level its pixel size
+    // would pick - at the size the file is, and 96 when the code names one
+    // that is not there yet: 48 DIP at 200%.
+    for path in toast_icons(repo) {
+        let size = square_png(&repo.root.join(&path)).unwrap_or(TOAST_PX);
+        add(path, mark.m.png(size), format!("M at {size}px, a toast's icon: 48 DIP"));
+    }
 
     // The copies the repository keeps.
     for path in repo.files.iter().filter(|p| !is_test_material(p) && !in_a_template(p)) {
@@ -286,6 +294,45 @@ fn build_icons(repo: &Repo) -> Vec<String> {
         let Some(text) = repo.read_text(script) else { continue };
         let dir = script.rsplit_once('/').map(|(d, _)| d).unwrap_or("");
         for named in icons_named_in(&text) {
+            if let Some(path) = resolve(dir, &named)
+                && !out.contains(&path)
+            {
+                out.push(path);
+            }
+        }
+    }
+    out
+}
+
+/// The pixels a toast's icon is drawn at when there is no file to read them
+/// from: 48 DIP at 200%.
+const TOAST_PX: u32 = 96;
+
+/// Whether a file is a toast's icon, by its name: `toast-96.png`,
+/// `toast-icon.png`.
+fn is_toast_icon(path: &str) -> bool {
+    let file = path.rsplit('/').next().unwrap_or(path).to_ascii_lowercase();
+    file.starts_with("toast") && file.ends_with(".png")
+}
+
+/// The toast icons of the repository: every one it keeps, and every one its
+/// code embeds with `include_bytes!` - drawn whether or not it is there yet,
+/// since a build that embeds a missing file fails.
+fn toast_icons(repo: &Repo) -> Vec<String> {
+    let mut out: Vec<String> = repo
+        .files
+        .iter()
+        .filter(|p| is_toast_icon(p) && !is_test_material(p) && !in_a_template(p))
+        .cloned()
+        .collect();
+    let embedded = regex::Regex::new(r#"include_bytes!\(\s*"([^"\s]+\.png)"\s*\)"#).expect("a valid pattern");
+    for source in repo.files.iter().filter(|p| p.ends_with(".rs") && !is_test_material(p) && !in_a_template(p)) {
+        let Some(text) = repo.read_text(source) else { continue };
+        if !text.contains("include_bytes!") {
+            continue;
+        }
+        let dir = source.rsplit_once('/').map(|(d, _)| d).unwrap_or("");
+        for named in embedded.captures_iter(&text).map(|c| c[1].to_string()).filter(|n| is_toast_icon(n)) {
             if let Some(path) = resolve(dir, &named)
                 && !out.contains(&path)
             {
@@ -430,6 +477,40 @@ mod tests {
             std::fs::metadata(&icon).expect("the line mark is missing from assets/icon.ico");
         "#;
         assert_eq!(icons_named_in(script), ["assets/icon.ico", "../../assets/icon.ico"]);
+    }
+
+    /// A toast's icon is M at the size the file is, whether the repository
+    /// keeps it or only its code embeds it; a picture that is no toast's
+    /// icon is left alone.
+    #[test]
+    fn a_toast_icon_is_m_at_its_own_size() {
+        let dir = tempfile::tempdir().unwrap();
+        let root = dir.path();
+        let ours = Path::new(env!("CARGO_MANIFEST_DIR")).join("assets");
+        std::fs::create_dir_all(root.join("assets")).unwrap();
+        std::fs::create_dir_all(root.join("src/libs")).unwrap();
+        for file in ["logo.svg", "logo-m.svg", "logo-s.svg"] {
+            std::fs::copy(ours.join(file), root.join("assets").join(file)).unwrap();
+        }
+        // Kept at 64px, the way turnout keeps it; embedded and not there yet,
+        // the way kasl names it from a module two directories down.
+        std::fs::write(root.join("assets/toast-icon.png"), crate::mark::ico::tests::png_of(64, [0, 0, 0, 255])).unwrap();
+        std::fs::write(
+            root.join("src/libs/inbox.rs"),
+            "const LOGO: &[u8] = include_bytes!(\"../../assets/toast-96.png\");\nconst PICTURE: &[u8] = include_bytes!(\"../../assets/picture.png\");\n",
+        )
+        .unwrap();
+        let repo = Repo::on_disk(root);
+        let mark = read_mark(root).unwrap();
+        let out = outputs(&repo, &mark);
+        let drawn = |path: &str| out.iter().find(|o| o.path == path).map(|o| o.bytes.clone());
+
+        let kept = drawn("assets/toast-icon.png").expect("the toast icon kept is drawn");
+        assert_eq!(kept, mark.m.png(64));
+        let embedded = drawn("assets/toast-96.png").expect("the toast icon embedded is drawn though it is not there");
+        assert_eq!(embedded, mark.m.png(96));
+        assert_ne!(embedded, mark.png(96), "M, not the level 96px would pick");
+        assert!(drawn("assets/picture.png").is_none(), "a picture is not a toast's icon");
     }
 
     #[test]

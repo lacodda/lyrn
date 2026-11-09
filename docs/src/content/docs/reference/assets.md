@@ -43,12 +43,19 @@ assets/social-preview.png changed: upload it by hand at https://github.com/lacod
 | `assets/social-preview.png` | the banner, 1280x640 |
 | every `.ico` a build reads | 256, 128 and 64 from L, 48 and 32 from M, 24 and 16 from S, the largest first |
 | every PNG a Tauri app's bundle lists | the level of its size: `32x32.png` is M, `128x128@2x.png` is L at 256 |
+| every toast's icon | M at the file's own size, 96px when it is not there yet - Windows shows it at 48 DIP whatever its pixels |
 
 An icon goes where a build reads it: every string in a `build.rs` that names
 an `.ico` - `"assets/icon.ico"` beside the crate, `"../../assets/icon.ico"` at
 the top of a workspace - and every icon in a `tauri.conf.json`'s
 `bundle.icon`. It is written even where it is missing, since a build that reads
-a missing icon fails, and nowhere else. The largest image of an `.ico` comes
+a missing icon fails, and nowhere else.
+
+A toast's icon is a PNG named `toast*.png` - `assets/toast-96.png`,
+`assets/toast-icon.png` - that the repository keeps or its code embeds with
+`include_bytes!`. A program shows it beside a desktop notification, which
+Windows draws at 48 DIP, so it is M whatever level its pixels would pick, and
+one the code embeds is drawn even before it is there. The largest image of an `.ico` comes
 first: Windows picks by size and ignores the order, but Tauri takes the first
 image as the window's icon.
 
@@ -83,7 +90,8 @@ banner on the plate, then drawn again fitted into 1040x460 and centred on the
 underline short.
 
 GitHub has no API for it: upload `assets/social-preview.png` by hand, under
-Social preview in the repository's settings.
+Social preview in the repository's settings. [`lyrn repo`](/reference/repo/)
+says whether the picture GitHub shows is this one, pixel for pixel.
 
 ## The font
 
