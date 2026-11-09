@@ -40,9 +40,11 @@ nothing was pushed still turns it red. A documentation site added later brings
 an audit of its own packages, `docs-audit.yml`, since the repository's audit
 does not look inside `docs/`.
 
-Private vulnerability reporting has to be switched on for the repository
-(Settings, Advanced Security) for the link in `SECURITY.md` to work; both it and
-the code of conduct say what to do if it is not.
+Private vulnerability reporting has to be switched on for the repository for
+the link in `SECURITY.md` to work, and GitHub starts a repository with it off:
+[`lyrn repo`](/reference/repo/) switches it on, with the rest of what GitHub
+keeps outside the files. Both `SECURITY.md` and the code of conduct say what to
+do if it is not.
 
 ## The gate is one script
 

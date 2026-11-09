@@ -1,6 +1,7 @@
 mod cli;
 mod commands;
 mod generate;
+mod github;
 mod hash;
 mod host;
 mod mark;
@@ -43,6 +44,13 @@ fn main() -> ExitCode {
             Err(e) => Err(e),
         },
         cli::Command::Check(args) => match commands::check::run(args) {
+            Ok(true) => return ExitCode::SUCCESS,
+            Ok(false) => return ExitCode::FAILURE,
+            Err(e) => Err(e),
+        },
+        // A setting GitHub refused is said in the report; the exit code says
+        // the repository is not yet the way the project says.
+        cli::Command::Repo(args) => match commands::repo::run(args) {
             Ok(true) => return ExitCode::SUCCESS,
             Ok(false) => return ExitCode::FAILURE,
             Err(e) => Err(e),

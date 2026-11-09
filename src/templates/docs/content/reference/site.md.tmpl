@@ -33,5 +33,7 @@ each one that does not.
 ## Publishing
 
 `.github/workflows/docs.yml` builds and deploys the site on every push to
-`main` that touches `docs/`. Turn it on once, in the repository's
-**Settings -> Pages -> Source: GitHub Actions**.
+`main` that touches `docs/`. Turn it on once: `lyrn repo` has GitHub build
+Pages from this workflow, served at the domain in `public/CNAME` when there is
+one - or by hand, in the repository's **Settings -> Pages -> Source: GitHub
+Actions**.

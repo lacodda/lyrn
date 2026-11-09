@@ -50,6 +50,8 @@ pub struct Manifest {
     /// The release an npm wrapper downloads its binary from, by where it
     /// says so: `lyrn.binary = v2.12.0`.
     pub binary_pins: Vec<(String, String)>,
+    /// What the product is tagged with: Cargo's and npm's `keywords`.
+    pub keywords: Vec<String>,
 }
 
 impl Manifest {
@@ -270,7 +272,17 @@ fn read_cargo(root: &Path, path: &str, text: &str) -> Option<Manifest> {
         bins,
         uses_clap: depends("clap"),
         binary_pins: Vec::new(),
+        keywords: strings(
+            package
+                .and_then(|p| p.get("keywords"))
+                .and_then(|k| k.as_array())
+                .map(|a| a.iter().filter_map(|v| v.as_str()).collect()),
+        ),
     })
+}
+
+fn strings(list: Option<Vec<&str>>) -> Vec<String> {
+    list.unwrap_or_default().into_iter().map(str::to_string).collect()
 }
 
 fn read_package(path: &str, text: &str) -> Option<Manifest> {
@@ -300,6 +312,11 @@ fn read_package(path: &str, text: &str) -> Option<Manifest> {
         bins: Vec::new(),
         uses_clap: false,
         binary_pins,
+        keywords: strings(
+            json.get("keywords")
+                .and_then(Value::as_array)
+                .map(|a| a.iter().filter_map(Value::as_str).collect()),
+        ),
     })
 }
 
@@ -327,6 +344,7 @@ fn read_tauri(path: &str, text: &str) -> Option<Manifest> {
         bins: Vec::new(),
         uses_clap: false,
         binary_pins: Vec::new(),
+        keywords: Vec::new(),
     })
 }
 
@@ -379,6 +397,7 @@ mod tests {
             bins: Vec::new(),
             uses_clap: false,
             binary_pins: Vec::new(),
+            keywords: Vec::new(),
         }
     }
 

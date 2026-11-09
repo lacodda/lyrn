@@ -558,7 +558,7 @@ fn print_next_steps(name: &str, form: Form, project: &ProjectArgs, root: &Path, 
             println!("  pnpm dev");
             // Pages is off in a new repository, and the workflow's deploy job
             // fails until it is on; saying so here saves the first red run.
-            println!("\nTo publish: Settings -> Pages -> Source: GitHub Actions, then push to main.");
+            println!("\nTo publish: `lyrn repo` has GitHub build Pages from the site's workflow, then push to main.");
         }
         Form::Spa => {
             if args.no_hooks {
@@ -612,6 +612,13 @@ fn print_next_steps(name: &str, form: Form, project: &ProjectArgs, root: &Path, 
             println!("  cargo test");
             println!("  pnpm test");
         }
+    }
+    // A documentation site is added to a repository that is already there;
+    // anything else is new, and GitHub has not heard of it.
+    if form != Form::Docs {
+        println!(
+            "\nOn GitHub: `lyrn repo` creates the repository and keeps it the way the project says - its description, topics, pages, and tags only on green CI."
+        );
     }
 }
 

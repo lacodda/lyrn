@@ -32,6 +32,8 @@ pub enum Command {
     Doctor(DoctorArgs),
     /// Hold the shopfronts to each other: versions, descriptions, commands, the site's address
     Check(CheckArgs),
+    /// Put the repository on GitHub, or bring the one there in line: what it says, its pages, its rules
+    Repo(RepoArgs),
     /// Lay the mark out by the line's canon and draw every raster of it from its masters
     Assets(AssetsArgs),
     /// A new product's mark, held to the line's: its code, its colour, and the two together
@@ -275,6 +277,20 @@ pub struct CheckArgs {
     /// Say why a check exists and how to satisfy it, instead of checking
     #[arg(long, value_name = "CHECK", conflicts_with_all = ["paths", "all", "json", "release"])]
     pub explain: Option<crate::commands::check::Shop>,
+}
+
+#[derive(clap::Args)]
+pub struct RepoArgs {
+    /// The repository; defaults to the one the current directory is in
+    pub path: Option<PathBuf>,
+
+    /// Say what would change on GitHub, and change nothing
+    #[arg(long)]
+    pub dry_run: bool,
+
+    /// Create the repository private rather than public; one that exists keeps its visibility
+    #[arg(long)]
+    pub private: bool,
 }
 
 #[derive(Subcommand)]

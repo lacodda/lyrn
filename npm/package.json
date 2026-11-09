@@ -15,7 +15,7 @@
   "bugs": {
     "url": "https://github.com/lacodda/lyrn/issues"
   },
-  "keywords": ["cli", "scaffold", "template", "vite", "react", "tailwind", "starter"],
+  "keywords": ["cli", "scaffold", "template", "vite", "react", "tailwind", "starter", "rust", "scaffolding", "project-template"],
   "bin": {
     "lyrn": "run.js"
   },

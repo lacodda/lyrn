@@ -12,6 +12,7 @@ pub mod init;
 pub mod msrv;
 pub mod new;
 pub mod readme;
+pub mod repo;
 pub mod stage;
 pub mod standing;
 pub mod status;

@@ -413,18 +413,10 @@ pub fn ci(name: &str, commit: &str) -> Result<Verdict, Box<dyn Error>> {
     Ok(verdict(&check_runs, &statuses))
 }
 
-/// A GitHub token, if one is at hand: the environment first, then the one
-/// `gh` is logged in with. Without one lyrn asks anonymously, which is enough
-/// for a public template and sixty questions an hour.
+/// A GitHub token, if one is at hand. Without one lyrn asks anonymously,
+/// which is enough for a public template and sixty questions an hour.
 fn token() -> Option<String> {
-    for var in ["GH_TOKEN", "GITHUB_TOKEN"] {
-        if let Some(value) = std::env::var(var).ok().filter(|v| !v.trim().is_empty()) {
-            return Some(value.trim().to_string());
-        }
-    }
-    let output = Process::new("gh").args(["auth", "token"]).output().ok()?;
-    let token = String::from_utf8(output.stdout).ok()?.trim().to_string();
-    (output.status.success() && !token.is_empty()).then_some(token)
+    crate::github::token()
 }
 
 #[cfg(test)]
