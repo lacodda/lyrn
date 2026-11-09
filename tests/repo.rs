@@ -350,3 +350,27 @@ fn every_shopfront_is_where_the_repository_says() {
     let (text, ok) = lyrn_in(dir.path(), &["open", "npm", "--print"]);
     assert!(!ok && text.contains("no package here that npm would take"), "{text}");
 }
+
+/// What git ignores and a tool writes again is removed, and nothing else:
+/// not a tracked file, not an ignored one nothing writes again.
+#[test]
+fn clean_removes_only_what_a_tool_writes_again() {
+    let dir = tempfile::tempdir().unwrap();
+    project(dir.path());
+    std::fs::write(dir.path().join(".gitignore"), "target/\n.env\n").unwrap();
+    std::fs::create_dir_all(dir.path().join("target/debug")).unwrap();
+    std::fs::write(dir.path().join("target/debug/demo"), vec![b'x'; 2048]).unwrap();
+    std::fs::write(dir.path().join(".env"), "SECRET=1\n").unwrap();
+
+    let (text, ok) = lyrn_in(dir.path(), &["clean", "--dry-run"]);
+    assert!(ok, "{text}");
+    assert!(text.contains("would remove  target/  2.0 KB  cargo builds it again"), "{text}");
+    assert!(dir.path().join("target").is_dir(), "a dry run removes nothing");
+
+    let (text, ok) = lyrn_in(dir.path(), &["clean"]);
+    assert!(ok, "{text}");
+    assert!(text.contains("2.0 KB freed."), "{text}");
+    assert!(!dir.path().join("target").exists());
+    assert!(dir.path().join(".env").is_file(), "an ignored file nothing writes again stays");
+    assert!(dir.path().join("Cargo.toml").is_file());
+}

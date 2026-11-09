@@ -36,6 +36,8 @@ pub enum Command {
     Repo(RepoArgs),
     /// Open one of the repository's shopfronts in the browser
     Open(OpenArgs),
+    /// Remove what a build or an install writes again, and say what it weighed
+    Clean(CleanArgs),
     /// Lay the mark out by the line's canon and draw every raster of it from its masters
     Assets(AssetsArgs),
     /// A new product's mark, held to the line's: its code, its colour, and the two together
@@ -308,6 +310,21 @@ pub struct OpenArgs {
     /// Print the address instead of opening it
     #[arg(long)]
     pub print: bool,
+}
+
+#[derive(clap::Args)]
+pub struct CleanArgs {
+    /// The repositories to clean; defaults to the one the current directory is in
+    #[arg(value_name = "PATH", conflicts_with = "all")]
+    pub paths: Vec<PathBuf>,
+
+    /// Clean every project in rigger's record
+    #[arg(long)]
+    pub all: bool,
+
+    /// Say what would be removed and what it weighs, and remove nothing
+    #[arg(long)]
+    pub dry_run: bool,
 }
 
 #[derive(Subcommand)]
