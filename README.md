@@ -37,6 +37,8 @@ Creating the first commit... done
 Next:
   cd demo-app
   pnpm dev
+
+Then `lyrn repo` puts it on GitHub, kept the way the project says.
 ```
 
 <!-- snap: keep ^(> eslint|registry:| *Test Files| *Tests) -->

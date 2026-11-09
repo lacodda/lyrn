@@ -58,6 +58,8 @@ Creating the first commit... done
 Next:
   cd demo-app
   pnpm dev
+
+Then `lyrn repo` puts it on GitHub, kept the way the project says.
 ```
 
 The project is already a git repository with one Conventional Commit in it, its

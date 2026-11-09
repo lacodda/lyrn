@@ -616,9 +616,7 @@ fn print_next_steps(name: &str, form: Form, project: &ProjectArgs, root: &Path, 
     // A documentation site is added to a repository that is already there;
     // anything else is new, and GitHub has not heard of it.
     if form != Form::Docs {
-        println!(
-            "\nOn GitHub: `lyrn repo` creates the repository and keeps it the way the project says - its description, topics, pages, and tags only on green CI."
-        );
+        println!("\nThen `lyrn repo` puts it on GitHub, kept the way the project says.");
     }
     // A program goes out through the owner's tap and bucket as well, and
     // they list it only when told to: the README's `brew install` finds
@@ -626,9 +624,7 @@ fn print_next_steps(name: &str, form: Form, project: &ProjectArgs, root: &Path, 
     if matches!(form, Form::Cli | Form::Workspace) {
         let github = crate::commands::check::product::Product::read(&crate::commands::doctor::Repo::on_disk(root)).github;
         let owner = github.as_deref().and_then(|g| g.split('/').next()).unwrap_or("OWNER");
-        println!(
-            "Homebrew and Scoop: add {name} to packages.json in {owner}/homebrew-tap and {owner}/scoop-bucket - `lyrn check --release` holds both lists to it."
-        );
+        println!("Homebrew and Scoop install it once {owner}/homebrew-tap and {owner}/scoop-bucket list it in packages.json.");
     }
 }
 
