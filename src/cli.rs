@@ -25,7 +25,8 @@ pub enum Command {
     Init(Box<InitArgs>),
     /// Bring an existing repository up to the line's standard
     Adopt(Box<AdoptArgs>),
-    /// Catch a repository up with the newest version of the line's standard
+    /// Catch a repository up with the newest version of the line's standard,
+    /// or of the template it was made from
     Upgrade(UpgradeArgs),
     /// Hold a repository to the line's standard, and say what is off and why
     Doctor(DoctorArgs),

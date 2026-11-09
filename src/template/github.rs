@@ -72,8 +72,111 @@ pub fn fetch(owner: &str, repo: &str, tag: &str) -> Result<Template, Box<dyn Err
     )
 }
 
-fn short(commit: &str) -> &str {
+pub fn short(commit: &str) -> &str {
     &commit[..commit.len().min(12)]
+}
+
+/// A tag passed over on the way to the newest one whose CI passed, and why.
+#[derive(Debug, Clone, PartialEq, Eq)]
+pub struct PassedOver {
+    pub tag: String,
+    pub why: String,
+}
+
+/// The newest tag of a repository past `after` whose CI passed, if one did,
+/// and the newer ones that did not.
+#[derive(Debug, Clone, PartialEq, Eq)]
+pub struct Newest {
+    pub tag: Option<RemoteTag>,
+    pub passed_over: Vec<PassedOver>,
+}
+
+/// The newest tag of `owner/repo` after `after`, by version, whose commit
+/// passed its CI. Tags are asked about newest first and the asking stops at
+/// the first green one: a tag whose CI is red is not a release, and the one
+/// below it still is.
+pub fn newest_green_after(owner: &str, repo: &str, after: &str) -> Result<Newest, Box<dyn Error>> {
+    let name = format!("{owner}/{repo}");
+    let url = format!("{}/{owner}/{repo}.git", git_base().trim_end_matches('/'));
+    let mut tags = remote_tags(&url, &name)?;
+    tags.retain(|t| crate::registries::version_cmp(&t.name, after).is_gt());
+    tags.sort_by(|a, b| crate::registries::version_cmp(&b.name, &a.name));
+    let mut passed_over = Vec::new();
+    for tag in tags {
+        let why = match ci(&name, &tag.commit)? {
+            Verdict::Green => return Ok(Newest { tag: Some(tag), passed_over }),
+            Verdict::NoCi => "no CI result on its commit".to_string(),
+            Verdict::Running(names) => format!("its CI is still running ({})", names.join(", ")),
+            Verdict::Failed(names) => format!("its CI failed: {}", names.join(", ")),
+        };
+        passed_over.push(PassedOver { tag: tag.name, why });
+    }
+    Ok(Newest { tag: None, passed_over })
+}
+
+/// The template `owner/repo` at each of `revisions` - a commit, and the tag
+/// it is recorded under - read from one clone of the repository.
+///
+/// Each is checked out by its commit, never by its tag: the commit is what a
+/// project was generated from, or what the CI was asked about. A tag given as
+/// `held` has to point at its commit still, as when a project is generated: a
+/// tag moved since would make `lyrn.toml` name files nobody built.
+pub fn read_at(owner: &str, repo: &str, revisions: &[Revision<'_>]) -> Result<Vec<Template>, Box<dyn Error>> {
+    let name = format!("{owner}/{repo}");
+    let url = format!("{}/{owner}/{repo}.git", git_base().trim_end_matches('/'));
+    let checkout = tempfile::Builder::new().prefix("lyrn-template-").tempdir()?;
+    let dir = checkout.path().join("clone");
+    let output = git()
+        .args(["clone", "--quiet", "--no-checkout", "--config", "core.autocrlf=false", &url])
+        .arg(&dir)
+        .output()
+        .map_err(|e| format!("lyrn reads templates from GitHub with git, which did not start: {e}"))?;
+    if !output.status.success() {
+        return Err(format!("could not clone `{name}`: {}", String::from_utf8_lossy(&output.stderr).trim()).into());
+    }
+
+    let mut templates = Vec::new();
+    for revision in revisions {
+        if git_output(&dir, &["cat-file", "-e", &format!("{}^{{commit}}", revision.commit)]).is_err() {
+            return Err(format!(
+                "`{name}` no longer has the commit {} that {} was: its history was rewritten, and there is nothing to read it at",
+                short(revision.commit),
+                revision.tag
+            )
+            .into());
+        }
+        if revision.held {
+            let now = git_output(&dir, &["rev-parse", &format!("refs/tags/{}^{{commit}}", revision.tag)]).unwrap_or_default();
+            if now != revision.commit {
+                return Err(format!(
+                    "the tag `{}` of `{name}` moved while lyrn was reading it ({} became {}); nothing was written - run again",
+                    revision.tag,
+                    short(revision.commit),
+                    short(&now)
+                )
+                .into());
+            }
+        }
+        git_output(&dir, &["-c", "advice.detachedHead=false", "checkout", "--quiet", "--force", revision.commit])?;
+        // Read whole into memory: the next revision is checked out over it.
+        templates.push(load_dir(
+            &dir,
+            Origin::GitHub {
+                repo: name.clone(),
+                tag: revision.tag.to_string(),
+                commit: revision.commit.to_string(),
+            },
+        )?);
+    }
+    Ok(templates)
+}
+
+/// One revision of a template to read: the commit, the tag it goes by, and
+/// whether that tag must still point at it.
+pub struct Revision<'a> {
+    pub commit: &'a str,
+    pub tag: &'a str,
+    pub held: bool,
 }
 
 /// A tag and the commit it points at.

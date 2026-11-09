@@ -9,6 +9,11 @@
 //! it now, and the standard as it is written today - the first and the last
 //! rendered with the repository's own name, description and accent.
 //!
+//! A project made from a template on GitHub carries the template's standard,
+//! so the template is what it catches up with: the base is the template at
+//! the commit `lyrn.toml` records, and the new version is the newest tag
+//! after it whose CI passed.
+//!
 //! What the repository changed in a file is kept, and what the standard
 //! changed is brought in. Where both changed the same lines the file gets the
 //! markers git uses, and the run ends non-zero until a person has decided. The
@@ -34,7 +39,7 @@ use crate::host;
 use crate::model::Form;
 use crate::repo::{Facts, already_there, origin_repo};
 use crate::standard::{self, Revision};
-use crate::template::{self, Kind, Origin};
+use crate::template::{self, Kind, Origin, Spec, github};
 use crate::templates;
 
 /// The files of the standard an upgrade leaves to the repository.
@@ -51,56 +56,37 @@ pub fn run(args: UpgradeArgs) -> Result<bool, Box<dyn Error>> {
         .into());
     }
     let stamp = Stamp::read(&root)?;
-    if stamp.source != "lyrn" {
-        return Err(format!(
-            "its files came from the template `{}`, and `lyrn upgrade` follows the standard of lyrn's own forms",
-            stamp.source
-        )
-        .into());
-    }
-
-    let to = standard::current();
-    match standard::order(&stamp.standard, &to) {
-        std::cmp::Ordering::Equal => {
-            println!("`{}` is on the standard {to}, the newest this lyrn writes: nothing to do.", root.display());
-            return Ok(true);
+    let sides = if stamp.source == "lyrn" {
+        builtin_sides(&root, &facts, &stamp)?
+    } else {
+        match template::parse_spec(&stamp.source) {
+            Ok(Spec::GitHub { owner, repo, tag }) => template_sides(&root, &facts, &stamp, &owner, &repo, &tag)?,
+            _ => {
+                return Err(format!(
+                    "its files came from the template `{}`, which keeps no revision to upgrade from: only lyrn's own forms and a template from GitHub at a tag are followed",
+                    stamp.source
+                )
+                .into());
+            }
         }
-        std::cmp::Ordering::Greater => {
-            return Err(format!(
-                "lyrn.toml says the standard {}, newer than {to}, which this lyrn writes - update lyrn first",
-                stamp.standard
-            )
-            .into());
-        }
-        std::cmp::Ordering::Less => {}
-    }
-    let Some(from) = standard::find(&stamp.standard) else {
-        let oldest = standard::revisions().first().map(|r| r.version.clone()).unwrap_or_default();
-        return Err(format!(
-            "lyrn.toml says the standard {}, which this lyrn keeps no record of - the oldest it upgrades from is {oldest}",
-            stamp.standard
-        )
-        .into());
     };
+    let Some(sides) = sides else { return Ok(true) };
 
-    let (old, new) = render(&root, &facts, &stamp, &from)?;
-    let steps = plan(&root, &old, &new, &from.version, &to)?;
-    let crossed = standard::between(&from.version, &to);
-
-    println!(
-        "lyrn upgrade: `{}`, a {} project, from the standard {} to {to}\n",
-        root.display(),
-        stamp.form,
-        from.version
-    );
-    println!("What the standard changed since:");
-    for revision in &crossed {
-        println!("  {}", revision.version);
-        for change in &revision.changes {
-            println!("    - {change}");
-        }
+    let steps = plan(&root, &sides.old, &sides.new, &sides.from, &sides.to)?;
+    println!("{}\n", sides.heading);
+    for line in &sides.before {
+        println!("{line}");
     }
-    println!();
+    if !sides.crossed.is_empty() {
+        println!("What the standard changed since:");
+        for revision in &sides.crossed {
+            println!("  {}", revision.version);
+            for change in &revision.changes {
+                println!("    - {change}");
+            }
+        }
+        println!();
+    }
 
     let touched: Vec<&Step> = steps.iter().filter(|s| s.writes()).collect();
     print!("{}", summary(&steps));
@@ -137,15 +123,17 @@ pub fn run(args: UpgradeArgs) -> Result<bool, Box<dyn Error>> {
     }
 
     let conflicted: Vec<&&Step> = touched.iter().filter(|s| matches!(s.action, Action::Conflict(_))).collect();
-    let subject = format!("chore(standard): take the line's standard {to}");
+    let subject = &sides.subject;
     let paths: Vec<String> = touched.iter().map(|s| posix(&s.path)).collect();
     if !conflicted.is_empty() {
         let places: usize = conflicted.iter().map(|s| if let Action::Conflict(n) = s.action { n } else { 0 }).sum();
         println!(
-            "\n{} {} a hand: {places} {} marked `<<<<<<< yours` ... `>>>>>>> standard {to}`, where the repository and the standard both changed the same lines.",
+            "\n{} {} a hand: {places} {} marked `<<<<<<< yours` ... `>>>>>>> {}`, where the repository and {} both changed the same lines.",
             conflicted.len(),
             if conflicted.len() == 1 { "file needs" } else { "files need" },
             if places == 1 { "place is" } else { "places are" },
+            sides.to,
+            sides.whose,
         );
         println!("Resolve them, then commit the upgrade:");
         println!("  git add {}", paths.join(" "));
@@ -160,11 +148,206 @@ pub fn run(args: UpgradeArgs) -> Result<bool, Box<dyn Error>> {
         );
         return Ok(true);
     }
-    let body = message_body(&from.version, &crossed);
-    commit(&root, &paths, &subject, &body)?;
+    commit(&root, &paths, subject, &sides.body)?;
     println!("\nCommitted: {subject}");
     println!("  git show --stat    # what the upgrade changed");
     Ok(true)
+}
+
+/// The two versions an upgrade merges between, rendered for the repository,
+/// and the words it says them in.
+struct Sides {
+    /// The files as they were written: the base of the merge.
+    old: Plan,
+    /// The files as they are written now.
+    new: Plan,
+    /// What the conflict markers name each side by: `standard 2026.10`,
+    /// `owner/template-cli@v1.1.0`.
+    from: String,
+    to: String,
+    /// Who changed the lines the repository changed too: `the standard`.
+    whose: String,
+    /// The first line the run prints.
+    heading: String,
+    /// Lines said before the standard's changes: tags passed over.
+    before: Vec<String>,
+    /// The versions of the standard crossed, as this lyrn keeps them.
+    crossed: Vec<Revision>,
+    subject: String,
+    body: String,
+}
+
+/// A built-in form, from the standard the repository records to the one this
+/// lyrn writes; `None` when there is nothing to do.
+fn builtin_sides(root: &Path, facts: &Facts, stamp: &Stamp) -> Result<Option<Sides>, Box<dyn Error>> {
+    let to = standard::current();
+    match standard::order(&stamp.standard, &to) {
+        std::cmp::Ordering::Equal => {
+            println!("`{}` is on the standard {to}, the newest this lyrn writes: nothing to do.", root.display());
+            return Ok(None);
+        }
+        std::cmp::Ordering::Greater => {
+            return Err(format!(
+                "lyrn.toml says the standard {}, newer than {to}, which this lyrn writes - update lyrn first",
+                stamp.standard
+            )
+            .into());
+        }
+        std::cmp::Ordering::Less => {}
+    }
+    let Some(from) = standard::find(&stamp.standard) else {
+        let oldest = standard::revisions().first().map(|r| r.version.clone()).unwrap_or_default();
+        return Err(format!(
+            "lyrn.toml says the standard {}, which this lyrn keeps no record of - the oldest it upgrades from is {oldest}",
+            stamp.standard
+        )
+        .into());
+    };
+    let (old, new) = render(root, facts, stamp, &from)?;
+    let crossed = standard::between(&from.version, &to);
+    Ok(Some(Sides {
+        old,
+        new,
+        from: format!("standard {}", from.version),
+        to: format!("standard {to}"),
+        whose: "the standard".to_string(),
+        heading: format!(
+            "lyrn upgrade: `{}`, a {} project, from the standard {} to {to}",
+            root.display(),
+            stamp.form,
+            from.version
+        ),
+        before: Vec::new(),
+        body: message_body(&format!("Brought from the standard {} by lyrn upgrade.\n", from.version), &crossed),
+        crossed,
+        subject: format!("chore(standard): take the line's standard {to}"),
+    }))
+}
+
+/// A template from GitHub, from the commit the repository was generated from
+/// to the newest tag after it whose CI passed; `None` when there is none.
+///
+/// The template is the standard's source here: the base is its files at the
+/// recorded commit, not lyrn's archive, so what the template changed in a
+/// file of the standard is what comes in - and the rest of what it writes is
+/// the project's once generated, as it is for a built-in form.
+fn template_sides(root: &Path, facts: &Facts, stamp: &Stamp, owner: &str, repo: &str, tag: &str) -> Result<Option<Sides>, Box<dyn Error>> {
+    let name = format!("{owner}/{repo}");
+    if stamp.revision.is_empty() {
+        return Err(format!("lyrn.toml names the template {name}@{tag} and no `[template] revision`, so nothing says which commit to merge from").into());
+    }
+    let newest = github::newest_green_after(owner, repo, tag)?;
+    let passed_over: Vec<String> = newest.passed_over.iter().map(|p| format!("  {} passed over: {}", p.tag, p.why)).collect();
+    let Some(next) = newest.tag else {
+        println!("`{}` is on {name}@{tag}; no newer tag of it passed its CI: nothing to do.", root.display());
+        for line in &passed_over {
+            println!("{line}");
+        }
+        return Ok(None);
+    };
+
+    let read = github::read_at(
+        owner,
+        repo,
+        &[
+            github::Revision {
+                commit: &stamp.revision,
+                tag,
+                held: false,
+            },
+            github::Revision {
+                commit: &next.commit,
+                tag: &next.name,
+                held: true,
+            },
+        ],
+    )?;
+    let [then, now] = <[template::Template; 2]>::try_from(read).map_err(|_| "the template was not read at both revisions")?;
+    let native = |template: template::Template, at: &str| -> Result<(template::Native, Origin), Box<dyn Error>> {
+        match template.kind {
+            Kind::Lyrn(native) if native.form == stamp.form => Ok((native, template.origin)),
+            Kind::Lyrn(native) => Err(format!("{name}@{at} is a template of the {} form, and the project is a {} one", native.form, stamp.form).into()),
+            Kind::CargoGenerate(_) => Err(format!("{name}@{at} is a cargo-generate template, which keeps no standard to follow").into()),
+        }
+    };
+    let (old_native, _) = native(then, tag)?;
+    let (new_native, new_origin) = native(now, &next.name)?;
+
+    let identity = IdentityArgs {
+        accent: facts.accent.clone(),
+        description: facts.description.clone(),
+        author: None,
+        repo: origin_repo(root),
+    };
+    let wanted = Wanted {
+        name: &stamp.name,
+        form: stamp.form,
+        host: host_of(stamp)?,
+        with: &stamp.with,
+        identity: &identity,
+    };
+    let current = build_context(&wanted, &new_native, &new_origin, false)?;
+    let mut was = current.clone();
+    was.set("standard", &old_native.manifest.standard)
+        .set("template_source", &stamp.source)
+        .set("template_revision", &stamp.revision)
+        .set("lyrn_version", &stamp.version);
+    let old = generate::plan_with(&templates::standard_files(&old_native.files), &old_native.manifest, &was, &stamp.with)?;
+    let new = generate::plan_with(&templates::standard_files(&new_native.files), &new_native.manifest, &current, &stamp.with)?;
+
+    let (from_standard, to_standard) = (&old_native.manifest.standard, &new_native.manifest.standard);
+    let crossed = if from_standard != to_standard && standard::find(from_standard).is_some() {
+        standard::between(from_standard, to_standard)
+    } else {
+        Vec::new()
+    };
+    let standards = if from_standard == to_standard {
+        format!("on the standard {to_standard}")
+    } else {
+        format!("the standard {from_standard} to {to_standard}")
+    };
+    let mut body = format!(
+        "Brought from {name}@{tag} ({}) to {} ({}), the newest tag whose CI passed, by lyrn upgrade: {standards}.\n",
+        github::short(&stamp.revision),
+        next.name,
+        github::short(&next.commit)
+    );
+    for passed in &newest.passed_over {
+        body.push_str(&wrapped(&format!("{} passed over: {}", passed.tag, passed.why), 72));
+    }
+    let mut before = passed_over;
+    if !before.is_empty() {
+        before.push(String::new());
+    }
+    Ok(Some(Sides {
+        old,
+        new,
+        from: format!("{name}@{tag}"),
+        to: format!("{name}@{}", next.name),
+        whose: "the template".to_string(),
+        heading: format!(
+            "lyrn upgrade: `{}`, a {} project, from the template {name}@{tag} to {}, {standards}",
+            root.display(),
+            stamp.form,
+            next.name
+        ),
+        before,
+        body: message_body(&body, &crossed),
+        crossed,
+        subject: format!("chore(standard): take the template {name}@{}", next.name),
+    }))
+}
+
+/// The host a plugin is named after, which is how its host finds it.
+fn host_of(stamp: &Stamp) -> Result<Option<&'static str>, Box<dyn Error>> {
+    if stamp.form != Form::Plugin {
+        return Ok(None);
+    }
+    host::ALL
+        .iter()
+        .find(|h| stamp.name.starts_with(&h.prefix()))
+        .map(|h| Some(h.name))
+        .ok_or_else(|| format!("`{}` is a plugin, and its name starts with the prefix of no host lyrn knows", stamp.name).into())
 }
 
 /// What `lyrn.toml` says the repository is, and which standard it carries.
@@ -220,17 +403,6 @@ fn render(root: &Path, facts: &Facts, stamp: &Stamp, from: &Revision) -> Result<
         return Err(format!("the standard {} had no `{}` form", from.version, stamp.form).into());
     };
 
-    // A plugin is named after its host, which is how its host finds it.
-    let host = match stamp.form {
-        Form::Plugin => Some(
-            host::ALL
-                .iter()
-                .find(|h| stamp.name.starts_with(&h.prefix()))
-                .map(|h| h.name)
-                .ok_or_else(|| format!("`{}` is a plugin, and its name starts with the prefix of no host lyrn knows", stamp.name))?,
-        ),
-        _ => None,
-    };
     let identity = IdentityArgs {
         accent: facts.accent.clone(),
         description: facts.description.clone(),
@@ -240,7 +412,7 @@ fn render(root: &Path, facts: &Facts, stamp: &Stamp, from: &Revision) -> Result<
     let wanted = Wanted {
         name: &stamp.name,
         form: stamp.form,
-        host,
+        host: host_of(stamp)?,
         with: &stamp.with,
         identity: &identity,
     };
@@ -471,7 +643,8 @@ struct Merged {
 /// Merge the standard's change into the repository's file.
 ///
 /// The markers name the three sides by what they are: the repository's
-/// version, and the two versions of the standard.
+/// version, and the two versions of the standard - `standard 2026.10`, or the
+/// template's tags.
 fn merge(base: &str, ours: &str, theirs: &str, from: &str, to: &str) -> Merged {
     let mut options = diffy::MergeOptions::new();
     options
@@ -488,8 +661,8 @@ fn merge(base: &str, ours: &str, theirs: &str, from: &str, to: &str) -> Merged {
                         conflicts += 1;
                         "<<<<<<< yours\n".to_string()
                     }
-                    "||||||| original" => format!("||||||| standard {from}\n"),
-                    ">>>>>>> theirs" => format!(">>>>>>> standard {to}\n"),
+                    "||||||| original" => format!("||||||| {from}\n"),
+                    ">>>>>>> theirs" => format!(">>>>>>> {to}\n"),
                     _ => line.to_string(),
                 })
                 .collect();
@@ -517,8 +690,10 @@ fn summary(steps: &[Step]) -> String {
     out
 }
 
+/// The commit's body: where it was brought from, then what each version of
+/// the standard crossed changed.
 fn message_body(from: &str, crossed: &[Revision]) -> String {
-    let mut body = format!("Brought from the standard {from} by lyrn upgrade.\n");
+    let mut body = from.to_string();
     for revision in crossed {
         body.push_str(&format!("\n{}:\n", revision.version));
         for change in &revision.changes {
@@ -663,7 +838,7 @@ mod tests {
         for form in Form::ALL.iter().copied().filter(|f| f.adoptable()) {
             let (dir, old, new) = on_the_oldest(form);
             let root = dir.path();
-            let steps = plan(root, &old, &new, OLDEST, &to).unwrap();
+            let steps = plan(root, &old, &new, &format!("standard {OLDEST}"), &format!("standard {to}")).unwrap();
             // The standard changed the README between the two versions; it is
             // the product's all the same.
             assert!(steps.iter().all(|s| s.path != Path::new("README.md")), "{form}: the README was merged");
@@ -700,7 +875,7 @@ mod tests {
         let (dir, old, new) = on_the_oldest(Form::Cli);
         let root = dir.path();
         // The changelog's header is the standard's, and is held on its own.
-        let changed: Vec<PathBuf> = plan(root, &old, &new, OLDEST, &to)
+        let changed: Vec<PathBuf> = plan(root, &old, &new, &format!("standard {OLDEST}"), &format!("standard {to}"))
             .unwrap()
             .into_iter()
             .filter(|s| s.action == Action::Update && s.path != Path::new(CHANGELOG))
@@ -718,7 +893,11 @@ mod tests {
             let before = read(root, path).unwrap();
             std::fs::write(root.join(path), format!("{}{before}", own(path))).unwrap();
         }
-        for step in plan(root, &old, &new, OLDEST, &to).unwrap().into_iter().filter(|s| changed.contains(&s.path)) {
+        for step in plan(root, &old, &new, &format!("standard {OLDEST}"), &format!("standard {to}"))
+            .unwrap()
+            .into_iter()
+            .filter(|s| changed.contains(&s.path))
+        {
             assert_eq!(step.action, Action::Merge, "`{}`", posix(&step.path));
             let theirs = text(new.files.iter().find(|f| f.path == step.path).unwrap());
             assert_eq!(
@@ -741,7 +920,7 @@ mod tests {
         let releases = "## 🎉 [0.2.0] - 2026-10-12\n\n### ✨ Features\n\n- Two\n\n## 🎉 [0.1.0] - 2026-10-01\n\n- One\n";
         std::fs::write(root.join(CHANGELOG), format!("# Changelog\n\n{releases}")).unwrap();
 
-        let step = plan(root, &old, &new, OLDEST, &to)
+        let step = plan(root, &old, &new, &format!("standard {OLDEST}"), &format!("standard {to}"))
             .unwrap()
             .into_iter()
             .find(|s| s.path == Path::new(CHANGELOG))
@@ -763,13 +942,13 @@ mod tests {
         std::fs::write(root.join(CHANGELOG), format!("{own}\n\n## 🎉 [0.1.0] - 2026-10-01\n\n- One\n")).unwrap();
         std::fs::write(root.join("cliff.toml"), format!("[changelog]\nheader = \"\"\"\n{own}\"\"\"\n")).unwrap();
 
-        let steps = plan(root, &old, &new, OLDEST, &to).unwrap();
+        let steps = plan(root, &old, &new, &format!("standard {OLDEST}"), &format!("standard {to}")).unwrap();
         assert!(steps.iter().all(|s| s.path != Path::new(CHANGELOG)), "the changelog was touched");
 
         // The header alone, without its cliff.toml, is the case above: a
         // changelog that lost the standard's header.
         std::fs::write(root.join("cliff.toml"), "[changelog]\nheader = \"# Something else\"\n").unwrap();
-        let steps = plan(root, &old, &new, OLDEST, &to).unwrap();
+        let steps = plan(root, &old, &new, &format!("standard {OLDEST}"), &format!("standard {to}")).unwrap();
         assert!(
             steps.iter().any(|s| s.path == Path::new(CHANGELOG)),
             "the changelog was left under a header cliff.toml does not name"
@@ -789,7 +968,7 @@ mod tests {
             let theirs = text(new.files.iter().find(|f| f.path == path).unwrap());
             base.lines().zip(theirs.lines()).position(|(b, t)| b != t)
         };
-        let path = plan(root, &old, &new, OLDEST, &to)
+        let path = plan(root, &old, &new, &format!("standard {OLDEST}"), &format!("standard {to}"))
             .unwrap()
             .into_iter()
             .find(|s| s.action == Action::Update && s.path != Path::new(CHANGELOG) && changed_at(&s.path).is_some())
@@ -804,7 +983,11 @@ mod tests {
             .collect();
         std::fs::write(root.join(&path), ours.join("\n") + "\n").unwrap();
 
-        let step = plan(root, &old, &new, OLDEST, &to).unwrap().into_iter().find(|s| s.path == path).unwrap();
+        let step = plan(root, &old, &new, &format!("standard {OLDEST}"), &format!("standard {to}"))
+            .unwrap()
+            .into_iter()
+            .find(|s| s.path == path)
+            .unwrap();
         assert!(matches!(step.action, Action::Conflict(n) if n >= 1), "{:?}", step.action);
         let after = step.after.unwrap();
         for marker in ["<<<<<<< yours", &format!("||||||| standard {OLDEST}"), &format!(">>>>>>> standard {to}")] {
@@ -882,14 +1065,14 @@ mod tests {
         let base = "one\ntwo\nthree\n";
         let ours = "one\ntwo\nthree\nfour, the repository's\n";
         let theirs = "one\n2, the standard's\nthree\n";
-        let merged = merge(base, ours, theirs, "2026.10", "2026.11");
+        let merged = merge(base, ours, theirs, "standard 2026.10", "standard 2026.11");
         assert_eq!(merged.conflicts, 0);
         assert_eq!(merged.text, "one\n2, the standard's\nthree\nfour, the repository's\n");
     }
 
     #[test]
     fn the_same_lines_changed_twice_are_marked_with_the_versions() {
-        let merged = merge("a\nb\nc\n", "a\nmine\nc\n", "a\nstandard\nc\n", "2026.10", "2026.11");
+        let merged = merge("a\nb\nc\n", "a\nmine\nc\n", "a\nstandard\nc\n", "standard 2026.10", "standard 2026.11");
         assert_eq!(merged.conflicts, 1);
         assert_eq!(
             merged.text,

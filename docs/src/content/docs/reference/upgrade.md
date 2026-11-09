@@ -1,6 +1,6 @@
 ---
 title: lyrn upgrade
-description: Catch a repository up with the newest version of the line's standard, as a three-way merge and one commit.
+description: Catch a repository up with the newest version of the line's standard, or of the template it was made from, as a three-way merge and one commit.
 ---
 
 ```console
@@ -104,10 +104,48 @@ repository's version, and the commit would carry it under the standard's name.
 - A version of the standard this lyrn keeps. The oldest is 2026.10, the first
   version lyrn recorded; a newer one than this lyrn writes asks for a newer
   lyrn.
-- A built-in form. A project generated from a template of your own is
-  refused: its files are that template's, and lyrn keeps no versions of it.
+- A built-in form, or a template from GitHub at a tag - see below. A project
+  generated from a directory, `path:<name>` or `local:<name>`, is refused: a
+  directory keeps no revision to merge from.
 
 A repository already on the newest version has nothing to do, and says so.
+
+## A project made from a template
+
+A project generated with `--template owner/repo@tag` records the tag and its
+commit in `lyrn.toml`. Its standard is the template's, so the template is what
+it catches up with:
+
+- **The base** of the merge is the template at the recorded commit - not lyrn's
+  archive - rendered with the project's name, description, accent and add-ons.
+- **The new version** is the newest tag after the recorded one whose CI passed,
+  asked about newest first, the way `lyrn new --template` asks. A newer tag
+  whose CI is red, still running or absent is passed over, and named.
+- **The files** are the template's files of the standard, as for a built-in
+  form; what else the template writes - its code - is the project's once
+  generated, and a change the template made to it is not brought in.
+
+```console
+$ lyrn upgrade --yes
+lyrn upgrade: `.`, a cli project, from the template lacodda/template-cli@v1.1.0 to v1.2.0, the standard 2026.10 to 2026.11.4
+
+  v1.3.0 passed over: its CI failed: generate (keyring) (failure)
+
+What the standard changed since:
+  2026.11
+    - A shopfront workflow, `.github/workflows/shopfronts.yml`: ...
+
+  .github/workflows/shopfronts.yml  added
+  lyrn.toml                         updated
+
+Committed: chore(standard): take the template lacodda/template-cli@v1.2.0
+```
+
+The markers of a place both changed name the two tags, `||||||| lacodda/template-cli@v1.1.0`
+and `>>>>>>> lacodda/template-cli@v1.2.0`. A template whose newest green tag is
+the one recorded has nothing to give, and says so. A template that moves with
+lyrn's forms is kept up by [`lyrn template follow`](/reference/template/#lyrn-template-follow),
+which tags it only once its CI passed.
 
 ## Options
 

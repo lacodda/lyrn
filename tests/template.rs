@@ -544,3 +544,234 @@ fn a_tag_moved_after_its_ci_was_asked_is_refused() {
         .stderr(predicate::str::contains("moved while lyrn was reading it"));
     assert!(!out.exists(), "files from a moved tag were written");
 }
+
+// --- Upgrading a project made from a template, and following a form -------
+
+/// A git config of its own for the processes a test runs, so a commit lyrn
+/// makes has an author on any machine.
+struct Identity {
+    _dir: tempfile::TempDir,
+    global: PathBuf,
+}
+
+impl Identity {
+    fn new() -> Identity {
+        let dir = tempfile::tempdir().unwrap();
+        let global = dir.path().join(".gitconfig");
+        fs::write(
+            &global,
+            "[user]\n\tname = Ada Lovelace\n\temail = ada@example.com\n[init]\n\tdefaultBranch = main\n[commit]\n\tgpgsign = false\n[core]\n\tautocrlf = false\n",
+        )
+        .unwrap();
+        Identity { _dir: dir, global }
+    }
+
+    fn lyrn(&self, remotes: &Path, api: &str) -> assert_cmd::Command {
+        let mut command = lyrn();
+        command
+            .env("GIT_CONFIG_GLOBAL", &self.global)
+            .env("GIT_CONFIG_NOSYSTEM", "1")
+            .env("LYRN_GITHUB_GIT", remotes)
+            .env("LYRN_GITHUB_API", api);
+        command
+    }
+}
+
+/// A stand-in for GitHub's API whose answer about a commit's check runs is
+/// `answer` of the request line: green for one commit, red for another.
+fn api_answering(answer: impl Fn(&str) -> String + Send + 'static) -> String {
+    let listener = TcpListener::bind("127.0.0.1:0").unwrap();
+    let address = format!("http://{}", listener.local_addr().unwrap());
+    std::thread::spawn(move || {
+        for stream in listener.incoming() {
+            let Ok(mut stream) = stream else { continue };
+            let mut reader = BufReader::new(stream.try_clone().unwrap());
+            let mut request_line = String::new();
+            reader.read_line(&mut request_line).unwrap();
+            loop {
+                let mut line = String::new();
+                if reader.read_line(&mut line).unwrap() == 0 || line == "\r\n" {
+                    break;
+                }
+            }
+            let body = if request_line.contains("/check-runs") {
+                answer(&request_line)
+            } else {
+                r#"{"state":"pending","total_count":0,"statuses":[]}"#.to_string()
+            };
+            let response = format!(
+                "HTTP/1.1 200 OK\r\nContent-Type: application/json\r\nContent-Length: {}\r\nConnection: close\r\n\r\n{body}",
+                body.len()
+            );
+            let _ = stream.write_all(response.as_bytes());
+        }
+    });
+    address
+}
+
+const RED: &str = r#"{"total_count":2,"check_runs":[
+    {"name":"check","status":"completed","conclusion":"success"},
+    {"name":"generate (keyring)","status":"completed","conclusion":"failure"}]}"#;
+
+/// The cli form exported into `remotes/work/template-cli`, committed and
+/// tagged `v1.0.0`, and pushed to `remotes/owner/template-cli.git`.
+fn cli_template(remotes: &Path) -> (PathBuf, PathBuf) {
+    let template = remotes.join("work/template-cli");
+    // Exported for the repository it is followed in: its README names it.
+    lyrn()
+        .args(["template", "export", "cli", "--repo", "owner/template-cli", "--path"])
+        .arg(&template)
+        .assert()
+        .success();
+    git(&template, &["init", "--quiet"]);
+    git(&template, &["add", "."]);
+    git(&template, &["commit", "--quiet", "-m", "feat: the cli form"]);
+    git(&template, &["tag", "-a", "v1.0.0", "-m", "v1.0.0"]);
+    fs::create_dir_all(remotes.join("owner")).unwrap();
+    let bare = remotes.join("owner/template-cli.git");
+    git(remotes, &["clone", "--quiet", "--bare", template.to_str().unwrap(), "owner/template-cli.git"]);
+    git(&template, &["remote", "add", "origin", bare.to_str().unwrap()]);
+    (template, bare)
+}
+
+/// A new commit of the template with `change` made to it, tagged `tag`, and
+/// pushed: its commit.
+fn release(template: &Path, tag: &str, change: impl FnOnce(&Path)) -> String {
+    change(template);
+    git(template, &["add", "-A"]);
+    git(template, &["commit", "--quiet", "-m", &format!("feat: {tag}")]);
+    git(template, &["tag", "-a", tag, "-m", tag]);
+    git(template, &["push", "--quiet", "origin", "HEAD:main", tag]);
+    git(template, &["rev-parse", "HEAD"])
+}
+
+fn append(path: impl AsRef<Path>, line: &str) {
+    let text = read(&path);
+    fs::write(path, format!("{text}{line}\n")).unwrap();
+}
+
+/// A project generated from `owner/template-cli@v1.0.0`, with a line of its
+/// own on top of a file of the standard, committed.
+fn project_from_the_template(identity: &Identity, remotes: &Path, api: &str) -> PathBuf {
+    let out = remotes.join("demo-app");
+    identity
+        .lyrn(remotes, api)
+        .args([
+            "new",
+            "demo-app",
+            "--yes",
+            "--no-hooks",
+            "--repo",
+            "owner/demo-app",
+            "--template",
+            "owner/template-cli@v1.0.0",
+            "--path",
+        ])
+        .arg(&out)
+        .assert()
+        .success();
+    let editorconfig = read(out.join(".editorconfig"));
+    fs::write(out.join(".editorconfig"), format!("# the project's own\n{editorconfig}")).unwrap();
+    git(&out, &["init", "--quiet"]);
+    git(&out, &["remote", "add", "origin", "https://github.com/owner/demo-app.git"]);
+    git(&out, &["add", "-A"]);
+    git(&out, &["commit", "--quiet", "-m", "feat: start"]);
+    out
+}
+
+/// The whole of the promise: a project made from a template takes what the
+/// template changed in a file of the standard since, from the newest tag
+/// whose CI passed - its own line kept, the template's code not brought in
+/// over the project's, and a newer tag whose CI is red passed over by name.
+#[test]
+fn a_project_from_a_template_takes_its_newest_green_tag() {
+    let identity = Identity::new();
+    let remotes = tempfile::tempdir().unwrap();
+    let (template, _) = cli_template(remotes.path());
+    let green = release(&template, "v1.1.0", |t| {
+        append(t.join("template/.editorconfig"), "# brought by v1.1.0");
+        append(t.join("template/src/main.rs"), "// the template's code at v1.1.0");
+    });
+    let red = release(&template, "v1.2.0", |t| append(t.join("template/.editorconfig"), "# brought by v1.2.0"));
+    let api = api_answering(move |request| if request.contains(&red) { RED.to_string() } else { GREEN.to_string() });
+    let out = project_from_the_template(&identity, remotes.path(), &api);
+
+    let assert = identity.lyrn(remotes.path(), &api).args(["upgrade", "--yes"]).arg(&out).assert().success();
+    let report = String::from_utf8_lossy(&assert.get_output().stdout).into_owned();
+    assert!(report.contains("from the template owner/template-cli@v1.0.0 to v1.1.0"), "{report}");
+    assert!(report.contains("v1.2.0 passed over: its CI failed: generate (keyring) (failure)"), "{report}");
+
+    let editorconfig = read(out.join(".editorconfig"));
+    assert!(editorconfig.starts_with("# the project's own\n"), "{editorconfig}");
+    assert!(editorconfig.contains("# brought by v1.1.0"), "{editorconfig}");
+    assert!(!editorconfig.contains("v1.2.0"), "a tag whose CI is red came in: {editorconfig}");
+    assert!(
+        !read(out.join("src/main.rs")).contains("v1.1.0"),
+        "the template's code was merged over the project's"
+    );
+    let stamp = read(out.join("lyrn.toml"));
+    assert!(stamp.contains("source = \"owner/template-cli@v1.1.0\""), "{stamp}");
+    assert!(stamp.contains(&format!("revision = \"{green}\"")), "{stamp}");
+    assert_eq!(
+        git(&out, &["log", "-1", "--format=%s"]),
+        "chore(standard): take the template owner/template-cli@v1.1.0"
+    );
+    assert_eq!(git(&out, &["status", "--porcelain"]), "", "the upgrade left files uncommitted");
+
+    // On the newest green tag, there is nothing to do.
+    identity
+        .lyrn(remotes.path(), &api)
+        .args(["upgrade", "--yes"])
+        .arg(&out)
+        .assert()
+        .success()
+        .stdout(predicate::str::contains(
+            "is on owner/template-cli@v1.1.0; no newer tag of it passed its CI: nothing to do",
+        ));
+}
+
+/// Where the project and the template changed the same lines, the markers
+/// name the two tags, and nothing is committed.
+#[test]
+fn lines_a_project_and_its_template_both_changed_are_marked_with_the_tags() {
+    let identity = Identity::new();
+    let remotes = tempfile::tempdir().unwrap();
+    let (template, _) = cli_template(remotes.path());
+    let first = read(template.join("template/.editorconfig")).lines().next().unwrap().to_string();
+    release(&template, "v1.1.0", |t| {
+        edit(t.join("template/.editorconfig"), &first, "# the template's first line")
+    });
+    let api = api_answering(|_| GREEN.to_string());
+    let out = project_from_the_template(&identity, remotes.path(), &api);
+    // The project's own line went on top; now it changes the template's first line too.
+    edit(
+        out.join(".editorconfig"),
+        &format!("# the project's own\n{first}"),
+        "# the project's first line",
+    );
+    git(&out, &["commit", "--quiet", "-am", "chore: mine"]);
+
+    identity.lyrn(remotes.path(), &api).args(["upgrade", "--yes"]).arg(&out).assert().failure();
+    let marked = read(out.join(".editorconfig"));
+    for marker in ["<<<<<<< yours", "||||||| owner/template-cli@v1.0.0", ">>>>>>> owner/template-cli@v1.1.0"] {
+        assert!(marked.lines().any(|l| l == marker), "no `{marker}` in:\n{marked}");
+    }
+    assert_eq!(git(&out, &["log", "-1", "--format=%s"]), "chore: mine");
+}
+
+#[test]
+fn a_project_from_a_template_directory_is_refused_by_name() {
+    let dir = tempfile::tempdir().unwrap();
+    let template = exported("cli", dir.path());
+    let out = dir.path().join("demo-app");
+    lyrn()
+        .args(["new", "demo-app", "--yes", "--no-hooks", "--repo", "owner/demo-app", "--template"])
+        .arg(&template)
+        .arg("--path")
+        .arg(&out)
+        .assert()
+        .success();
+    lyrn().arg("upgrade").arg(&out).assert().failure().stderr(predicate::str::contains(
+        "came from the template `path:template-cli`, which keeps no revision to upgrade from",
+    ));
+}
