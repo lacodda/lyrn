@@ -8,6 +8,18 @@ last release, which follow [Conventional Commits](https://www.conventionalcommit
 $ git cliff --unreleased --tag vX.Y.Z --prepend CHANGELOG.md
 ```
 
+## 🎉 [2.19.0] - 2026-11-09
+
+### ✨ Features
+
+- Say whether the stage's line is in the sitting's diary
+- Follow a form into the templates exported from it
+- Take a project made from a template to its newest green tag
+
+### 🛟 Miscellaneous Tasks
+
+- Leave the samples of the template and upgrade pages as written
+
 ## 🎉 [2.18.0] - 2026-11-07
 
 ### ✨ Features
