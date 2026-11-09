@@ -620,6 +620,16 @@ fn print_next_steps(name: &str, form: Form, project: &ProjectArgs, root: &Path, 
             "\nOn GitHub: `lyrn repo` creates the repository and keeps it the way the project says - its description, topics, pages, and tags only on green CI."
         );
     }
+    // A program goes out through the owner's tap and bucket as well, and
+    // they list it only when told to: the README's `brew install` finds
+    // nothing until then.
+    if matches!(form, Form::Cli | Form::Workspace) {
+        let github = crate::commands::check::product::Product::read(&crate::commands::doctor::Repo::on_disk(root)).github;
+        let owner = github.as_deref().and_then(|g| g.split('/').next()).unwrap_or("OWNER");
+        println!(
+            "Homebrew and Scoop: add {name} to packages.json in {owner}/homebrew-tap and {owner}/scoop-bucket - `lyrn check --release` holds both lists to it."
+        );
+    }
 }
 
 /// What to do next with a project from a cargo-generate template: go there,

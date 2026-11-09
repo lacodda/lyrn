@@ -54,7 +54,7 @@ request.
 <!-- snap -->
 ```console
 $ lyrn doctor
-lyrn doctor: ~/demo-app, a `spa` project on standard 2026.11.4
+lyrn doctor: ~/demo-app, a `spa` project on standard 2026.11.5
 
 ✓ standard   all 21 files of the `spa` standard
 ✓ readme     the longest block is 18 words, in 25 lines

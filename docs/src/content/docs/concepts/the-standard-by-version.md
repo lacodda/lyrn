@@ -19,6 +19,10 @@ the newest, merging each change into the files as they are now, and
 never changes once a release of lyrn has carried it: a later change to a file of
 the standard is a new version, and a second one in a month is `2026.11.1`.
 
+## 2026.11.5
+
+- The cli and workspace forms' README installs the program with Homebrew from the owner's tap and with Scoop from the owner's bucket, before cargo and the installers: the line's programs go out through OWNER/homebrew-tap and OWNER/scoop-bucket, and `lyrn check --release` holds both lists to the program.
+
 ## 2026.11.4
 
 - tools/check-licenses.mjs is a file of the standard wherever the audit runs it at the top of the repository, so `adopt` and `upgrade` bring it, and it accepts a package one by one: name, version and reason, with an entry for a package the build no longer has failing the check.
