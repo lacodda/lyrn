@@ -222,7 +222,7 @@ More forms — egui — follow in 2.x.
 
 ## Status
 
-v2.19.0, in daily use. All nine forms pass their own `lyrn doctor` and their
+v2.20.0, in daily use. All nine forms pass their own `lyrn doctor` and their
 gate on Linux, macOS and Windows on every push, and the eight that start a
 repository release through furca's engine; `lyrn adopt` and `lyrn upgrade`
 bring older repositories to the newest standard. What landed in each version:

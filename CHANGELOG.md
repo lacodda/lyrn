@@ -8,6 +8,29 @@ last release, which follow [Conventional Commits](https://www.conventionalcommit
 $ git cliff --unreleased --tag vX.Y.Z --prepend CHANGELOG.md
 ```
 
+## 🎉 [2.20.0] - 2026-11-09
+
+### ✨ Features
+
+- Hold the owner's tap and bucket to the program
+- Install a cli program with Homebrew and Scoop
+- Draw a toast's icon at M, the size its file is
+- Remove what a build or an install writes again
+- Open one of the repository's shopfronts in the browser
+- Keep the repository on GitHub the way the project says
+
+### 📖 Documentation
+
+- Install lyrn with Homebrew and Scoop
+
+### 🛠️ Bug Fixes
+
+- Keep each next step after the files to one line
+
+### 🧪 Testing
+
+- Read a ruleset's id as a number in the stand-in GitHub
+
 ## 🎉 [2.19.0] - 2026-11-09
 
 ### ✨ Features
