@@ -32,6 +32,7 @@ check     7 passed
 Nothing stands in the way.
 
 In rigger's record for word-count: Stage v0.2.0 began at 25bd80d; v0.1.0 out on 2026-10-19; tree clean; stack updated today; doctor: 1 to look at (mark), 12 passed; check: 7 passed.
+In the diary of the sitting open since 2026-10-20 09:14 UTC.
 ```
 
 - **stage** is the stage rigger's record says is being built, with its open
@@ -52,5 +53,15 @@ In rigger's record for word-count: Stage v0.2.0 began at 25bd80d; v0.1.0 out on 
 What stands in the way is listed at the end; `lyrn stage` itself exits with 0,
 since a ritual reports rather than refuses. The line it leaves is a `state`
 note - `rigger note <project> --kind state` - which rigger files in the sitting
-that is open. Without rigger, or for a repository its record does not know,
-nothing is recorded and the report says so.
+that is open, so the sitting's diary says it under **Где стоит.**, beside the
+work that followed. The report then asks rigger for the open sitting's draft
+and says where the line went:
+
+| Last line | When |
+| --- | --- |
+| `In the diary of the sitting open since …` | A sitting is open, and its draft holds the line |
+| `No sitting is open, …` | The line is in the hub's state block and in no diary: `rigger session start <project>` before `lyrn stage` puts it beside the work |
+| `This rigger keeps state lines apart …` | A sitting is open, and rigger is older than 0.47.0, which first put state lines in a sitting's diary |
+
+Without rigger, or for a repository its record does not know, nothing is
+recorded and the report says so.

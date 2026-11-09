@@ -138,7 +138,23 @@ pub fn run(args: PathArgs) -> Result<(), Box<dyn Error>> {
     let line = format!("{}.", facts.join("; "));
     match project {
         Ok(Some(name)) => match rigger::note_state(&name, &line) {
-            Ok(()) => println!("\nIn rigger's record for {name}: {line}"),
+            Ok(()) => {
+                println!("\nIn rigger's record for {name}: {line}");
+                // The line is noted so the stage's start is in the diary beside
+                // its work; whether it is depends on a sitting being open.
+                match rigger::diary_of(&name, &line) {
+                    Ok(rigger::Diary::Sitting(since)) => {
+                        println!("In the diary of the sitting open since {}.", moment(&since));
+                    }
+                    Ok(rigger::Diary::NoSitting) => println!(
+                        "No sitting is open, so the line is in the hub's state block and in no diary - `rigger session start {name}` before `lyrn stage` puts it beside the work."
+                    ),
+                    Ok(rigger::Diary::Apart) => {
+                        println!("This rigger keeps state lines apart from the sitting's diary; rigger 0.47.0 puts them in it.")
+                    }
+                    Err(reason) => println!("Whether it is in a sitting's diary was not read - {reason}"),
+                }
+            }
             Err(reason) => println!("\nNot recorded in rigger - {reason}"),
         },
         Ok(None) => println!("\nNot recorded: rigger's record does not know this repository"),
@@ -170,6 +186,14 @@ fn summary<'a>(outcomes: impl Iterator<Item = (&'a str, &'a Outcome)>) -> String
         parts.push(format!("{skipped} not applicable"));
     }
     parts.join(", ")
+}
+
+/// `2026-11-09T11:09:11Z` as `2026-11-09 11:09 UTC`; anything else as it is.
+fn moment(stamp: &str) -> String {
+    match stamp.split_once('T') {
+        Some((day, time)) if time.len() >= 5 && stamp.ends_with('Z') => format!("{day} {} UTC", &time[..5]),
+        _ => stamp.to_string(),
+    }
 }
 
 /// A task's first line, without the Markdown emphasis a plan wraps it in.

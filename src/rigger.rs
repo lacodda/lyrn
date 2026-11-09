@@ -171,6 +171,42 @@ pub fn note_state(project: &str, text: &str) -> Result<(), String> {
     ask(&["note", project, "--kind", "state", text]).map(|_| ())
 }
 
+/// Where a state line ended up besides the hub's state block.
+#[derive(Debug, Clone, PartialEq, Eq)]
+pub enum Diary {
+    /// In the diary of the sitting open since this moment.
+    Sitting(String),
+    /// No sitting is open: the line is in the state block only.
+    NoSitting,
+    /// A sitting is open, and this rigger keeps state lines apart from it:
+    /// older than 0.47.0.
+    Apart,
+}
+
+/// Whether `line`, just noted, is in the diary of the sitting open on
+/// `project` - which is the point of noting it at the start of a stage.
+pub fn diary_of(project: &str, line: &str) -> Result<Diary, String> {
+    match ask(&["--json", "session", "draft", project]) {
+        Ok(json) => parse_diary(&json, line),
+        Err(reason) if reason.contains("no session is open") => Ok(Diary::NoSitting),
+        Err(reason) => Err(reason),
+    }
+}
+
+fn parse_diary(json: &str, line: &str) -> Result<Diary, String> {
+    let draft: Value = serde_json::from_str(json).map_err(|e| format!("rigger's draft is not JSON: {e}"))?;
+    let session = draft.get("session").ok_or("rigger's draft names no session")?;
+    let holds = session
+        .get("state")
+        .and_then(Value::as_array)
+        .is_some_and(|lines| lines.iter().any(|l| l.as_str() == Some(line)));
+    if !holds {
+        return Ok(Diary::Apart);
+    }
+    let since = session.get("started_at").and_then(Value::as_str).unwrap_or_default().to_string();
+    Ok(Diary::Sitting(since))
+}
+
 #[cfg(test)]
 mod tests {
     use super::*;
@@ -222,6 +258,19 @@ mod tests {
             })
         );
         assert_eq!(parse_stage(r#"{"project": "demo", "current": null}"#).unwrap(), None);
+    }
+
+    /// The line is the sitting's when the draft of the open sitting says it;
+    /// a draft without it is a rigger that keeps the two apart.
+    #[test]
+    fn a_state_line_is_in_the_diary_when_the_open_sitting_says_it() {
+        let line = "Stage v1.2.0 began at 71c2514; tree clean.";
+        let draft = format!(r#"{{"session": {{"started_at": "2026-11-09T11:09:11Z", "state": ["{line}"]}}, "entry": ""}}"#);
+        assert_eq!(parse_diary(&draft, line).unwrap(), Diary::Sitting("2026-11-09T11:09:11Z".into()));
+        assert_eq!(parse_diary(&draft, "another line").unwrap(), Diary::Apart);
+        let older = r#"{"session": {"started_at": "2026-11-09T11:09:11Z"}, "entry": ""}"#;
+        assert_eq!(parse_diary(older, line).unwrap(), Diary::Apart);
+        assert!(parse_diary("not json", line).is_err());
     }
 
     #[test]
