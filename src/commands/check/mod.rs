@@ -23,6 +23,7 @@ pub mod product;
 mod readme;
 mod release;
 pub mod site;
+mod taps;
 mod versions;
 
 use std::error::Error;
@@ -55,6 +56,7 @@ pub enum Shop {
     Links,
     Live,
     Install,
+    Taps,
 }
 
 impl Shop {
@@ -72,7 +74,7 @@ impl Shop {
 
     /// The checks of a release that went out, asked of the forge and the
     /// registries with --release; install only with --install.
-    pub const RELEASED: &'static [Shop] = &[Shop::Page, Shop::Registries, Shop::Links, Shop::Live, Shop::Install];
+    pub const RELEASED: &'static [Shop] = &[Shop::Page, Shop::Registries, Shop::Links, Shop::Live, Shop::Install, Shop::Taps];
 
     pub fn name(self) -> &'static str {
         match self {
@@ -89,6 +91,7 @@ impl Shop {
             Shop::Links => "links",
             Shop::Live => "live",
             Shop::Install => "install",
+            Shop::Taps => "taps",
         }
     }
 
@@ -107,6 +110,7 @@ impl Shop {
             Shop::Links => "Every homepage, documentation and repository link the manifests show answers",
             Shop::Live => "Every box of the Checked live list the release's notes end with is ticked",
             Shop::Install => "The installer puts the release's own build in place, proven by its hash",
+            Shop::Taps => "Homebrew and Scoop install the program: the owner's tap and bucket list it",
         }
     }
 
@@ -125,6 +129,7 @@ impl Shop {
             Shop::Links => include_str!("lessons/links.txt"),
             Shop::Live => include_str!("lessons/live.txt"),
             Shop::Install => include_str!("lessons/install.txt"),
+            Shop::Taps => include_str!("lessons/taps.txt"),
         }
     }
 
@@ -139,7 +144,7 @@ impl Shop {
             Shop::Installers => installers::check(repo, product),
             Shop::Release => release::check(repo),
             // Asked of the forge, not of the files: eleased answers them.
-            Shop::Page | Shop::Registries | Shop::Links | Shop::Live | Shop::Install => Outcome::Skip("asked with --release".to_string()),
+            Shop::Page | Shop::Registries | Shop::Links | Shop::Live | Shop::Install | Shop::Taps => Outcome::Skip("asked with --release".to_string()),
         }
     }
 }
@@ -259,6 +264,7 @@ fn examine(name: &str, path: &std::path::Path, released: Option<Released>) -> Re
     let mut outcomes = check_all(&repo, &product);
     if let Some(released) = released {
         outcomes.extend(release::released(&repo.root, released.tag, released.install));
+        outcomes.push((Shop::Taps, taps::check(&repo, &product)));
     }
     let version = product.version().map(|(_, v)| format!(" {v}")).unwrap_or_default();
     Report {

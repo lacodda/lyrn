@@ -24,6 +24,17 @@ fn github() -> String {
     std::env::var("LYRN_GITHUB_GIT").unwrap_or_else(|_| "https://github.com".to_string())
 }
 
+/// Where a repository's files are read raw.
+fn github_raw() -> String {
+    std::env::var("LYRN_GITHUB_RAW").unwrap_or_else(|_| "https://raw.githubusercontent.com".to_string())
+}
+
+/// `packages.json` of a tap or a bucket: the list its formulas and
+/// manifests are written from. `None` when the repository has none.
+pub fn package_list(slug: &str) -> Result<Option<String>, String> {
+    get(&format!("{}/{slug}/HEAD/packages.json", github_raw().trim_end_matches('/')), "application/json")
+}
+
 fn client(redirects: bool) -> Result<Client, String> {
     let mut builder = Client::builder()
         .user_agent(concat!("lyrn/", env!("CARGO_PKG_VERSION"), " (https://lyrn.lacodda.com)"))

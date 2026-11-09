@@ -1,0 +1,12 @@
+A program of the line goes out through Homebrew and Scoop as well as the
+registries: its README says `brew install OWNER/tap/NAME` and `scoop install
+NAME`, and those find it only when the owner's tap and bucket list it. Their
+formulas and manifests are written from a packages.json in each -
+OWNER/homebrew-tap and OWNER/scoop-bucket - by the newest release, so a
+program missing from the list is a README line that installs nothing.
+
+With --release the check reads both lists, for a repository whose
+release.toml has [post.install]: the program has to be there under its own
+name, the repository it is released from and the program it puts on the
+PATH, and its homepage should be the one the manifests give. A program that
+is missing is handed the entry to add.

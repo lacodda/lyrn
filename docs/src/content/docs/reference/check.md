@@ -93,7 +93,10 @@ $ lyrn check --release --install
 ✓ install       v2.16.0 installed by its own installer: the release's own build, as in lyrn-v2.16.0-x86_64-pc-windows-msvc.zip
 ```
 
-Every check but `live` is the engine's own: `furca release verify [tag]
+For a program - a `release.toml` with `[post.install]` - `taps` reads the
+owner's Homebrew tap and Scoop bucket too.
+
+Every check but `live` and `taps` is the engine's own: `furca release verify [tag]
 --install` asks the same questions the same way, and a release that passes one
 passes the other. With `--all` they ask about the newest release of every
 project in the record, one column each. The forge is asked with the token
@@ -236,6 +239,32 @@ user's place nor the PATH is touched; the installed program prints the version
 and hashes the same as the binary in the release page's archive, and so does
 every alias. A `release.toml` without `[post.install]` has nothing to
 install.
+
+### taps
+
+With `--release`, for a `release.toml` with `[post.install]`: the program is
+listed in the `packages.json` of its owner's tap and bucket -
+`OWNER/homebrew-tap` and `OWNER/scoop-bucket` - which their formulas and
+manifests are written from by the newest release. The README of the `cli` and
+`workspace` forms says `brew install OWNER/tap/NAME` and `scoop install NAME`,
+and without the entry both find nothing. The entry has to name the program as
+the README installs it, the repository it is released from and the program it
+puts on the PATH; a homepage other than the manifests' is one to look at. A
+program that is missing is handed the entry to add:
+
+```console
+✗ taps
+    ✗ demo is not in owner/homebrew-tap's packages.json, so `brew install owner/tap/demo` finds nothing
+      → add to packages.json in owner/homebrew-tap:
+        {
+          "name": "demo",
+          "repo": "owner/demo",
+          "desc": "A demo",
+          "homepage": "https://owner.github.io/demo/",
+          "license": "MIT",
+          "bin": "demo"
+        }
+```
 
 ## Many repositories
 
