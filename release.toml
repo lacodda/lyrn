@@ -17,6 +17,8 @@ as_written = [
     "docs/src/content/docs/reference/check.md",
     "docs/src/content/docs/reference/stage.md",
     "docs/src/content/docs/reference/status.md",
+    "docs/src/content/docs/reference/template.md",
+    "docs/src/content/docs/reference/upgrade.md",
     "docs/src/content/docs/reference/versions.md",
     "src/standard/archive/",
 ]
