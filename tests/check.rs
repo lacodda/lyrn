@@ -157,6 +157,23 @@ fn a_release_tag_belongs_to_one_repository() {
     assert!(!out.status.success(), "--install ran without --release");
 }
 
+/// release.toml is read by furca's engine itself, so a key furca knows is
+/// one the check knows: `[bump] after`, which furca 0.14 added, passes here
+/// as it runs there.
+#[test]
+fn a_key_furca_knows_the_check_reads() {
+    let repo = repository();
+    write(repo.path(), ".github/workflows/ci.yml", "on: push\njobs: {}\n");
+    write(
+        repo.path(),
+        "release.toml",
+        "[project]\nname = \"demo\"\nchangelog = \"CHANGELOG.md\"\nmanifests = [\"Cargo.toml\", \"npm/package.json\"]\n\n[bump]\nafter = [\"node tools/stamp-version.mjs\"]\n\n[gate]\ncommands = [\"cargo fmt --check\"]\n\n[ci]\nprovider = \"github\"\nworkflow = \"ci.yml\"\n",
+    );
+    let (report, passed) = check(repo.path());
+    assert!(passed, "{report}");
+    assert!(report.lines().any(|l| l.starts_with("✓ release")), "{report}");
+}
+
 /// Before the first tag there is no release to ask the forge about, and the
 /// check says so without asking.
 #[test]

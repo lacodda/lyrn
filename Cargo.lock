@@ -962,9 +962,9 @@ checksum = "42703706b716c37f96a77aea830392ad231f44c9e9a67872fa5548707e11b11c"
 
 [[package]]
 name = "furca-core"
-version = "0.12.0"
+version = "0.15.0"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "ce93e1991af9681c3485e81dde482e7880660a15b65fe6ef98918fdea7c6830b"
+checksum = "29d9fc748a1dc06b4e566c27e797a8eae92b02e1b84d9fd42f877aaa8a469d50"
 dependencies = [
  "gix",
  "serde",
@@ -973,9 +973,9 @@ dependencies = [
 
 [[package]]
 name = "furca-release"
-version = "0.12.0"
+version = "0.15.0"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "3b613445853133fe6a05087f4c6744049ebc81b6e016750896d90a12910dd5b9"
+checksum = "3c8f5ec385dd14d6b3d6e91bfff4d9bff149637c10bcebf5d13c8176e58bf6f2"
 dependencies = [
  "furca-core",
  "git-cliff-core",
