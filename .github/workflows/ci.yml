@@ -263,10 +263,15 @@ jobs:
   # restart command with the port as STAND_PORT, asked its health, then filled
   # by its seed and asked again, then its image built by its image command.
   # Every command is read from the generated file, so what is proven is the
-  # very line turnout is handed, on the architecture of the runner.
+  # very line turnout is handed - on arm64 too, which is what a Raspberry Pi
+  # stand builds its image on.
   template-service-stand:
-    name: template service stand (spa,demo)
-    runs-on: ubuntu-latest
+    name: template service stand (spa,demo) on ${{ matrix.os }}
+    runs-on: ${{ matrix.os }}
+    strategy:
+      fail-fast: false
+      matrix:
+        os: [ubuntu-latest, ubuntu-24.04-arm]
     steps:
       - uses: actions/checkout@v7
       - uses: dtolnay/rust-toolchain@stable
