@@ -605,7 +605,7 @@ pub fn problems(native: &Native, sections: &[String]) -> Vec<String> {
     }
 
     for hook in &manifest.hooks {
-        if let Some(addon) = hook.addon.as_ref().filter(|a| !manifest.addons.iter().any(|known| known.name == **a)) {
+        if let Some(addon) = hook.addon.as_ref().filter(|a| !native.addons.iter().any(|known| known.name == **a)) {
             problems.push(format!(
                 "the hook `{}` runs with the add-on `{addon}`, which the template does not have",
                 hook.name
@@ -817,6 +817,21 @@ mod tests {
         ] {
             assert!(hook_is_allowed(&hook(run)), "{run:?} was refused");
         }
+    }
+
+    /// A hook of an add-on the template does not have would never run, and
+    /// what it installs would be missing without a word.
+    #[test]
+    fn a_hook_of_an_add_on_the_template_lacks_is_a_problem() {
+        let mut stray = hook(&["pnpm", "install"]);
+        stray.addon = Some("nope".into());
+        let manifest = TemplateManifest {
+            hooks: vec![stray],
+            ..TemplateManifest::default()
+        };
+        let native = template_with(vec![file("README.md", "hello")], manifest);
+        let found = problems_of(&native);
+        assert!(found.iter().any(|p| p.contains("add-on `nope`")), "{found:?}");
     }
 
     #[test]
