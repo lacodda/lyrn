@@ -8,6 +8,35 @@ last release, which follow [Conventional Commits](https://www.conventionalcommit
 $ git cliff --unreleased --tag vX.Y.Z --prepend CHANGELOG.md
 ```
 
+## 🎉 [2.21.0] - 2026-11-12
+
+### ✨ Features
+
+- Put a service on its stand through turnout
+- Build a tag's release again on workflow_dispatch
+- Name tracked paths that are one name but for case
+
+### 📖 Documentation
+
+- Take the transcripts again from the build
+
+### 🛟 Miscellaneous Tasks
+
+- Put the service's stand up on arm64 too, as a Pi builds it
+
+### 🛠️ Bug Fixes
+
+- Hold a hook to the add-ons the form has, not the manifest's
+- Build the stand's image with the Rust the manifest declares
+- Name an image run's fields rather than a tuple of four
+- Hold a tap's entry to the archives and the installed program
+- Take an argument where a command's subcommands could stand
+- Read release.toml's [bump] as furca 0.15 does
+
+### 🧪 Testing
+
+- Count the case rule among the rules a table and --explain list
+
 ## 🎉 [2.20.0] - 2026-11-09
 
 ### ✨ Features

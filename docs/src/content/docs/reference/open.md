@@ -21,7 +21,7 @@ the project points at:
 
 ```console
 $ lyrn open release
-opening https://github.com/lacodda/lyrn/releases/tag/v2.20.0
+opening https://github.com/lacodda/lyrn/releases/tag/v2.21.0
 ```
 
 `--print` prints the address and opens nothing, for a terminal with no browser
