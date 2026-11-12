@@ -65,6 +65,7 @@ lyrn doctor: ~/demo-app, a `spa` project on standard 2026.11.5
 ✓ assets     three levels in assets/, 3 copies and icons in place
 ✓ language   48 text files in English, translations in their places
 ✓ private    nothing from this computer in 48 text files
+✓ case       48 tracked files, no two named alike but for case
 ✓ actions    10 actions in 4 workflows, none retired or behind the standard
 - msrv       not a Rust project
 ✓ node       pnpm 10 and Node 22+ across 1 project

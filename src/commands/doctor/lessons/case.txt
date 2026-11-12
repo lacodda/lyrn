@@ -1,0 +1,9 @@
+Linux tells two names apart by case; Windows and macOS do not. lyrid had
+`web/src/Expedition.tsx` beside `expedition.ts`: CI built it green on Linux,
+and on the machine its author works on the import resolved to the other file
+and the app did not start. A checkout there also writes one of the two files
+over the other, so the working tree is not what the history says.
+
+The rule fails every set of tracked paths - files or directories - whose names
+are one name but for case. Rename one of them; an import that names either
+reaches whichever the file system finds first.

@@ -168,6 +168,15 @@ finds its assets by its author's absolute path - and the machine's own name. A
 made-up example path names nothing on this computer and passes. On CI the rule
 does not apply.
 
+### case
+
+No two tracked paths are one name but for case - `web/src/Expedition.tsx` beside
+`web/src/expedition.tsx`, or `src/Views/` beside `src/views/`. Linux tells them
+apart; Windows and macOS do not, so an import of either reaches whichever the
+file system finds first, and CI builds green on Linux what does not start on
+the machine you work on. Each set is named once, at the shortest path it starts
+at.
+
 ### actions
 
 No GitHub Action GitHub has retired or archived - `create-release`,
@@ -276,9 +285,9 @@ on one of them says what is off and how to put it right.
 $ lyrn doctor ../word-count ../tally
 lyrn doctor: 2 repositories
 
-            standard readme changelog mark assets language private actions msrv node audit ai-traces authors identity
-word-count  ✓        ✓      ✓         ✓    ✓      ✓        ✗       ✗       ✗    !    ✗     ✓         ✗       ✓
-tally       ✓        ✓      ✓         ✓    ✓      ✓        ✓       ✓       ✓    ✓    ✓     ✓         ✓       ✓
+            standard readme changelog mark assets language private case actions msrv node audit ai-traces authors identity
+word-count  ✓        ✓      ✓         ✓    ✓      ✓        ✗       ✓    ✗       ✗    !    ✗     ✓         ✗       ✓
+tally       ✓        ✓      ✓         ✓    ✓      ✓        ✓       ✓    ✓       ✓    ✓    ✓     ✓         ✓       ✓
 
 1 fails, 1 passes; `lyrn doctor --fix` puts 2 findings right
 `lyrn doctor <path>` says what is off in one of them, how to put it right and why

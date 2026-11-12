@@ -20,6 +20,7 @@ mod ai;
 mod assets;
 pub mod audit;
 mod authors;
+mod case;
 pub mod changelog;
 pub mod git;
 mod identity;
@@ -56,6 +57,7 @@ pub enum Rule {
     Assets,
     Language,
     Private,
+    Case,
     Actions,
     Msrv,
     Node,
@@ -76,6 +78,7 @@ impl Rule {
         Rule::Assets,
         Rule::Language,
         Rule::Private,
+        Rule::Case,
         Rule::Actions,
         Rule::Msrv,
         Rule::Node,
@@ -94,6 +97,7 @@ impl Rule {
             Rule::Assets => "assets",
             Rule::Language => "language",
             Rule::Private => "private",
+            Rule::Case => "case",
             Rule::Actions => "actions",
             Rule::Msrv => "msrv",
             Rule::Node => "node",
@@ -114,6 +118,7 @@ impl Rule {
             Rule::Assets => "Each level of the mark sits where its size calls for it, and an .ico lists its largest image first",
             Rule::Language => "What ships is written in English; another language lives where its translations go",
             Rule::Private => "Nothing from this computer - its user's home, its other projects, its name - in the repository",
+            Rule::Case => "No two tracked paths are one name but for case, which Windows and macOS cannot tell apart",
             Rule::Actions => "No GitHub Action or workflow command that GitHub has retired",
             Rule::Msrv => "rust-version is declared, and a CI job builds on it",
             Rule::Node => "pnpm and Node at the majors the line builds with",
@@ -134,6 +139,7 @@ impl Rule {
             Rule::Assets => include_str!("lessons/assets.txt"),
             Rule::Language => include_str!("lessons/language.txt"),
             Rule::Private => include_str!("lessons/private.txt"),
+            Rule::Case => include_str!("lessons/case.txt"),
             Rule::Actions => include_str!("lessons/actions.txt"),
             Rule::Msrv => include_str!("lessons/msrv.txt"),
             Rule::Node => include_str!("lessons/node.txt"),
@@ -153,6 +159,7 @@ impl Rule {
             Rule::Assets => assets::check(repo),
             Rule::Language => language::check(repo),
             Rule::Private => private::check(repo),
+            Rule::Case => case::check(repo),
             Rule::Actions => actions::check(repo),
             Rule::Msrv => msrv::check(repo),
             Rule::Node => node::check(repo),
