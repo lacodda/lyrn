@@ -65,9 +65,13 @@ pub fn check(repo: &Repo, product: &Product) -> Outcome {
                 );
                 continue;
             }
+            // A command whose usage takes arguments besides its subcommands -
+            // `import <PATH>...` beside `import <COMMAND>` - is shown with an
+            // argument as often as with a subcommand.
             if let Some(second) = words.get(1)
                 && let Ok(Some(inner)) = help.commands(&[first.as_str()])
                 && !inner.iter().any(|c| c == second)
+                && !help.takes_arguments(&[first.as_str()])
             {
                 findings.push(
                     Finding::fail(format!(
@@ -148,6 +152,9 @@ struct Listing {
     accepted: Vec<String>,
     /// Names alone, for what needs a page.
     names: Vec<String>,
+    /// Whether the usage takes a positional argument where a subcommand
+    /// could stand.
+    takes_arguments: bool,
 }
 
 impl<'a> Help<'a> {
@@ -185,6 +192,10 @@ impl<'a> Help<'a> {
 
     fn commands(&mut self, path: &[&str]) -> Result<Option<Vec<String>>, String> {
         self.listing(path).map(|l| l.map(|l| l.accepted))
+    }
+
+    fn takes_arguments(&mut self, path: &[&str]) -> bool {
+        self.listing(path).ok().flatten().is_some_and(|l| l.takes_arguments)
     }
 
     pub fn names(&mut self, path: &[&str]) -> Vec<String> {
@@ -269,6 +280,7 @@ fn parse_help(help: &str) -> Option<Listing> {
     let mut listing = Listing {
         accepted: Vec::new(),
         names: Vec::new(),
+        takes_arguments: takes_arguments(help),
     };
     for line in lines.take_while(|l| !l.trim().is_empty()) {
         // An entry is indented by two; a wrapped description, by more.
@@ -286,6 +298,24 @@ fn parse_help(help: &str) -> Option<Listing> {
         }
     }
     Some(listing)
+}
+
+/// Whether a usage takes a positional argument other than its subcommand:
+/// clap prints a line of its own for each way a command is called, the
+/// arguments on one and `<COMMAND>` on the next, under the first.
+fn takes_arguments(help: &str) -> bool {
+    let mut lines = help.lines().skip_while(|l| !l.trim_start().starts_with("Usage: "));
+    let Some(first) = lines.next() else { return false };
+    let usages = std::iter::once(first.trim_start().trim_start_matches("Usage: "))
+        .chain(lines.take_while(|l| l.starts_with(' ') && !l.trim().is_empty()).map(str::trim));
+    usages.flat_map(str::split_whitespace).any(|word| {
+        let name = word.trim_end_matches("...");
+        let inner = name
+            .strip_prefix('<')
+            .and_then(|n| n.strip_suffix('>'))
+            .or_else(|| name.strip_prefix('[').and_then(|n| n.strip_suffix(']')));
+        inner.is_some_and(|inner| inner != "COMMAND" && inner != "OPTIONS")
+    })
 }
 
 /// Every `$ <bin> <command> …` line in the README and the documentation, with
@@ -377,6 +407,21 @@ mod tests {
     const HELP: &str = "Start a new web application\n\nUsage: lyrn.exe <COMMAND>\n\nCommands:\n  new       Create a new project in a directory\n            of its own\n  doctor    Hold a repository to the standard [aliases: dr]\n  help      Print this message or the help of the given subcommand(s)\n\nOptions:\n  -h, --help  Print help\n";
 
     const LONG: &str = "Hold a repository to the standard\n\nUsage: lyrn.exe doctor [OPTIONS] [PATH]...\n\nArguments:\n  [PATH]...\n          The repositories to examine\n\nOptions:\n      --all\n          Examine every project in rigger's record,\n          as a table\n\n  -y, --yes  Accept the defaults\n      --explain <RULE>\n          Say why a rule exists\n\n  -h, --help\n          Print help (see a summary with '-h')\n";
+
+    /// `austeris import Downloads/factura.xml` and `turnout tunnel db@staging
+    /// 5432` are real: the command takes its arguments on one usage line and
+    /// its subcommands on the next.
+    #[test]
+    fn a_command_with_arguments_beside_its_subcommands_takes_either() {
+        let both = "Open a tunnel\n\nUsage: turnout.exe tunnel [OPTIONS] <NAME@SERVER> <PORTS>...\n       turnout.exe tunnel <COMMAND>\n\nCommands:\n  list  The tunnels open\n  stop  Close one\n\nOptions:\n  -h, --help  Print help\n";
+        assert!(takes_arguments(both));
+        assert!(parse_help(both).unwrap().takes_arguments);
+        let only = "Write the docs\n\nUsage: lyrn.exe docs <COMMAND>\n\nCommands:\n  ref  A page\n\nOptions:\n  -h, --help  Print help\n";
+        assert!(!takes_arguments(only));
+        assert!(!takes_arguments(HELP));
+        let optional = "Usage: x import [OPTIONS] [PATH] [COMMAND]\n\nCommands:\n  undo  Take one back\n";
+        assert!(takes_arguments(optional));
+    }
 
     #[test]
     fn a_help_text_says_what_a_page_has_to() {
