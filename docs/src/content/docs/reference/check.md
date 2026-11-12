@@ -249,8 +249,15 @@ manifests are written from by the newest release. The README of the `cli` and
 `workspace` forms says `brew install OWNER/tap/NAME` and `scoop install NAME`,
 and without the entry both find nothing. The entry has to name the program as
 the README installs it, the repository it is released from and the program it
-puts on the PATH; a homepage other than the manifests' is one to look at. A
-program that is missing is handed the entry to add:
+puts on the PATH; a homepage other than the manifests' is one to look at.
+
+The name is the one the release page's archives begin with -
+`relay-server-{tag}-<target>.tar.gz` in `[page] assets` - since that is what
+the tap's and the bucket's scripts look for, and the program is the one
+`[post.install]` puts on the PATH: in a workspace whose product is named after
+the workspace, both are the server's, not the product's. The homepage is the
+installed program's crate's, else `[workspace.package]`'s - never a library's
+of the same workspace. A program that is missing is handed the entry to add:
 
 ```console
 ✗ taps

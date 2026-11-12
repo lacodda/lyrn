@@ -23,11 +23,12 @@ pub fn check(repo: &Repo, product: &Product) -> Outcome {
     };
     let owner = slug.split('/').next().unwrap_or(slug);
     let entry = entry(repo, product, slug);
+    let name = entry["name"].as_str().unwrap_or(&product.name).to_string();
     let lists = SHELVES
         .iter()
         .map(|(shelf, install)| {
             let list = format!("{owner}/{shelf}");
-            let install = install.replace("{owner}", owner).replace("{name}", &product.name);
+            let install = install.replace("{owner}", owner).replace("{name}", &name);
             (list.clone(), install, crate::registries::package_list(&list))
         })
         .collect();
@@ -45,15 +46,64 @@ fn installs_a_program(root: &std::path::Path) -> bool {
         .is_some()
 }
 
+/// What release.toml says the program is: the name `[post.install]` puts on
+/// the PATH, and the name the archives `[page]` attaches begin with -
+/// `efema-server-{tag}-<target>.tar.gz` - which is what the tap's and the
+/// bucket's scripts look for.
+fn released(root: &std::path::Path) -> (Option<String>, Option<String>) {
+    let table = std::fs::read_to_string(root.join("release.toml"))
+        .ok()
+        .and_then(|t| toml::from_str::<toml::Table>(&t).ok());
+    let Some(table) = table else { return (None, None) };
+    let bin = table
+        .get("post")
+        .and_then(|p| p.get("install"))
+        .and_then(|i| i.get("bin"))
+        .and_then(|b| b.as_str())
+        .map(str::to_string);
+    let archives = table
+        .get("page")
+        .and_then(|p| p.get("assets"))
+        .and_then(|a| a.as_array())
+        .into_iter()
+        .flatten()
+        .filter_map(|a| a.as_str()?.split_once("-{tag}").map(|(prefix, _)| prefix.to_string()))
+        .find(|prefix| !prefix.is_empty());
+    (bin, archives)
+}
+
 /// The entry the lists should hold for this program.
 pub fn entry(repo: &Repo, product: &Product, slug: &str) -> Value {
     let wanted = crate::commands::repo::Wanted::read(repo, product);
-    let program = product
+    let (installed, archives) = released(&repo.root);
+    let program = installed
+        .or_else(|| {
+            product
+                .manifests
+                .iter()
+                .filter(|m| m.kind == Kind::Cargo && m.publishable)
+                .find_map(|m| m.bins.first().cloned())
+        })
+        .unwrap_or_else(|| product.name.clone());
+    // The tap and the bucket install by the archives' name, which is the
+    // program's where the product's own name is the workspace's.
+    let name = archives.unwrap_or_else(|| program.clone());
+    // The page of the crate whose program is installed, else the
+    // workspace's; a library of the workspace has a page of its own.
+    let workspace_homepage = repo
+        .facts
+        .as_ref()
+        .ok()
+        .and_then(|f| f.cargo.as_ref())
+        .and_then(|c| c.get("workspace")?.get("package")?.get("homepage")?.as_str().map(str::to_string));
+    let homepage = product
         .manifests
         .iter()
-        .filter(|m| m.kind == Kind::Cargo && m.publishable)
-        .find_map(|m| m.bins.first().cloned())
-        .unwrap_or_else(|| product.name.clone());
+        .filter(|m| m.kind == Kind::Cargo && m.bins.contains(&program))
+        .find_map(|m| m.homepage.clone())
+        .or(workspace_homepage)
+        .or(wanted.homepage)
+        .unwrap_or_else(|| format!("https://github.com/{slug}"));
     let license = repo
         .facts
         .as_ref()
@@ -64,10 +114,10 @@ pub fn entry(repo: &Repo, product: &Product, slug: &str) -> Value {
     // Homebrew's audit wants a short description with no full stop.
     let desc = wanted.description.unwrap_or_default().trim_end_matches('.').to_string();
     json!({
-        "name": product.name,
+        "name": name,
         "repo": slug,
         "desc": desc,
-        "homepage": wanted.homepage.unwrap_or_else(|| format!("https://github.com/{slug}")),
+        "homepage": homepage,
         "license": license,
         "bin": program,
     })
@@ -78,6 +128,7 @@ pub fn entry(repo: &Repo, product: &Product, slug: &str) -> Value {
 pub fn judge(product: &Product, slug: &str, entry: &Value, lists: Vec<(String, String, Result<Option<String>, String>)>) -> Outcome {
     let mut findings = Vec::new();
     let mut found_in = Vec::new();
+    let name = entry["name"].as_str().unwrap_or(&product.name);
     // In the order the lists keep their entries, rather than JSON's
     // alphabetical one.
     let fields: Vec<String> = ["name", "repo", "desc", "homepage", "license", "bin"]
@@ -106,7 +157,7 @@ pub fn judge(product: &Product, slug: &str, entry: &Value, lists: Vec<(String, S
         };
         let Some(package) = packages.iter().find(|p| p["repo"].as_str().is_some_and(|r| r.eq_ignore_ascii_case(slug))) else {
             findings.push(
-                Finding::fail(format!("{} is not in {list}'s packages.json, so `{install}` finds nothing", product.name))
+                Finding::fail(format!("{name} is not in {list}'s packages.json, so `{install}` finds nothing"))
                     .fix(format!("add to packages.json in {list}:\n{pretty}")),
             );
             continue;
@@ -135,7 +186,7 @@ pub fn judge(product: &Product, slug: &str, entry: &Value, lists: Vec<(String, S
         found_in.push(list);
     }
     if findings.is_empty() {
-        Outcome::Pass(format!("{} is in {}", product.name, found_in.join(" and ")))
+        Outcome::Pass(format!("{name} is in {}", found_in.join(" and ")))
     } else {
         Outcome::Found(findings)
     }
@@ -162,6 +213,50 @@ mod tests {
             ("owner/homebrew-tap".into(), "brew install owner/tap/demo".into(), tap),
             ("owner/scoop-bucket".into(), "scoop install demo".into(), bucket),
         ]
+    }
+
+    /// A workspace named after the product whose program is another crate's:
+    /// the tap installs by the archives' name, and sends people to the
+    /// program's page rather than to a library's.
+    #[test]
+    fn the_entry_is_the_installed_program_s() {
+        let dir = tempfile::tempdir().unwrap();
+        let root = dir.path();
+        let write = |path: &str, text: &str| {
+            let path = root.join(path);
+            std::fs::create_dir_all(path.parent().unwrap()).unwrap();
+            std::fs::write(path, text).unwrap();
+        };
+        write("lyrn.toml", "[project]\nname = \"relay\"\nform = \"workspace\"\n");
+        write(
+            "Cargo.toml",
+            "[workspace]\nmembers = [\"crates/*\"]\n\n[workspace.package]\nversion = \"0.10.0\"\nhomepage = \"https://owner.github.io/relay/\"\n",
+        );
+        write(
+            "crates/relay/Cargo.toml",
+            "[package]\nname = \"relay\"\nversion.workspace = true\nhomepage = \"https://owner.github.io/relay/client/\"\n",
+        );
+        write("crates/relay/src/main.rs", "fn main() {}\n");
+        write(
+            "crates/seal/Cargo.toml",
+            "[package]\nname = \"seal\"\nversion.workspace = true\nhomepage = \"https://owner.github.io/relay/concepts/sealing/\"\n",
+        );
+        write("crates/seal/src/lib.rs", "");
+        write(
+            "crates/relay-server/Cargo.toml",
+            "[package]\nname = \"relay-server\"\nversion.workspace = true\nhomepage.workspace = true\npublish = false\n",
+        );
+        write("crates/relay-server/src/main.rs", "fn main() {}\n");
+        write(
+            "release.toml",
+            "[post.install]\nbin = \"relay-server\"\n\n[page]\nassets = [\"relay-server-{tag}-x86_64-unknown-linux-gnu.tar.gz\"]\n",
+        );
+        let repo = Repo::on_disk(root);
+        let product = Product::read(&repo);
+        let entry = super::entry(&repo, &product, "owner/relay");
+        assert_eq!(entry["name"], "relay-server", "{entry}");
+        assert_eq!(entry["bin"], "relay-server");
+        assert_eq!(entry["homepage"], "https://owner.github.io/relay/");
     }
 
     #[test]
