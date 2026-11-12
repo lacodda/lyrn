@@ -16,6 +16,7 @@ pub mod open;
 pub mod readme;
 pub mod repo;
 pub mod stage;
+pub mod stand;
 pub mod standing;
 pub mod status;
 pub mod template;

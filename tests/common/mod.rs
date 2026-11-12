@@ -54,5 +54,10 @@ pub fn host_args(form: &str, addons: &[&str]) -> Vec<&'static str> {
 pub fn lyrn() -> assert_cmd::Command {
     let mut cmd = assert_cmd::Command::cargo_bin("lyrn").unwrap();
     cmd.env("LYRN_HOME", concat!(env!("CARGO_TARGET_TMPDIR"), "/empty-lyrn-home"));
+    // Neither your turnout nor your rigger: a generated service would be
+    // registered in your catalog, and handed a port by what your machine
+    // holds rather than the same one on every machine.
+    cmd.env("LYRN_TURNOUT", "no-such-turnout-lyrn-test");
+    cmd.env("LYRN_RIGGER", "no-such-rigger-lyrn-test");
     cmd
 }

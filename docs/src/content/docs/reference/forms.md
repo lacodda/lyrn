@@ -221,10 +221,27 @@ An HTTP service:
 | Database | Postgres through sqlx, migrations as plain SQL |
 | Config | Environment only - the same binary runs anywhere |
 | Errors | One type, mapped to status codes once |
-| Deploy | A Dockerfile and a compose file for a stand |
+| Deploy | A Dockerfile and a compose file for a stand, described to turnout in `turnout.json` |
 
 Migrations run at startup, so a binary and the schema it expects travel
 together and there is no window where one is ahead of the other.
+
+### The stand
+
+`turnout.json` says what the stand is - its port, what puts an upload to work,
+how its health is asked, what builds its image - and
+[`lyrn stand`](/reference/stand/) has turnout put it there.
+`tools/stand/stage.sh` is the build a deploy runs: the repository at HEAD,
+tracked files only, which the stand builds its image from **on its own
+machine**, so a Raspberry Pi builds for arm64 itself. The compose project is
+named after the service, so two services on one machine never take each
+other's containers, and it publishes the port turnout.json gives it.
+
+`.github/workflows/image.yml` builds and starts the stand on `amd64` and
+`arm64` runners and asks its health - on `workflow_dispatch` only, which
+[`lyrn stand image --ci`](/reference/stand/#in-ci) asks for on the commit about
+to be released. With `--with spa`, `lyrn new` installs the web UI too, so its
+lockfile is in the first commit: the image installs from it.
 
 The tests talk to a **real Postgres** and skip themselves when `DATABASE_URL`
 is unset - right on a laptop without one. The CI the form ships provides a

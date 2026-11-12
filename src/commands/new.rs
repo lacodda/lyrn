@@ -175,6 +175,13 @@ pub fn build_context(wanted: &Wanted, native: &Native, origin: &Origin, interact
         // because `cargo install` believes it.
         .set("msrv", msrv());
 
+    // The port the service's stand answers on, written into turnout.json:
+    // the first of the stands' range no stand this machine knows holds, so
+    // two services on one server are never handed the same one.
+    if args.form == Form::Service {
+        context.set("stand_port", crate::turnout::free_stand_port(&crate::turnout::taken_stand_ports()).to_string());
+    }
+
     // The Tauri plugin's Rust type, e.g. `WordCount`, and the single command
     // both halves agree on. Derived from the name rather than asked for: a
     // scaffold has exactly one command, and naming it separately would be a
@@ -321,7 +328,14 @@ pub fn generate_project(name: &str, template: &Template, project: &ProjectArgs, 
             let context = build_context(&wanted, native, &template.origin, interactive)?;
             Planned {
                 plan: generate::plan_with(&native.files, &native.manifest, &context, &project.with)?,
-                hooks: native.manifest.hooks.clone(),
+                // A hook of an add-on installs what only the add-on brings.
+                hooks: native
+                    .manifest
+                    .hooks
+                    .iter()
+                    .filter(|h| h.addon.as_ref().is_none_or(|a| project.with.contains(a)))
+                    .cloned()
+                    .collect(),
                 form: Some(native.form),
             }
         }
@@ -418,6 +432,7 @@ pub fn generate_project(name: &str, template: &Template, project: &ProjectArgs, 
 
     if !project.no_hooks {
         run_hooks(&planned.hooks, root, in_a_repository)?;
+        register_with_turnout(plan, root);
     }
 
     let uncommitted = in_a_repository && planned.hooks.iter().any(|h| h.starts_repository);
@@ -426,6 +441,33 @@ pub fn generate_project(name: &str, template: &Template, project: &ProjectArgs, 
         None => print_cargo_next_steps(plan, root, uncommitted),
     }
     Ok(())
+}
+
+/// A project that describes itself to turnout is put into its catalog: the
+/// stand it describes is one `lyrn stand up` away. Not a step the generation
+/// stands or falls by - the files are written either way, and `stand up`
+/// registers what is not registered yet.
+fn register_with_turnout(plan: &Plan, root: &Path) {
+    if !plan.files.iter().any(|f| f.path == Path::new(crate::turnout::FILE)) {
+        return;
+    }
+    let described = match crate::turnout::Described::read(root) {
+        Ok(Some(described)) => described,
+        Ok(None) => return,
+        Err(reason) => {
+            println!("Not registered with turnout: {reason}");
+            return;
+        }
+    };
+    let port = described.stand.as_ref().map(|s| format!(", its stand on port {}", s.port)).unwrap_or_default();
+    match crate::turnout::register(root, &described) {
+        Ok(crate::turnout::Registered::Added) => println!("Registered with turnout as {}{port}.", described.name),
+        Ok(crate::turnout::Registered::Kept { .. }) => println!("turnout knows {} here already{port}.", described.name),
+        Err(crate::turnout::Trouble::Missing) => {
+            println!("turnout is not installed here: `lyrn stand up` registers {} once it is.", described.name)
+        }
+        Err(crate::turnout::Trouble::Refused(said)) => println!("Not registered with turnout: {said}"),
+    }
 }
 
 /// The flags that describe a project of the line mean nothing to a
@@ -618,6 +660,11 @@ fn print_next_steps(name: &str, form: Form, project: &ProjectArgs, root: &Path, 
     if form != Form::Docs {
         println!("\nThen `lyrn repo` puts it on GitHub, kept the way the project says.");
     }
+    // The stand is described already; which server it goes on is the
+    // machine's to say, once.
+    if form == Form::Service {
+        println!("Its stand goes up through turnout with `lyrn stand up --server NAME`.");
+    }
     // A program goes out through the owner's tap and bucket as well, and
     // they list it only when told to: the README's `brew install` finds
     // nothing until then.
@@ -780,6 +827,7 @@ mod tests {
             optional: false,
             dir: None,
             starts_repository: true,
+            addon: None,
         }]
     }
 

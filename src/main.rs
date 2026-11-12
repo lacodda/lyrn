@@ -14,6 +14,7 @@ mod rigger;
 mod standard;
 mod template;
 mod templates;
+mod turnout;
 mod workflows;
 
 use std::process::ExitCode;
@@ -61,6 +62,7 @@ fn main() -> ExitCode {
             Ok(false) => return ExitCode::FAILURE,
             Err(e) => Err(e),
         },
+        cli::Command::Stand(command) => commands::stand::run(command),
         cli::Command::Ci(args) => match commands::ci::run(args) {
             Ok(true) => return ExitCode::SUCCESS,
             Ok(false) => return ExitCode::FAILURE,

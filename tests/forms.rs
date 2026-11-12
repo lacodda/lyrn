@@ -252,3 +252,54 @@ fn walk(root: &Path) -> Vec<std::path::PathBuf> {
     }
     found
 }
+
+/// A service says what its stand is in turnout.json, and the compose file
+/// does what the file says: it publishes the port every command there is
+/// handed, and with `--with demo` takes the flag the seed turns on.
+#[test]
+fn a_service_describes_its_stand_as_its_compose_file_runs_it() {
+    for addons in combinations("service") {
+        let dir = tempfile::tempdir().unwrap();
+        let root = dir.path().join("demo-tool");
+        generate("service", &addons, &root);
+        let text = fs::read_to_string(root.join("turnout.json")).unwrap();
+        let described: serde_json::Value = serde_json::from_str(&text).unwrap_or_else(|e| panic!("{addons:?}: turnout.json is not JSON: {e}\n{text}"));
+        let stand = &described["stand"];
+        assert_eq!(described["name"], "demo-tool");
+        // No turnout and no rigger here, so nothing holds a port yet.
+        assert_eq!(stand["port"], 8100, "{addons:?}");
+        assert_eq!(stand["health"], "/api/health");
+        assert_eq!(described["dist"], "target/stand");
+        assert_eq!(described["commands"]["build"], "sh tools/stand/stage.sh target/stand");
+
+        let compose = fs::read_to_string(root.join("deploy/compose.yml")).unwrap();
+        assert!(compose.contains("\nname: demo-tool\n"), "{addons:?}: the compose project is not named");
+        assert!(
+            compose.contains("\"${STAND_PORT:-8080}:8080\""),
+            "{addons:?}: the stand's port is not published"
+        );
+        assert!(stand["restart"].as_str().unwrap().contains("-f deploy/compose.yml"));
+
+        let demo = addons.contains(&"demo");
+        assert_eq!(
+            stand.get("seed").is_some(),
+            demo,
+            "{addons:?}: a seed without the demo, or the demo without one"
+        );
+        if demo {
+            assert!(stand["seed"].as_str().unwrap().starts_with("DEMO_TOOL_DEMO=true "));
+            assert!(
+                compose.contains("DEMO_TOOL_DEMO: ${DEMO_TOOL_DEMO:-false}"),
+                "{addons:?}: the compose file drops the flag"
+            );
+        }
+        assert!(root.join("tools/stand/stage.sh").is_file());
+        assert!(root.join(".github/workflows/image.yml").is_file());
+        #[cfg(unix)]
+        {
+            use std::os::unix::fs::PermissionsExt;
+            let mode = fs::metadata(root.join("tools/stand/stage.sh")).unwrap().permissions().mode();
+            assert!(mode & 0o111 != 0, "the staging script is not executable");
+        }
+    }
+}

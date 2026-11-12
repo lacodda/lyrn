@@ -199,6 +199,7 @@ impl CargoTemplate {
             optional: true,
             dir: None,
             starts_repository: true,
+            addon: None,
         };
         vec![
             hook("Starting the repository", &["git", "init", "--initial-branch=main"]),

@@ -42,7 +42,7 @@ error: the name starts with `D`; it has to start with a lowercase letter
 | `--with <addon,...>` | none | Optional pieces, per form; see [Forms](/reference/forms/) |
 | `-y`, `--yes` | — | Accept the defaults instead of asking |
 | `--dry-run` | — | Show the tree that would be written, and write nothing |
-| `--no-hooks` | — | Skip installing dependencies and starting the repository |
+| `--no-hooks` | — | Skip installing dependencies, starting the repository and registering with turnout |
 
 ## Before anything is written
 
@@ -199,3 +199,20 @@ with one Conventional Commit. `--form docs` only installs the site: the
 repository already exists, and its history is yours. Both are skipped by `--no-hooks`, and a missing
 tool is reported rather than fatal: the files are already on disk and the step
 is one command away.
+
+## turnout
+
+A project that describes itself to [turnout](https://lacodda.github.io/turnout/) -
+the service form writes a `turnout.json` - is put into turnout's catalog once
+the hooks have run: its commands, what a deploy uploads, and no gateway port,
+since it talks to its own stand. The stand is then one
+[`lyrn stand up --server NAME`](/reference/stand/#up) away.
+
+```console
+Registered with turnout as demo-svc, its stand on port 8100.
+```
+
+The port is the first of `8100-8199` no stand the machine knows holds - see
+[the port](/reference/stand/#the-port). turnout missing, or not set up, is said
+and is not fatal: `lyrn stand up` registers the project once it is. An app of
+the same name elsewhere is left alone, and named. `--no-hooks` skips this too.

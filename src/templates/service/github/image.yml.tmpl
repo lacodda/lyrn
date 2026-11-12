@@ -1,0 +1,37 @@
+name: Image
+
+# The stand's image, built and started on both architectures a stand runs on,
+# before a tag rather than on the stand after it: `lyrn stand image --ci` asks
+# for a run on the commit about to be released. Not on every push - an image
+# build is minutes of Rust the CI of each push already compiles.
+on:
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  image:
+    name: image (${{ matrix.arch }})
+    runs-on: ${{ matrix.os }}
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - arch: amd64
+            os: ubuntu-latest
+          - arch: arm64
+            os: ubuntu-24.04-arm
+    env:
+      # A password for this run alone; a stand makes its own.
+      POSTGRES_PASSWORD: image-check
+      STAND_PORT: "8080"
+    steps:
+      - uses: actions/checkout@v7
+      - name: Build and start the stand
+        run: docker compose -f deploy/compose.yml up -d --build --wait
+      - name: Ask its health
+        run: curl --fail --silent --show-error --retry 30 --retry-delay 2 --retry-all-errors http://localhost:8080/api/health
+      - name: What the stand said
+        if: failure()
+        run: docker compose -f deploy/compose.yml logs

@@ -124,10 +124,22 @@ name = "Installing dependencies"
 run = ["pnpm", "install"]
 optional = true
 
+[[hooks]]
+name = "Installing the web UI's dependencies"
+run = ["pnpm", "install"]
+dir = "frontend"        # where it runs, inside the project
+addon = "ui"            # only with this add-on: what installs what it alone brings
+optional = true
+
 [[addons]]
 name = "pwa"
 summary = "Installable and offline: a manifest, its icons, a service worker"
 files = ["public/sw.js", "src/pwa.ts"]
+
+[[addons]]
+name = "ui"
+summary = "A web UI of its own, under frontend/"
+files = ["frontend/package.json"]
 ```
 
 A field lyrn does not know is refused rather than read past: a template written
@@ -156,6 +168,7 @@ error, never an empty string. What there is:
 | `lib_name` | The name as a Rust identifier: `word_count` |
 | `env_prefix` | The name shouted: `WORD_COUNT` |
 | `msrv` | The Rust toolchain generating it, as `1.98` |
+| `stand_port` | The `service` form's: the port its stand answers on, as `8100` |
 | `registry` | dowel's registry address |
 | `lyrn_version`, `standard` | lyrn's version, and the standard the template writes |
 | `template_source`, `template_revision` | Where the template came from, and its revision |

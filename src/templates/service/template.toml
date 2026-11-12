@@ -13,6 +13,15 @@ name = "Fetching dependencies"
 run = ["cargo", "fetch"]
 optional = true
 
+# The web UI's lockfile, before the first commit: the stand's image installs
+# from it, and an image built without one is not the build CI checked.
+[[hooks]]
+name = "Installing the web UI's dependencies"
+run = ["pnpm", "install"]
+dir = "frontend"
+addon = "spa"
+optional = true
+
 [[hooks]]
 name = "Starting the repository"
 run = ["git", "init", "--initial-branch=main"]

@@ -361,6 +361,10 @@ pub struct Hook {
     /// whose history and next commit belong to its owner.
     #[serde(default)]
     pub starts_repository: bool,
+    /// Run only with this add-on: what installs a part of the project the
+    /// add-on alone brings.
+    #[serde(default)]
+    pub addon: Option<String>,
 }
 
 /// The answers a generation runs with, and the source of every placeholder.

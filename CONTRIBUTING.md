@@ -69,10 +69,10 @@ and writes nothing.
 | Path | What lives there |
 | --- | --- |
 | `src/cli.rs` | The command surface: every flag and subcommand |
-| `src/commands/` | Each command: `new`, `init`, `adopt`, `upgrade`, `doctor`, `check`, `ci`, `stage`, `status`, `versions`, `deps`, `adr`, `docs`, `readme`, `changelog`, `template` |
+| `src/commands/` | Each command: `new`, `init`, `adopt`, `upgrade`, `doctor`, `check`, `repo`, `open`, `clean`, `stand`, `ci`, `stage`, `status`, `versions`, `deps`, `adr`, `docs`, `readme`, `changelog`, `template` |
 | `src/standard/` | Every version of the standard: what it changed, and its templates, which `upgrade` merges from |
 | `src/workflows/` | GitHub workflows read as GitHub reads them: jobs, matrices, triggers, expressions |
-| `src/rigger.rs`, `src/registries.rs` | What lyrn asks rigger's record, and crates.io, npm and GitHub |
+| `src/rigger.rs`, `src/turnout.rs`, `src/registries.rs` | What lyrn asks rigger's record and turnout's catalog, and crates.io, npm and GitHub |
 | `src/templates/` | The built-in forms: one module and one directory of template files each |
 | `src/templates/community.rs` | What every repository a form starts carries, written once |
 | `src/templates/dowel/` | Copies taken from a published dowel-ui: primitives, accents, every product's masters |

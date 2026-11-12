@@ -1,0 +1,18 @@
+#!/bin/sh
+# Assembles what `turnout deploy` uploads to the stand: the repository at
+# HEAD, which the stand builds its image from on its own machine - a Pi
+# builds for arm64 itself, and nothing is cross-compiled.
+#
+# `git archive` is the filter: it writes tracked files and nothing else, so
+# `target/` and a `.env` that was never committed cannot travel by accident.
+# HEAD, not the working tree: what reaches a stand is a committed state, so
+# which version runs there always has an answer. The stand's own
+# `deploy/.env` is never in it, and survives every deploy.
+set -eu
+
+out=${1:-target/stand}
+cd "$(dirname "$0")/../.."
+rm -rf "$out"
+mkdir -p "$out"
+git archive --format=tar HEAD | tar -x -C "$out"
+echo "staged $(git rev-parse --short HEAD) into $out/"

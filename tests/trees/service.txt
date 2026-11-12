@@ -1,4 +1,4 @@
-Would create 42 files in `demo-tool`:
+Would create 45 files in `demo-tool`:
 
   ├── .github/
   │   ├── ISSUE_TEMPLATE/
@@ -8,6 +8,7 @@ Would create 42 files in `demo-tool`:
   │   ├── workflows/
   │   │   ├── audit.yml
   │   │   ├── ci.yml
+  │   │   ├── image.yml
   │   │   ├── release.yml
   │   │   └── shopfronts.yml
   │   ├── pull_request_template.md
@@ -35,6 +36,9 @@ Would create 42 files in `demo-tool`:
   │   └── main.rs
   ├── tests/
   │   └── api.rs
+  ├── tools/
+  │   └── stand/
+  │       └── stage.sh
   ├── .editorconfig
   ├── .gitattributes
   ├── .gitignore
@@ -51,4 +55,5 @@ Would create 42 files in `demo-tool`:
   ├── llms.txt
   ├── lyrn.toml
   ├── release.toml
-  └── rustfmt.toml
+  ├── rustfmt.toml
+  └── turnout.json

@@ -1,0 +1,22 @@
+{
+  "name": "{{ name }}",
+  "commands": {
+    "build": "sh tools/stand/stage.sh target/stand",
+    "dev": "cargo run",
+    "lint": "cargo clippy --all-targets -- -D warnings",
+    "test": "cargo test"
+  },
+  "dist": "target/stand",
+  "stand": {
+    "port": {{ stand_port }},
+    "restart": "docker compose -f deploy/compose.yml up -d --build --remove-orphans",
+    "health": "/api/health",
+    "image": "docker build --tag {{ name }}-server:candidate .",
+{{#demo}}
+    "seed": "{{ env_prefix }}_DEMO=true docker compose -f deploy/compose.yml up -d --force-recreate --no-deps server",
+{{/demo}}
+    "secrets": {
+      "deploy/.env": ["POSTGRES_PASSWORD"]
+    }
+  }
+}

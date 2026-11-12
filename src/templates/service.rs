@@ -125,6 +125,27 @@ pub fn sources() -> Vec<SourceFile> {
             executable: false,
             addon: None,
         },
+        // What the project says about itself to turnout: its commands, what
+        // a deploy uploads, and its stand. `lyrn new` registers it, and
+        // `lyrn stand` reads it.
+        SourceFile {
+            path: "turnout.json",
+            contents: Contents::Text(include_str!("service/turnout.json.tmpl")),
+            executable: false,
+            addon: None,
+        },
+        SourceFile {
+            path: "tools/stand/stage.sh",
+            contents: Contents::Text(include_str!("service/tools/stand/stage.sh.tmpl")),
+            executable: true,
+            addon: None,
+        },
+        SourceFile {
+            path: ".github/workflows/image.yml",
+            contents: Contents::Text(include_str!("service/github/image.yml.tmpl")),
+            executable: false,
+            addon: None,
+        },
         SourceFile {
             path: "README.md",
             contents: Contents::Text(include_str!("service/README.md.tmpl")),

@@ -49,6 +49,8 @@ pub const VARIABLES: &[&str] = &[
     "lib_name",
     "owner",
     "repo_name",
+    // The service form's: the port its stand answers on, for turnout.json.
+    "stand_port",
     // Where the template came from and at which revision, for `lyrn.toml`.
     "template_source",
     "template_revision",
@@ -603,6 +605,12 @@ pub fn problems(native: &Native, sections: &[String]) -> Vec<String> {
     }
 
     for hook in &manifest.hooks {
+        if let Some(addon) = hook.addon.as_ref().filter(|a| !manifest.addons.iter().any(|known| known.name == **a)) {
+            problems.push(format!(
+                "the hook `{}` runs with the add-on `{addon}`, which the template does not have",
+                hook.name
+            ));
+        }
         if !hook_is_allowed(hook) {
             problems.push(format!(
                 "the hook `{}` runs `{}`; a template may only install dependencies (pnpm install, npm install, cargo fetch) and start the repository (git init, git add ., git commit -m)",
@@ -794,6 +802,7 @@ mod tests {
             optional: false,
             dir: None,
             starts_repository: false,
+            addon: None,
         }
     }
 

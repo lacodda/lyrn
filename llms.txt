@@ -6,7 +6,8 @@ lyrn is a Rust command-line tool. `lyrn new` generates a repository in one of
 nine forms, `lyrn adopt` brings an existing one up to the same standard,
 `lyrn upgrade` carries it to the standard's newest version,
 `lyrn doctor` holds a repository to it and says why each rule exists,
-`lyrn check` holds its shopfronts to each other, `lyrn ci` runs the push's CI
+`lyrn check` holds its shopfronts to each other, `lyrn stand` puts a service
+on its stand through turnout, `lyrn ci` runs the push's CI
 on the commit before it is pushed, `lyrn stage`, `status`, `versions` and
 `deps` say where it stands, `lyrn adr` writes a decision down, `lyrn docs` writes
 and checks the documentation site, `lyrn readme snap` retakes the README's

@@ -116,6 +116,8 @@ $ lyrn check [path...]           # the shopfronts held to each other; --release:
 $ lyrn repo [path]               # the repository on GitHub, kept the way the project says; tags on green CI
 $ lyrn open [place]              # a shopfront in the browser: repo, docs, ci, release, crate, npm
 $ lyrn clean [path...]           # what a build or an install writes again, removed, with what it weighed
+$ lyrn stand up [--server <s>]   # a service on its stand through turnout, its health asked
+$ lyrn stand image [--ci]        # the stand's image built on the stand's machine, or in CI
 $ lyrn assets [--from <dir>]     # the mark laid out by the canon, every raster drawn from its masters
 $ lyrn brand pick [name]         # a new mark's code and colour, held to the line's marks
 $ lyrn ci [job...]               # the CI a push of this commit would start, run here first

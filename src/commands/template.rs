@@ -74,7 +74,8 @@ fn sample_context(form: Form) -> Context {
     for variable in VARIABLES {
         context.set(*variable, variable.replace('_', "-"));
     }
-    context.set("name", "demo-app").set("form", form.as_str());
+    // A number where a file reads one: turnout.json is JSON.
+    context.set("name", "demo-app").set("form", form.as_str()).set("stand_port", "8100");
     context
 }
 

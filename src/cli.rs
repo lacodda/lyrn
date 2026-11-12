@@ -38,6 +38,9 @@ pub enum Command {
     Open(OpenArgs),
     /// Remove what a build or an install writes again, and say what it weighed
     Clean(CleanArgs),
+    /// The service's stand, through turnout: put it up, fill it for a demonstration, build its image there
+    #[command(subcommand)]
+    Stand(StandCommand),
     /// Lay the mark out by the line's canon and draw every raster of it from its masters
     Assets(AssetsArgs),
     /// A new product's mark, held to the line's: its code, its colour, and the two together
@@ -312,6 +315,45 @@ pub struct OpenArgs {
     pub print: bool,
 }
 
+#[derive(Subcommand)]
+pub enum StandCommand {
+    /// Deploy the project to its stand through turnout, and ask its health until it answers
+    Up {
+        /// The server the stand is on, as turnout names it; needed the first time
+        #[arg(long, value_name = "SERVER")]
+        server: Option<String>,
+
+        /// Where on the server the stand lives, the first time [default: /srv/<name>]
+        #[arg(long, value_name = "DIR")]
+        dir: Option<String>,
+
+        /// The repository; defaults to the one the current directory is in
+        path: Option<PathBuf>,
+    },
+    /// Fill the stand with the made-up rows of a demonstration, and ask its health after
+    Seed {
+        /// The server the stand is on, when the project has more than one
+        #[arg(long, value_name = "SERVER")]
+        server: Option<String>,
+
+        /// The repository; defaults to the one the current directory is in
+        path: Option<PathBuf>,
+    },
+    /// Build the stand's image on the stand's own machine, leaving what runs there alone
+    Image {
+        /// Build it in CI instead, on both architectures, for the commit HEAD is
+        #[arg(long, conflicts_with = "server")]
+        ci: bool,
+
+        /// The server the stand is on, when the project has more than one
+        #[arg(long, value_name = "SERVER")]
+        server: Option<String>,
+
+        /// The repository; defaults to the one the current directory is in
+        path: Option<PathBuf>,
+    },
+}
+
 #[derive(clap::Args)]
 pub struct CleanArgs {
     /// The repositories to clean; defaults to the one the current directory is in
@@ -469,7 +511,7 @@ pub struct ProjectArgs {
     #[arg(long)]
     pub dry_run: bool,
 
-    /// Skip the hooks that install dependencies and start the repository
+    /// Skip the hooks that install dependencies and start the repository, and the registration with turnout
     #[arg(long)]
     pub no_hooks: bool,
 }
