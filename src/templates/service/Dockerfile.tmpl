@@ -23,6 +23,13 @@ WORKDIR /src
 # Dependencies first, so editing source does not re-download and rebuild the
 # whole tree. A stub main gives cargo something to compile them against.
 COPY Cargo.toml Cargo.lock ./
+# With the Rust the manifest's rust-version names, which the msrv job of CI
+# builds on: the image's own Rust lags a new stable by days, and a project
+# started the day one came out declares that one.
+RUN version=$(sed -n 's/^rust-version = "\(.*\)"$/\1/p' Cargo.toml) \
+    && version=${version:-stable} \
+    && rustup toolchain install "$version" --profile minimal \
+    && rustup default "$version"
 RUN mkdir -p src frontend/dist \
     && echo 'fn main() {}' > src/main.rs \
     && cargo build --release \
