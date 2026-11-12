@@ -7,6 +7,10 @@ name: Release
 on:
   push:
     tags: ['v*']
+  # A tag whose run GitHub lost - a job never created, a rerun refused - is
+  # built again with `gh workflow run release.yml --ref vX.Y.Z`: the tag stays
+  # where it is, and publish waits for this run on the tag's commit.
+  workflow_dispatch:
 
 permissions:
   contents: write
@@ -14,6 +18,8 @@ permissions:
 jobs:
   release:
     runs-on: ubuntu-latest
+    # Dispatched on a branch, the run would release the branch's name.
+    if: startsWith(github.ref, 'refs/tags/v')
     steps:
       - uses: actions/checkout@v7
         with:
