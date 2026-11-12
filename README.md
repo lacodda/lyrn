@@ -45,7 +45,7 @@ Then `lyrn repo` puts it on GitHub, kept the way the project says.
 ```console
 $ cd demo-app && pnpm lint
 > eslint . && tsc --noEmit && pnpm registry && pnpm test
-registry: 1 copy matches dowel-ui 0.43.0
+registry: 1 copy matches dowel-ui 0.43.1
  Test Files  2 passed (2)
       Tests  3 passed (3)
 ```
@@ -65,7 +65,7 @@ lyrn doctor: ~/demo-app, a `spa` project on standard 2026.11.5
 ✓ assets     three levels in assets/, 3 copies and icons in place
 ✓ language   48 text files in English, translations in their places
 ✓ private    nothing from this computer in 48 text files
-✓ case       48 tracked files, no two named alike but for case
+✓ case       52 tracked files, no two named alike but for case
 ✓ actions    10 actions in 4 workflows, none retired or behind the standard
 - msrv       not a Rust project
 ✓ node       pnpm 10 and Node 22+ across 1 project
@@ -74,7 +74,7 @@ lyrn doctor: ~/demo-app, a `spa` project on standard 2026.11.5
 ✓ authors    1 commit, all by Kirill Lakhtachev <lahtachev@gmail.com>
 ✓ identity   commits as `Kirill Lakhtachev <lahtachev@gmail.com>`, the global identity; the global excludes file keeps assistant files out
 
-13 passed, 1 not applicable
+14 passed, 1 not applicable
 stack: node 22 · pnpm 10.34.9 · actions on the standard · updated today
 ```
 
