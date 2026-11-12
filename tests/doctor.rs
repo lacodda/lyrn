@@ -374,6 +374,7 @@ fn explain_says_why_and_where_to_read_more() {
         "assets",
         "language",
         "private",
+        "case",
         "actions",
         "msrv",
         "node",
@@ -559,6 +560,7 @@ fn many_repositories_are_a_table_and_json_is_one_document() {
             "assets",
             "language",
             "private",
+            "case",
             "actions",
             "msrv",
             "node",
@@ -592,7 +594,7 @@ fn many_repositories_are_a_table_and_json_is_one_document() {
     assert_eq!(repositories[0]["result"], "pass");
     assert_eq!(repositories[1]["result"], "fail");
     let rules = repositories[1]["rules"].as_array().unwrap();
-    assert_eq!(rules.len(), 14);
+    assert_eq!(rules.len(), 15);
     let assets = rules.iter().find(|r| r["rule"] == "assets").unwrap();
     assert_eq!(assets["result"], "fail");
     let favicon = assets["findings"]
