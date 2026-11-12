@@ -434,6 +434,14 @@ fn git(root: &Path, args: &[&str]) -> Option<String> {
     out.status.success().then(|| String::from_utf8_lossy(&out.stdout).trim().to_string())
 }
 
+/// A run of the image workflow, as GitHub lists it.
+struct Run {
+    id: u64,
+    status: String,
+    conclusion: String,
+    url: String,
+}
+
 fn image_in_ci(root: &Path) -> Result<(), Box<dyn Error>> {
     let workflow = root.join(".github").join("workflows").join(IMAGE_WORKFLOW);
     if !workflow.is_file() {
@@ -455,7 +463,7 @@ fn image_in_ci(root: &Path) -> Result<(), Box<dyn Error>> {
     if !api.signed_in() {
         return Err("no GitHub token at hand: GH_TOKEN, or `gh auth login`".into());
     }
-    let runs = |api: &crate::github::Api| -> Result<Vec<(u64, String, String, String)>, Box<dyn Error>> {
+    let runs = |api: &crate::github::Api| -> Result<Vec<Run>, Box<dyn Error>> {
         let found = api.get(&format!(
             "repos/{repo}/actions/workflows/{IMAGE_WORKFLOW}/runs?event=workflow_dispatch&head_sha={head}&per_page=20"
         ))?;
@@ -466,11 +474,16 @@ fn image_in_ci(root: &Path) -> Result<(), Box<dyn Error>> {
             .flatten()
             .filter_map(|run| {
                 let text = |key: &str| run.get(key).and_then(Value::as_str).unwrap_or_default().to_string();
-                Some((run.get("id")?.as_u64()?, text("status"), text("conclusion"), text("html_url")))
+                Some(Run {
+                    id: run.get("id")?.as_u64()?,
+                    status: text("status"),
+                    conclusion: text("conclusion"),
+                    url: text("html_url"),
+                })
             })
             .collect())
     };
-    let before: BTreeSet<u64> = runs(&api)?.into_iter().map(|(id, ..)| id).collect();
+    let before: BTreeSet<u64> = runs(&api)?.into_iter().map(|run| run.id).collect();
     api.send(
         "POST",
         &format!("repos/{repo}/actions/workflows/{IMAGE_WORKFLOW}/dispatches"),
@@ -486,7 +499,7 @@ fn image_in_ci(root: &Path) -> Result<(), Box<dyn Error>> {
             return Err(format!("{IMAGE_WORKFLOW} did not finish in 90 minutes").into());
         }
         std::thread::sleep(Duration::from_secs(if announced { 20 } else { 3 }));
-        let Some((_, status, conclusion, url)) = runs(&api)?.into_iter().find(|(id, ..)| !before.contains(id)) else {
+        let Some(Run { status, conclusion, url, .. }) = runs(&api)?.into_iter().find(|run| !before.contains(&run.id)) else {
             if start.elapsed() > Duration::from_secs(120) {
                 return Err(format!("GitHub started no run of {IMAGE_WORKFLOW} for {short} in two minutes").into());
             }
