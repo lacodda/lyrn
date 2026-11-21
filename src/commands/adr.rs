@@ -34,7 +34,7 @@ fn new(title: &str, path: Option<PathBuf>) -> Result<(), Box<dyn Error>> {
     let number = format!("{:04}", log.next_number());
     let name = format!("{number}-{slug}.md");
     let file = root.join(log.dir).join(&name);
-    let date = chrono::Utc::now().format("%Y-%m-%d");
+    let date = jiff::Timestamp::now().strftime("%Y-%m-%d");
     std::fs::write(&file, record(&number, &title, &date.to_string())).map_err(|e| format!("{}: {e}", file.display()))?;
     println!("Wrote {}/{name}.", log.dir);
 

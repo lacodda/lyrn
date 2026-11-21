@@ -5,7 +5,8 @@
 //! `status` and `stage` say these things, and they say them from here, so the
 //! two can never read the same history two ways.
 
-use chrono::{Duration, NaiveDate};
+use jiff::Span;
+use jiff::civil::Date;
 
 use crate::commands::doctor::Git;
 use crate::commands::doctor::stack::Updated;
@@ -145,7 +146,7 @@ pub fn ci_text(slug: &str, commit: &str) -> String {
 }
 
 /// When the stack was last brought up to date, and whether that still holds.
-pub fn stack_text(updated: &Updated, today: NaiveDate) -> (String, bool) {
+pub fn stack_text(updated: &Updated, today: Date) -> (String, bool) {
     let Some((day, days)) = &updated.last else {
         return ("never brought up to date - no `chore(deps)` commit in the history".to_string(), true);
     };
@@ -154,8 +155,10 @@ pub fn stack_text(updated: &Updated, today: NaiveDate) -> (String, bool) {
         1 => "yesterday".to_string(),
         n => format!("{n} days ago"),
     };
-    let until = NaiveDate::parse_from_str(day, "%Y-%m-%d")
-        .map(|d| d + Duration::days(UPDATE_HOLDS_DAYS))
+    let until = day
+        .parse::<Date>()
+        .ok()
+        .and_then(|d| d.checked_add(Span::new().days(UPDATE_HOLDS_DAYS)).ok())
         .unwrap_or(today);
     if until <= today {
         (format!("updated {ago}, on {day} - due since {until}"), true)
@@ -194,7 +197,7 @@ mod tests {
 
     #[test]
     fn an_update_holds_for_a_week() {
-        let today = NaiveDate::from_ymd_opt(2026, 10, 19).unwrap();
+        let today = Date::new(2026, 10, 19).unwrap();
         let updated = |day: &str, days: i64| Updated {
             last: Some((day.to_string(), days)),
             skipped_by: None,

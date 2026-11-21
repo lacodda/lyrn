@@ -948,11 +948,11 @@ fn prompt_line(prompt: &str, default: &str) -> Result<String, Box<dyn Error>> {
 }
 
 fn current_year() -> String {
-    chrono::Local::now().format("%Y").to_string()
+    jiff::ZonedDateTime::now().strftime("%Y").to_string()
 }
 
 fn current_date() -> String {
-    chrono::Local::now().format("%Y-%m-%d").to_string()
+    jiff::ZonedDateTime::now().strftime("%Y-%m-%d").to_string()
 }
 
 #[cfg(test)]

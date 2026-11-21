@@ -12,8 +12,6 @@
 use std::error::Error;
 use std::path::PathBuf;
 
-use chrono::Utc;
-
 use crate::cli::PathArgs;
 use crate::commands::check::{self, product::Product};
 use crate::commands::doctor::stack::Stack;
@@ -98,9 +96,9 @@ pub fn run(args: PathArgs) -> Result<(), Box<dyn Error>> {
     }
     facts.push(format!("tree {}", standing.tree_text()));
 
-    let now = Utc::now();
+    let now = jiff::Timestamp::now();
     if let Some(updated) = Stack::read(&repo, now).updated {
-        let (text, due) = stack_text(&updated, now.date_naive());
+        let (text, due) = stack_text(&updated, now.to_zoned_datetime(jiff::tz::TimeZone::UTC).date());
         if due {
             println!("stack     {text}");
             println!("          the stage starts with one `chore(deps)` commit - `lyrn deps` lists what is behind");

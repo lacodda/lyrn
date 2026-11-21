@@ -9,8 +9,6 @@
 use std::error::Error;
 use std::path::PathBuf;
 
-use chrono::Utc;
-
 use crate::cli::PathArgs;
 use crate::commands::check::product::Product;
 use crate::commands::doctor::Repo;
@@ -53,9 +51,9 @@ pub fn run(args: PathArgs) -> Result<(), Box<dyn Error>> {
         (None, _) => println!("ci        not on GitHub - no remote names a repository there"),
         (_, None) => println!("ci        nothing pushed to ask about"),
     }
-    let now = Utc::now();
+    let now = jiff::Timestamp::now();
     if let Some(updated) = Stack::read(&repo, now).updated {
-        println!("stack     {}", stack_text(&updated, now.date_naive()).0);
+        println!("stack     {}", stack_text(&updated, now.to_zoned_datetime(jiff::tz::TimeZone::UTC).date()).0);
     }
     println!("stage     {}", stage_line(&repo.root));
     Ok(())

@@ -11,7 +11,8 @@
 
 use std::collections::BTreeMap;
 
-use chrono::{DateTime, Duration, FixedOffset, Utc};
+use jiff::civil::Date;
+use jiff::{SignedDuration, Timestamp};
 use regex::Regex;
 
 use super::{Repo, actions, msrv, node};
@@ -92,7 +93,7 @@ pub struct Updated {
 }
 
 impl Stack {
-    pub fn read(repo: &Repo, now: DateTime<Utc>) -> Stack {
+    pub fn read(repo: &Repo, now: Timestamp) -> Stack {
         Stack {
             edition: edition(repo),
             msrv: msrv::MANIFESTS
@@ -229,17 +230,36 @@ fn actions_behind(repo: &Repo) -> Vec<String> {
     behind
 }
 
+/// A moment git wrote down, and the day it was where it was written: the day
+/// of `2026-10-01T23:30:00+03:00` is the 1st, whatever the day is in UTC.
+#[derive(Debug, Clone, Copy, PartialEq, Eq, PartialOrd, Ord)]
+struct Moment {
+    at: Timestamp,
+    day: Date,
+}
+
+impl Moment {
+    /// An RFC 3339 moment with its offset, as `%cI` and `iso-strict` print it.
+    fn parse(text: &str) -> Option<Moment> {
+        let text = text.trim();
+        Some(Moment {
+            at: text.parse().ok()?,
+            day: text.get(..10)?.parse().ok()?,
+        })
+    }
+}
+
 /// `git log --format=%cI` read into moments, newest first as git prints them.
-fn dates(log: &str) -> Vec<DateTime<FixedOffset>> {
-    log.lines().filter_map(|l| DateTime::parse_from_rfc3339(l.trim()).ok()).collect()
+fn dates(log: &str) -> Vec<Moment> {
+    log.lines().filter_map(Moment::parse).collect()
 }
 
 /// `git for-each-ref` of the version tags, newest first.
-fn versions(refs: &str) -> Vec<(String, DateTime<FixedOffset>)> {
+fn versions(refs: &str) -> Vec<(String, Moment)> {
     refs.lines()
         .filter_map(|line| {
             let (tag, date) = line.split_once('\t')?;
-            Some((tag.trim().to_string(), DateTime::parse_from_rfc3339(date.trim()).ok()?))
+            Some((tag.trim().to_string(), Moment::parse(date)?))
         })
         .collect()
 }
@@ -247,16 +267,17 @@ fn versions(refs: &str) -> Vec<(String, DateTime<FixedOffset>)> {
 /// The habit, by the fact. The newest version's work began when the version
 /// before it shipped; if the stack's last update was a week or more old by
 /// then and none came while the version was built, it skipped one.
-fn updated(updates: &[DateTime<FixedOffset>], tags: &[(String, DateTime<FixedOffset>)], now: DateTime<Utc>) -> Updated {
+fn updated(updates: &[Moment], tags: &[(String, Moment)], now: Timestamp) -> Updated {
+    let today = now.to_zoned_datetime(jiff::tz::TimeZone::UTC).date();
     let last = updates
         .iter()
-        .max()
-        .map(|d| (d.format("%Y-%m-%d").to_string(), (now.date_naive() - d.date_naive()).num_days()));
+        .max_by_key(|d| d.at)
+        .map(|d| (d.day.to_string(), i64::from((today - d.day).get_days())));
     let skipped_by = match tags {
         [(newest, shipped), (_, began), ..] => {
-            let during = updates.iter().any(|d| d > began && d <= shipped);
-            let before = updates.iter().filter(|d| *d <= began).max();
-            let fresh = before.is_some_and(|d| *began - *d < Duration::days(UPDATE_HOLDS_DAYS));
+            let during = updates.iter().any(|d| d.at > began.at && d.at <= shipped.at);
+            let before = updates.iter().filter(|d| d.at <= began.at).max_by_key(|d| d.at);
+            let fresh = before.is_some_and(|d| began.at.duration_since(d.at) < SignedDuration::from_hours(24 * UPDATE_HOLDS_DAYS));
             (!during && !fresh).then(|| newest.clone())
         }
         _ => None,
@@ -274,12 +295,12 @@ pub fn version_cmp(a: &str, b: &str) -> std::cmp::Ordering {
 mod tests {
     use super::*;
 
-    fn at(text: &str) -> DateTime<FixedOffset> {
-        DateTime::parse_from_rfc3339(text).unwrap()
+    fn at(text: &str) -> Moment {
+        Moment::parse(text).unwrap()
     }
 
-    fn now() -> DateTime<Utc> {
-        at("2026-10-13T12:00:00+00:00").with_timezone(&Utc)
+    fn now() -> Timestamp {
+        at("2026-10-13T12:00:00+00:00").at
     }
 
     /// If this fails, the templates stopped saying what the stack reads.

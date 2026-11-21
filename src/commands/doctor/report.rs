@@ -4,7 +4,6 @@
 
 use std::path::{Path, PathBuf};
 
-use chrono::Utc;
 use serde_json::{Value, json};
 
 use super::stack::{Stack, Standard};
@@ -127,7 +126,7 @@ fn examine(target: &Target, fix: bool, registry: &Result<Vec<crate::rigger::Prod
     };
     Report {
         name: target.name.clone(),
-        stack: Stack::read(&repo, Utc::now()),
+        stack: Stack::read(&repo, jiff::Timestamp::now()),
         root: repo.root,
         missing: None,
         form,

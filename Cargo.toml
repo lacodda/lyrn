@@ -33,7 +33,6 @@ exclude = [
 winresource = "0.1"
 
 [dependencies]
-chrono = "0.4.45"
 clap = { version = "4.6.9", features = ["derive"] }
 dialoguer = "0.12.0"
 # `lyrn upgrade` merges three versions of a file - what the standard wrote,
@@ -48,6 +47,7 @@ furca-release = "0.16.0"
 # Case filters for cargo-generate templates: the crate cargo-generate itself
 # uses, so `{{ project-name | pascal_case }}` comes out the same in both.
 heck = "0.5.0"
+jiff = "1.0.2"
 # cargo-generate templates are Liquid, and a Liquid subset would render some of
 # them differently from the tool they were written for.
 liquid = "0.26.11"

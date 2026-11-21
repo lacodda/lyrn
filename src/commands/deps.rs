@@ -14,7 +14,6 @@ use std::error::Error;
 use std::path::PathBuf;
 use std::process::Command as Process;
 
-use chrono::Utc;
 use regex::Regex;
 use yaml_rust2::{Yaml, YamlLoader};
 
@@ -54,13 +53,13 @@ pub fn run(args: PathArgs) -> Result<(), Box<dyn Error>> {
         return Err(format!("`{}` is not a directory - `lyrn deps` reads a repository", path.display()).into());
     }
     let repo = Repo::read(&path);
-    let now = Utc::now();
+    let now = jiff::Timestamp::now();
     let stack = Stack::read(&repo, now);
     let standard = Standard::read();
     println!("lyrn deps: {}\n", repo.root.display());
 
     if let Some(updated) = &stack.updated {
-        let (text, due) = stack_text(updated, now.date_naive());
+        let (text, due) = stack_text(updated, now.to_zoned_datetime(jiff::tz::TimeZone::UTC).date());
         println!("stack     {text}");
         if due {
             println!("          the next stage starts with one `chore(deps)` commit: majors too, the code fixed in it");
