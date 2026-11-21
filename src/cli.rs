@@ -25,6 +25,8 @@ pub enum Command {
     Init(Box<InitArgs>),
     /// Bring an existing repository up to the line's standard
     Adopt(Box<AdoptArgs>),
+    /// Copy items of dowel's registry into the project, from the dowel-ui it pins, with what they are made of
+    Add(AddArgs),
     /// Catch a repository up with the newest version of the line's standard,
     /// or of the template it was made from
     Upgrade(UpgradeArgs),
@@ -168,6 +170,17 @@ pub struct ChangelogArgs {
 
 #[derive(clap::Args)]
 pub struct FormsArgs {}
+
+#[derive(clap::Args)]
+pub struct AddArgs {
+    /// Items of dowel's registry, by name: `password-field`, `login-screen`
+    #[arg(required = true, value_name = "ITEM")]
+    pub items: Vec<String>,
+
+    /// The project; defaults to the one the current directory is in
+    #[arg(long, value_name = "PATH")]
+    pub path: Option<PathBuf>,
+}
 
 #[derive(Subcommand)]
 pub enum TemplateCommand {

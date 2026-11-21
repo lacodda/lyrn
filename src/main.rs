@@ -93,6 +93,7 @@ fn main() -> ExitCode {
         },
         cli::Command::Changelog(args) => commands::changelog::run(args),
         cli::Command::Forms(args) => commands::forms::run(args),
+        cli::Command::Add(args) => commands::add::run(args),
         cli::Command::Template(command) => commands::template::run(command),
     };
 
