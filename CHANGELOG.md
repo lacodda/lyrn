@@ -8,6 +8,40 @@ last release, which follow [Conventional Commits](https://www.conventionalcommit
 $ git cliff --unreleased --tag vX.Y.Z --prepend CHANGELOG.md
 ```
 
+## 🎉 [2.22.0] - 2026-11-21
+
+### Build
+
+- Tell days apart with jiff rather than the unmaintained chrono
+
+### ✨ Features
+
+- Name two modules of a directory that are one but for case
+- End every CI in the one check a release tag waits for
+- Hold a product to the line's registry
+- Record a repository made where the line lives in rigger
+- Name the product of the line each form made
+- Copy dowel's items into a project from the dowel-ui it pins
+- Write dowel's blocks with --with block:<name>
+- Take dowel-ui 1.0, and sign in with its LoginScreen block
+
+### 📖 Documentation
+
+- Record that a block is not an add-on, and the one check a tag waits for
+- Take the transcripts again from the build
+
+### 🛟 Miscellaneous Tasks
+
+- Build every dowel block, and end in the one check a tag waits for
+
+### 🛠️ Bug Fixes
+
+- Say in 2026.11.6 what it changed in the files a project starts with
+- List dowel's blocks under the forms that take them
+- Name the fields of the catalogue's entries rather than a tuple of six
+- Say what --consumers needs when rigger is not installed
+- Ask a tap or a bucket only where the shopfronts send readers
+
 ## 🎉 [2.21.0] - 2026-11-12
 
 ### ✨ Features
