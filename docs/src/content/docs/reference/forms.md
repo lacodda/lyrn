@@ -10,14 +10,17 @@ spa            Single-page app: Vite, React, TypeScript, Tailwind, dowel
   --with tanstack-query   Server state through TanStack Query, on the line's defaults
   --with auth             A cookie session and a sign-in screen until someone signs in
   --with pwa              Installable and offline: a manifest, its icons, a service worker
+  --with block:<name>     A screen of dowel's with its parts: empty-dashboard, list-detail, login, reader, settings
 cli            Command-line tool: Rust, clap, anyhow, dialoguer
   --with keyring          Secrets in the OS keyring, never in a config file
   --with self-update      A `self-update` command that reads the releases page
 desktop        Desktop app: Tauri 2 around the spa stack
   --with i18n             i18next, with a gate holding every locale to the source
+  --with block:<name>     A screen of dowel's with its parts: empty-dashboard, list-detail, login, reader, settings
 service        HTTP service: axum, sqlx, Postgres
   --with spa              A web UI compiled into the binary and served by it
   --with demo             Made-up data in an empty database; one with real data refuses it
+  --with block:<name>     With spa: a screen of dowel's, as the spa form lists them
 workspace      Cargo workspace: a library crate plus the CLI that uses it
   --with keyring          Secrets in the OS keyring, never in a config file
   --with self-update      A `self-update` command that reads the releases page
@@ -30,9 +33,6 @@ plugin         Plugin for a host of the line: an executable speaking JSON over s
   --host sefy             an inconspicuous encrypted store for notes, credentials and files
 tauri-plugin   Tauri 2 plugin: a Rust crate and the npm package that calls it
 docs           Documentation site added to an existing repository: Starlight, llms.txt
-
-Dowel's screens, for a form that draws with dowel (spa; service --with spa), from dowel-ui 1.0.0:
-  --with block:empty-dashboard, block:list-detail, block:login, block:reader, block:settings
 ```
 
 A form is the shape of the repository, not a choice of framework. The line runs
@@ -120,7 +120,8 @@ The block lands in `src/components/blocks/`, its parts in
 the copies under `components/ui` are dowel's and `pnpm lint` holds them to the
 registry, while a block is the product's from the moment it lands - nothing
 renders it yet, and it is yours to put where it belongs and to change. So it is
-not in `lyrn.toml`'s `with` either. A service takes blocks with its web UI,
+not in `lyrn.toml`'s `with` either. A form takes blocks where its files draw
+with dowel: the spa and desktop forms, and a service with its web UI,
 `--with spa,block:<name>`, into `frontend/`; a form that draws nothing of
 dowel's refuses them. The copies come from inside lyrn, offline; later ones
 come from the dowel-ui the project installed, with

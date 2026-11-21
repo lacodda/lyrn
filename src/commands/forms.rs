@@ -51,6 +51,19 @@ fn list() {
         for addon in form.addons() {
             println!("  --with {:<addon_column$} {}", addon.as_str(), addon.summary());
         }
+        // Blocks under the form that draws with dowel, as one more thing
+        // `--with` takes there: the form whose files hold a components.json,
+        // or the add-on that brings it.
+        if let Some(by) = draws_with_dowel(*form) {
+            let label = format!("{}<name>", blocks::PREFIX);
+            match by {
+                None => println!(
+                    "  --with {label:<addon_column$} A screen of dowel's with its parts: {}",
+                    block_names().join(", ")
+                ),
+                Some(addon) => println!("  --with {label:<addon_column$} With {addon}: a screen of dowel's, as the spa form lists them"),
+            }
+        }
         // A form generated against a host is useless without knowing which
         // hosts exist: `--host` has no default worth guessing, and the answer
         // changes as the line's applications grow plugin hosts of their own.
@@ -60,19 +73,22 @@ fn list() {
             }
         }
     }
-    // Blocks are dowel's, not any one form's: listed once, for every form
-    // whose files draw with dowel.
-    let catalogue = Catalogue::builtin();
-    let names: Vec<String> = catalogue
-        .blocks()
-        .map(|b| format!("{}{}", blocks::PREFIX, b.name.trim_end_matches("-screen")))
-        .collect();
-    println!(
-        "\nDowel's screens, for a form that draws with dowel (spa; service --with spa), from dowel-ui {}:\n  --with {}",
-        catalogue.version,
-        names.join(", ")
-    );
     list_local_templates();
+}
+
+/// Whether a form's files draw with dowel - hold a `components.json` - and
+/// with which add-on, when only an add-on brings it.
+fn draws_with_dowel(form: Form) -> Option<Option<crate::model::Addon>> {
+    crate::templates::sources_for(form)
+        .into_iter()
+        .filter(|s| s.path.ends_with("components.json"))
+        .map(|s| s.addon)
+        .min()
+}
+
+/// The blocks the binary carries, by the name `block:` takes.
+fn block_names() -> Vec<String> {
+    Catalogue::builtin().blocks().map(|b| b.name.trim_end_matches("-screen").to_string()).collect()
 }
 
 /// Your templates under ~/.lyrn/templates, each read the way `lyrn new`

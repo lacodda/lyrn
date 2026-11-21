@@ -28,7 +28,7 @@ pub fn run(args: AddArgs) -> Result<(), Box<dyn Error>> {
     };
     let frontend = frontend_of(&start).ok_or_else(|| {
         format!(
-            "no components.json in {} or above it - `lyrn add` copies dowel into a project drawn with dowel: the spa form, or a service's frontend/",
+            "no components.json in {} or above it - `lyrn add` copies dowel into a project drawn with dowel: the spa and desktop forms, or a service's frontend/",
             start.display()
         )
     })?;
