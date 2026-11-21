@@ -45,7 +45,7 @@ Then `lyrn repo` puts it on GitHub, kept the way the project says.
 ```console
 $ cd demo-app && pnpm lint
 > eslint . && tsc --noEmit && pnpm registry && pnpm test
-registry: 1 copy matches dowel-ui 0.43.1
+registry: 1 copy matches dowel-ui 1.0.0
  Test Files  2 passed (2)
       Tests  3 passed (3)
 ```
@@ -56,7 +56,7 @@ request.
 <!-- snap -->
 ```console
 $ lyrn doctor
-lyrn doctor: ~/demo-app, a `spa` project on standard 2026.11.5
+lyrn doctor: ~/demo-app, a `spa` project on standard 2026.11.6
 
 ✓ standard   all 21 files of the `spa` standard
 ✓ readme     the longest block is 18 words, in 25 lines
@@ -73,8 +73,9 @@ lyrn doctor: ~/demo-app, a `spa` project on standard 2026.11.5
 ✓ ai-traces  no assistant files tracked or in the history, no stamps, .gitignore keeps them out
 ✓ authors    1 commit, all by Kirill Lakhtachev <lahtachev@gmail.com>
 ✓ identity   commits as `Kirill Lakhtachev <lahtachev@gmail.com>`, the global identity; the global excludes file keeps assistant files out
+- line       the line's registry was not read - rigger is not installed here
 
-14 passed, 1 not applicable
+14 passed, 2 not applicable
 stack: node 22 · pnpm 10.34.9 · actions on the standard · updated today
 ```
 
