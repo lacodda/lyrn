@@ -7,3 +7,9 @@ over the other, so the working tree is not what the history says.
 The rule fails every set of tracked paths - files or directories - whose names
 are one name but for case. Rename one of them; an import that names either
 reaches whichever the file system finds first.
+
+lyrid's two files were not even one path: they differ in their extensions too.
+They are one module, though - `import './Expedition'` tries `.ts` before `.tsx`,
+and where case is not told apart it finds `expedition.ts`. So two files of one
+directory whose names, without an extension a module is imported without (ts,
+tsx, js, jsx, mjs, cjs, mts, cts), are one but for case fail as well.

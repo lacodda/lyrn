@@ -178,6 +178,13 @@ file system finds first, and CI builds green on Linux what does not start on
 the machine you work on. Each set is named once, at the shortest path it starts
 at.
 
+Nor are two modules of one directory: `Expedition.tsx` beside `expedition.ts`
+are two paths, and one module - `import './Expedition'` tries `.ts` before
+`.tsx`, and where case is not told apart it finds the other file. Names that
+are one but for case once the extension a module is imported without is off -
+`ts`, `tsx`, `js`, `jsx`, `mjs`, `cjs`, `mts`, `cts` - fail too; one spelling
+with two extensions, `button.ts` beside `button.tsx`, does not.
+
 ### actions
 
 No GitHub Action GitHub has retired or archived - `create-release`,
