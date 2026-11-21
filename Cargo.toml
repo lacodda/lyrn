@@ -34,7 +34,7 @@ winresource = "0.1"
 
 [dependencies]
 chrono = "0.4.45"
-clap = { version = "4.6.7", features = ["derive"] }
+clap = { version = "4.6.9", features = ["derive"] }
 dialoguer = "0.12.0"
 # `lyrn upgrade` merges three versions of a file - what the standard wrote,
 # what the repository has, what the standard writes now - and shows the
@@ -44,7 +44,7 @@ diffy = "0.5.2"
 # installers held to the release page, and the checks of a release that went
 # out - its page, registries, links and installed build. One engine for
 # furca's `release` and lyrn's `check`, so the two never disagree.
-furca-release = "0.15.0"
+furca-release = "0.16.0"
 # Case filters for cargo-generate templates: the crate cargo-generate itself
 # uses, so `{{ project-name | pascal_case }}` comes out the same in both.
 heck = "0.5.0"
@@ -57,27 +57,27 @@ liquid-core = "0.26.11"
 # mark to the same rule.
 png = "0.18.1"
 # A cargo-generate placeholder may carry a `regex` its answer has to match.
-regex = "1.13.1"
+regex = "1.13.2"
 # Asks GitHub whether a template's tag passed its CI. Blocking and rustls, as
 # turnout and the cli form's self-update use it.
 reqwest = { version = "0.13.5", default-features = false, features = ["rustls", "blocking"] }
 # Draws the mark's masters into every raster `lyrn assets` writes. Text, so the
 # code and the banner's line are set in the font lyrn carries; no system fonts
 # and no raster images, which a master never has.
-resvg = { version = "0.49.0", default-features = false, features = ["text"] }
+resvg = { version = "0.50.0", default-features = false, features = ["text"] }
 serde = { version = "1.0.229", features = ["derive"] }
 serde_json = "1"
 # Reads the carried font's character map, so a master with a character the
 # font has no glyph for is refused rather than drawn with an empty box. The
 # reader resvg itself shapes text with.
-skrifa = { version = "0.44.0", default-features = false, features = ["std"] }
+skrifa = { version = "0.50.0", default-features = false, features = ["std"] }
 # A template from GitHub is cloned into a directory that has to disappear
 # whatever happens to the generation.
 tempfile = "3.27.0"
 # Ordered tables: a cargo-generate template asks its placeholders in the order
 # it declares them, and the export writes a manifest in the order it was read.
 toml = { version = "1.1.8", features = ["preserve_order"] }
-yaml-rust2 = { version = "0.13.0", default-features = false }
+yaml-rust2 = { version = "0.13.2", default-features = false }
 
 [dev-dependencies]
 assert_cmd = "2.2.2"
