@@ -39,7 +39,7 @@ error: the name starts with `D`; it has to start with a lowercase letter
 | `--author <name>` | the global `git config user.name` | Recorded in LICENSE |
 | `--path <path>` | `./<name>`; `.` for `docs` | Where to create it |
 | `--repo <owner/name>` | looked up | The GitHub repository it will live in |
-| `--with <addon,...>` | none | Optional pieces, per form; see [Forms](/reference/forms/) |
+| `--with <addon,...>` | none | Optional pieces, per form, and dowel's screens as `block:<name>`; see [Forms](/reference/forms/) |
 | `-y`, `--yes` | — | Accept the defaults instead of asking |
 | `--dry-run` | — | Show the tree that would be written, and write nothing |
 | `--no-hooks` | — | Skip installing dependencies, starting the repository and registering with turnout |
@@ -140,6 +140,13 @@ An add-on a form does not have is an error rather than a silent no-op.
 A form decides what an add-on means for it: `--with i18n` on a `desktop`
 project writes the translation runtime and puts the locale gate into
 `pnpm lint`, so a key missing from one language fails the gate.
+
+`block:<name>` beside them is one of dowel's screens, written with the
+primitives it is made of - see [Blocks](/reference/forms/#blocks):
+
+```console
+$ lyrn new my-app --with auth,block:list-detail
+```
 
 ## The host
 

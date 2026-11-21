@@ -9,6 +9,7 @@ pub mod clean;
 pub mod deps;
 pub mod docs;
 pub mod doctor;
+pub mod forms;
 pub mod init;
 pub mod msrv;
 pub mod new;

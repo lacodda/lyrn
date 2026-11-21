@@ -30,6 +30,9 @@ plugin         Plugin for a host of the line: an executable speaking JSON over s
   --host sefy             an inconspicuous encrypted store for notes, credentials and files
 tauri-plugin   Tauri 2 plugin: a Rust crate and the npm package that calls it
 docs           Documentation site added to an existing repository: Starlight, llms.txt
+
+Dowel's screens, for a form that draws with dowel (spa; service --with spa), from dowel-ui 1.0.0:
+  --with block:empty-dashboard, block:list-detail, block:login, block:reader, block:settings
 ```
 
 A form is the shape of the repository, not a choice of framework. The line runs
@@ -83,8 +86,10 @@ fails at once instead of retrying three times behind a spinner.
 **`auth`** keeps a cookie session the way all four of the line's signed-in
 frontends do: the cookie is HttpOnly, so the app asks the server who is signed
 in (`GET /api/me`) and shows a sign-in screen until someone is. The screen is
-dowel's Field, Input, Panel and Alert, copied in with the add-on; it tells a
-wrong password from a server out of reach. `/api` is forwarded to
+dowel's LoginScreen block, copied into `src/components/blocks/` with the
+primitives it is made of: it tells a wrong password from a server out of
+reach, marks its fields for a password manager, and sends one attempt at a
+time. `/api` is forwarded to
 `localhost:8080` in development, where the `service` form listens, and a test
 helper stands in for the server so the tests run the real provider.
 
@@ -99,6 +104,27 @@ one is dropped.
 `main.tsx` is where the add-ons meet: the providers they need are one line
 each, outermost first, so any set of them nests without re-indenting the
 rest.
+
+### Blocks
+
+A block is one of dowel's screens - a list beside its detail, settings in
+sections, a sign-in page, an empty dashboard, a reader - and `--with
+block:<name>` writes it with every primitive it is made of:
+
+```console
+$ lyrn new my-app --with router,block:list-detail,block:settings
+```
+
+The block lands in `src/components/blocks/`, its parts in
+`src/components/ui/` beside the other copies. It is not an add-on of the form:
+the copies under `components/ui` are dowel's and `pnpm lint` holds them to the
+registry, while a block is the product's from the moment it lands - nothing
+renders it yet, and it is yours to put where it belongs and to change. So it is
+not in `lyrn.toml`'s `with` either. A service takes blocks with its web UI,
+`--with spa,block:<name>`, into `frontend/`; a form that draws nothing of
+dowel's refuses them. The copies come from inside lyrn, offline; later ones
+come from the dowel-ui the project installed, with
+[`lyrn add`](/reference/add/).
 
 ### The favicon
 

@@ -69,8 +69,8 @@ pub enum Command {
     Readme(ReadmeCommand),
     /// A version's changelog section, and the screens that go with it
     Changelog(ChangelogArgs),
-    /// List the forms a project can take, and your own templates
-    Forms,
+    /// List the forms a project can take, dowel's blocks, and your own templates
+    Forms(FormsArgs),
     /// Check a template, or write a built-in form out as one
     #[command(subcommand)]
     Template(TemplateCommand),
@@ -165,6 +165,9 @@ pub struct ChangelogArgs {
     #[arg(long, value_name = "PATH")]
     pub path: Option<PathBuf>,
 }
+
+#[derive(clap::Args)]
+pub struct FormsArgs {}
 
 #[derive(Subcommand)]
 pub enum TemplateCommand {
@@ -495,7 +498,8 @@ pub struct ProjectArgs {
     #[command(flatten)]
     pub identity: IdentityArgs,
 
-    /// Optional pieces to generate with, comma-separated (see `lyrn forms`)
+    /// Optional pieces to generate with, comma-separated: the form's add-ons,
+    /// and dowel's screens as `block:<name>` (see `lyrn forms`)
     #[arg(long = "with", value_name = "ADDON", value_delimiter = ',')]
     pub with: Vec<String>,
 

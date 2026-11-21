@@ -348,3 +348,61 @@ fn source_is_refused_for_a_host_that_asks_no_requests() {
         assert!(!dir.path().join("demo").exists(), "{host}: a refused project was written");
     }
 }
+
+/// A block is one of dowel's screens, written with every primitive it is made
+/// of and nothing else: `--with block:list-detail` is `lyrn add
+/// list-detail-screen` at the moment the project is made, from the copies the
+/// binary carries.
+#[test]
+fn a_block_comes_with_the_primitives_it_is_made_of() {
+    let (_dir, root) = generate("demo-app", &["--with", "block:list-detail,router"]);
+    let block = fs::read_to_string(root.join("src/components/blocks/list-detail-screen.tsx")).unwrap();
+    for import in block.lines().filter_map(|l| l.split("from '@/components/ui/").nth(1)) {
+        let part = import.trim_end_matches(['\'', ';']);
+        assert!(
+            root.join(format!("src/components/ui/{part}.tsx")).is_file(),
+            "the block imports {part}, and it is not there"
+        );
+    }
+    // What the parts import of each other comes too: frame is made of a scroll area.
+    assert!(root.join("src/components/ui/scroll-area.tsx").is_file());
+    // A block is not an add-on of the form: `lyrn upgrade` renders the
+    // standard by `with`, and a block changes nothing in it.
+    let lyrn_toml = fs::read_to_string(root.join("lyrn.toml")).unwrap();
+    assert!(lyrn_toml.contains("with = [\"router\"]"), "{lyrn_toml}");
+    // Nothing of another block.
+    assert!(!root.join("src/components/blocks/login-screen.tsx").exists());
+}
+
+/// A service draws with dowel only through its web UI, and the block goes
+/// where that UI's components.json says.
+#[test]
+fn a_service_s_block_goes_into_its_frontend() {
+    let (_dir, root) = generate("demo-svc", &["--form", "service", "--with", "spa,block:settings"]);
+    assert!(root.join("frontend/src/components/blocks/settings-screen.tsx").is_file());
+    assert!(root.join("frontend/src/components/ui/section-nav.tsx").is_file());
+}
+
+#[test]
+fn a_block_is_refused_where_nothing_draws_with_dowel_and_by_a_name_dowel_lacks() {
+    for (args, says) in [
+        (vec!["--form", "cli", "--with", "block:login"], "the `cli` form draws nothing of dowel's"),
+        (vec!["--form", "service", "--with", "block:login"], "`--with spa` as well"),
+        (vec!["--with", "block:nothing"], "has no `nothing` block - it has: block:"),
+    ] {
+        let dir = tempfile::tempdir().unwrap();
+        let output = lyrn()
+            .args(["new", "demo", "--yes", "--no-hooks"])
+            .args(&args)
+            .arg("--path")
+            .arg(dir.path().join("demo"))
+            .assert()
+            .failure()
+            .get_output()
+            .stderr
+            .clone();
+        let stderr = String::from_utf8_lossy(&output);
+        assert!(stderr.contains(says), "{args:?}: {stderr}");
+        assert!(!dir.path().join("demo").exists(), "{args:?}: a refused project was written");
+    }
+}

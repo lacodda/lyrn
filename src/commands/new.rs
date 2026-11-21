@@ -246,6 +246,97 @@ pub fn build_context(wanted: &Wanted, native: &Native, origin: &Origin, interact
     Ok(context)
 }
 
+/// `--with block:<x>`: one of dowel's screens, written with the primitives it
+/// is made of.
+///
+/// Not an add-on of the form, though it is asked for beside them. An add-on
+/// is the form's - its files, its sections in shared files - while a block is
+/// dowel's, the same for every form that draws with dowel, and the product's
+/// own the moment it lands: nothing in the form changes with it, so it is not
+/// in `lyrn.toml`'s `with` either, which `lyrn upgrade` renders the standard
+/// by. It is `lyrn add <x>-screen` at the moment the project is made, from the
+/// copies the binary carries, so it needs no network and no install.
+pub mod blocks {
+    use std::error::Error;
+    use std::path::Path;
+
+    use crate::generate::{Plan, PlannedFile};
+    use crate::model::Form;
+    use crate::templates::dowel::{Catalogue, Kind, Places};
+
+    /// How `--with` spells a block.
+    pub const PREFIX: &str = "block:";
+
+    /// The add-ons in `with`, and the blocks by their names in the registry -
+    /// `block:login` is `login-screen`. A block the binary does not carry is
+    /// refused here, with the ones it does.
+    pub fn split(with: &[String]) -> Result<(Vec<String>, Vec<String>), Box<dyn Error>> {
+        let catalogue = Catalogue::builtin();
+        let mut addons = Vec::new();
+        let mut blocks = Vec::new();
+        for entry in with {
+            let Some(short) = entry.strip_prefix(PREFIX) else {
+                addons.push(entry.clone());
+                continue;
+            };
+            let name = format!("{short}-screen");
+            if catalogue.get(&name).is_none_or(|item| item.kind != Kind::Block) {
+                let known: Vec<String> = catalogue.blocks().map(|b| format!("{PREFIX}{}", b.name.trim_end_matches("-screen"))).collect();
+                return Err(format!("dowel-ui {} has no `{short}` block - it has: {}", catalogue.version, known.join(", ")).into());
+            }
+            if !blocks.contains(&name) {
+                blocks.push(name);
+            }
+        }
+        Ok((addons, blocks))
+    }
+
+    /// Puts the blocks into the plan, under the frontend whose
+    /// `components.json` the plan writes, with every part they are made of
+    /// that the plan does not already hold.
+    pub fn add(plan: &mut Plan, blocks: &[String], form: Form) -> Result<(), Box<dyn Error>> {
+        if blocks.is_empty() {
+            return Ok(());
+        }
+        let config = plan
+            .files
+            .iter()
+            .filter(|f| f.path.file_name().is_some_and(|n| n == "components.json"))
+            .min_by_key(|f| f.path.components().count())
+            .ok_or_else(|| match form {
+                Form::Service => "the `service` form draws with dowel only with its `spa` add-on: `--with spa` as well".to_string(),
+                form => format!("the `{form}` form draws nothing of dowel's, so a block has nowhere to go"),
+            })?;
+        let frontend = config.path.parent().unwrap_or(Path::new("")).to_path_buf();
+        let places = Places::read(&String::from_utf8_lossy(&config.contents))?;
+        let catalogue = Catalogue::builtin();
+        for item in catalogue.closure(blocks)? {
+            let (Some(place), Some((_, text))) = (places.of(item)?, &item.file) else {
+                continue;
+            };
+            let path = frontend.join(place);
+            match plan.files.iter().find(|f| f.path == path) {
+                Some(planned) if planned.contents == text.as_bytes() => continue,
+                Some(_) => {
+                    return Err(format!(
+                        "the `{form}` form writes a file of its own at {}, where dowel's `{}` goes",
+                        path.display(),
+                        item.name
+                    )
+                    .into());
+                }
+                None => plan.files.push(PlannedFile {
+                    path,
+                    contents: text.as_bytes().to_vec(),
+                    executable: false,
+                }),
+            }
+        }
+        plan.files.sort_by(|a, b| a.path.cmp(&b.path));
+        Ok(())
+    }
+}
+
 /// The keys of a host's targets or operations as the items of a Rust array.
 fn quoted(targets: &[host::Target]) -> String {
     targets.iter().map(|t| format!("\"{}\"", t.key)).collect::<Vec<_>>().join(", ")
@@ -311,6 +402,7 @@ pub fn generate_project(name: &str, template: &Template, project: &ProjectArgs, 
             if !project.define.is_empty() {
                 return Err("`--define` answers a cargo-generate template's placeholders; this is a lyrn template, which asks with its own flags".into());
             }
+            let (addons, blocks) = blocks::split(&project.with)?;
             // A site added to a repository describes the product already
             // there, in the words its manifest uses: the shopfronts say one
             // thing, and `lyrn check` holds them to it.
@@ -322,18 +414,20 @@ pub fn generate_project(name: &str, template: &Template, project: &ProjectArgs, 
                 name,
                 form: native.form,
                 host: project.host.as_deref(),
-                with: &project.with,
+                with: &addons,
                 identity: &identity,
             };
             let context = build_context(&wanted, native, &template.origin, interactive)?;
+            let mut plan = generate::plan_with(&native.files, &native.manifest, &context, &addons)?;
+            blocks::add(&mut plan, &blocks, native.form)?;
             Planned {
-                plan: generate::plan_with(&native.files, &native.manifest, &context, &project.with)?,
+                plan,
                 // A hook of an add-on installs what only the add-on brings.
                 hooks: native
                     .manifest
                     .hooks
                     .iter()
-                    .filter(|h| h.addon.as_ref().is_none_or(|a| project.with.contains(a)))
+                    .filter(|h| h.addon.as_ref().is_none_or(|a| addons.contains(a)))
                     .cloned()
                     .collect(),
                 form: Some(native.form),
@@ -654,6 +748,13 @@ fn print_next_steps(name: &str, form: Form, project: &ProjectArgs, root: &Path, 
             println!("  cargo test");
             println!("  pnpm test");
         }
+    }
+    // A block is the product's from the moment it lands, and nothing renders
+    // it yet: saying where it is beats leaving it to be found.
+    if args.with.iter().any(|w| w.starts_with(blocks::PREFIX)) {
+        println!(
+            "\nThe blocks are in components/blocks, the product's own from here: render them where they belong. `lyrn add` takes more of dowel's registry."
+        );
     }
     // A documentation site is added to a repository that is already there;
     // anything else is new, and GitHub has not heard of it.
