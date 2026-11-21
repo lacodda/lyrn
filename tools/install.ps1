@@ -35,7 +35,13 @@ $target = Join-Path $dir "lyrn.exe"
 try {
     Write-Host "Downloading $url"
     Invoke-WebRequest $url -OutFile (Join-Path $tmp "lyrn.zip")
-    Expand-Archive (Join-Path $tmp "lyrn.zip") -DestinationPath $tmp -Force
+    # tar by its full path, not Expand-Archive: Windows PowerShell started
+    # from PowerShell 7 inherits its module path, loads that Archive module,
+    # and Expand-Archive then fails on an overload .NET Framework lacks - the
+    # release of lyrn 2.22.0 stopped there. Windows has carried bsdtar, which
+    # reads a zip, since 10 1803; a bare `tar` may be some other one on PATH.
+    & (Join-Path $env:SystemRoot "System32\tar.exe") -xf (Join-Path $tmp "lyrn.zip") -C $tmp
+    if ($LASTEXITCODE -ne 0) { throw "tar could not unpack lyrn.zip" }
     New-Item -ItemType Directory -Force $dir | Out-Null
     # A running lyrn.exe cannot be overwritten, but it can be renamed: the old
     # one steps aside, so an update does not fail while lyrn runs. It is
