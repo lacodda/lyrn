@@ -114,6 +114,26 @@ impl Form {
         }
     }
 
+    /// What rigger's record calls a new product of this form, with these
+    /// add-ons - `cli`, `desktop`, `web`, `library`, `service` - where they
+    /// say it. A service with a web UI is a web product to whoever uses it,
+    /// as every one of the line's is recorded. A workspace is a command line
+    /// in one product and a server in the next, and a plugin is its host's:
+    /// for those the record is left to be told. A guess at birth, not a rule:
+    /// the form is how the repository is built, and the shape what the
+    /// product turns into - nitid is a window on the cli form.
+    pub fn shape(self, with: &[String]) -> Option<&'static str> {
+        match self {
+            Form::Spa => Some("web"),
+            Form::Cli => Some("cli"),
+            Form::Desktop => Some("desktop"),
+            Form::Service if with.iter().any(|a| a == Addon::Spa.as_str()) => Some("web"),
+            Form::Service => Some("service"),
+            Form::Mono | Form::TauriPlugin => Some("library"),
+            Form::Workspace | Form::Plugin | Form::Docs => None,
+        }
+    }
+
     /// Whether this form is generated against a host application.
     pub fn takes_a_host(self) -> bool {
         matches!(self, Form::Plugin)

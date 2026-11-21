@@ -527,6 +527,9 @@ pub fn generate_project(name: &str, template: &Template, project: &ProjectArgs, 
     if !project.no_hooks {
         run_hooks(&planned.hooks, root, in_a_repository)?;
         register_with_turnout(plan, root);
+        if let Some(form) = planned.form.filter(|f| f.placement() == Placement::NewDirectory) {
+            record_in_rigger(name, form.shape(&project.with), root);
+        }
     }
 
     let uncommitted = in_a_repository && planned.hooks.iter().any(|h| h.starts_repository);
@@ -561,6 +564,47 @@ fn register_with_turnout(plan: &Plan, root: &Path) {
             println!("turnout is not installed here: `lyrn stand up` registers {} once it is.", described.name)
         }
         Err(crate::turnout::Trouble::Refused(said)) => println!("Not registered with turnout: {said}"),
+    }
+}
+
+/// A repository made where the line keeps its repositories joins the
+/// record with its hub and its skill, so the project is one the next sitting
+/// can be started on - rather than a directory someone has to remember to
+/// `rigger project add`. Where it is made decides, not a flag: rigger's
+/// profile names the directories the line's repositories sit in, and a
+/// project made in a scratch directory to try something is not the line's.
+/// Like turnout, not a step the generation stands or falls by.
+fn record_in_rigger(name: &str, shape: Option<&str>, root: &Path) {
+    let profile = match crate::rigger::profile() {
+        Ok(profile) => profile,
+        Err(reason) if reason.contains("not installed") => return,
+        Err(reason) => return println!("Not recorded in rigger: {reason}"),
+    };
+    if !root.join(".git").exists() {
+        // Inside somebody's checkout: a directory of their repository, not
+        // a repository of its own.
+        return;
+    }
+    if !profile.holds(root) {
+        let roots: Vec<String> = profile.roots.iter().map(|r| r.display().to_string()).collect();
+        let at = if roots.is_empty() { "no directory".to_string() } else { roots.join(", ") };
+        return println!(
+            "Not recorded in rigger: the line's repositories are in {at}, and this one is not - `rigger project add {}` records it.",
+            root.display()
+        );
+    }
+    if let Ok(Some(known)) = crate::rigger::project_for(root) {
+        return println!("rigger knows it as {known} already.");
+    }
+    match crate::rigger::record(root, name, shape, &profile) {
+        Ok(recorded) => {
+            let hub = recorded.hub.map(|h| format!(", its hub at {}", h.display())).unwrap_or_default();
+            println!("Recorded in rigger as {name}{hub}.");
+            for missed in recorded.missed {
+                println!("  Not written - {missed}");
+            }
+        }
+        Err(reason) => println!("Not recorded in rigger: {reason}"),
     }
 }
 

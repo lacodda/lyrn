@@ -223,6 +223,10 @@ impl<'a> Session<'a> {
             .current_dir(&self.here)
             .env("PATH", &self.path)
             .env("NO_COLOR", "1")
+            // A transcript is a reader's terminal: a reader has no record of
+            // the owner's line to be told about, and no catalog of stands.
+            .env("LYRN_RIGGER", "lyrn-snap-has-no-rigger")
+            .env("LYRN_TURNOUT", "lyrn-snap-has-no-turnout")
             .stdin(std::process::Stdio::null())
             .output()
             .map_err(|e| format!("bash did not start: {e}"))?;

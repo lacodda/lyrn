@@ -406,3 +406,141 @@ fn a_block_is_refused_where_nothing_draws_with_dowel_and_by_a_name_dowel_lacks()
         assert!(!dir.path().join("demo").exists(), "{args:?}: a refused project was written");
     }
 }
+
+/// A stand-in rigger whose profile keeps the line's repositories in `root`,
+/// which knows no project yet, and which writes down every call it gets.
+struct Record {
+    dir: tempfile::TempDir,
+}
+
+impl Record {
+    fn new(root: &Path, hubs: &Path) -> Record {
+        let dir = tempfile::tempdir().unwrap();
+        let slashed = |p: &Path| p.display().to_string().replace(std::path::MAIN_SEPARATOR, "/");
+        fs::write(
+            dir.path().join("profile.json"),
+            format!(
+                "[{{\"current\":true,\"name\":\"line\",\"profile\":{{\"hubs\":\"{}\",\"kind\":\"line\",\"roots\":[\"{}\"]}}}}]\n",
+                slashed(hubs),
+                slashed(root)
+            ),
+        )
+        .unwrap();
+        fs::write(dir.path().join("projects.json"), "[]\n").unwrap();
+        if cfg!(windows) {
+            fs::write(
+                dir.path().join("rigger.cmd"),
+                "@echo off\r\necho %* >> \"%~dp0calls.txt\"\r\nif \"%2\"==\"profile\" type \"%~dp0profile.json\" & exit /b 0\r\nif \"%2\"==\"project\" type \"%~dp0projects.json\" & exit /b 0\r\nexit /b 0\r\n",
+            )
+            .unwrap();
+        } else {
+            let script = dir.path().join("rigger");
+            fs::write(
+                &script,
+                "#!/bin/sh\nhere=$(dirname \"$0\")\necho \"$*\" >> \"$here/calls.txt\"\ncase \"$2\" in\n  profile) cat \"$here/profile.json\" ;;\n  project) cat \"$here/projects.json\" ;;\nesac\nexit 0\n",
+            )
+            .unwrap();
+            #[cfg(unix)]
+            {
+                use std::os::unix::fs::PermissionsExt;
+                fs::set_permissions(&script, fs::Permissions::from_mode(0o755)).unwrap();
+            }
+            // An executable just written can be "busy" on Linux while another
+            // test's fork still holds it open: run it until it runs, so the
+            // generation never meets that flake - and only that one.
+            for _ in 0..50 {
+                match std::process::Command::new(&script).arg("--version").output() {
+                    Err(e) if e.raw_os_error() == Some(26) => std::thread::sleep(std::time::Duration::from_millis(50)),
+                    _ => break,
+                }
+            }
+        }
+        Record { dir }
+    }
+
+    fn program(&self) -> std::path::PathBuf {
+        self.dir.path().join(if cfg!(windows) { "rigger.cmd" } else { "rigger" })
+    }
+
+    fn calls(&self) -> String {
+        fs::read_to_string(self.dir.path().join("calls.txt")).unwrap_or_default()
+    }
+}
+
+/// The cli form written out as a template, with the hooks that start the
+/// repository and without the one that fetches crates: a generation that runs
+/// its hooks, and needs no network.
+fn template_without_a_fetch(at: &Path) -> std::path::PathBuf {
+    let template = at.join("template-cli");
+    lyrn()
+        .args(["template", "export", "cli", "--repo", "owner/template-cli", "--path"])
+        .arg(&template)
+        .assert()
+        .success();
+    let manifest = fs::read_to_string(template.join("template.toml")).unwrap();
+    let kept: Vec<&str> = manifest.split("[[hooks]]").filter(|part| !part.contains("\"cargo\", \"fetch\"")).collect();
+    fs::write(template.join("template.toml"), kept.join("[[hooks]]")).unwrap();
+    template
+}
+
+/// The project starts its life in the record: recorded, its shape, its hub
+/// written out of the record, its skill - the moment the repository exists.
+#[test]
+fn a_repository_made_where_the_line_lives_joins_the_record() {
+    let line = tempfile::tempdir().unwrap();
+    let hubs = tempfile::tempdir().unwrap();
+    let elsewhere = tempfile::tempdir().unwrap();
+    let template = template_without_a_fetch(elsewhere.path());
+    let record = Record::new(line.path(), hubs.path());
+    let root = line.path().join("demo-tool");
+    let output = lyrn()
+        .env("LYRN_RIGGER", record.program())
+        .env("GIT_AUTHOR_NAME", "Ada Lovelace")
+        .env("GIT_AUTHOR_EMAIL", "ada@example.com")
+        .env("GIT_COMMITTER_NAME", "Ada Lovelace")
+        .env("GIT_COMMITTER_EMAIL", "ada@example.com")
+        .args(["new", "demo-tool", "--yes", "--repo", "owner/demo-tool", "--template"])
+        .arg(&template)
+        .arg("--path")
+        .arg(&root)
+        .assert()
+        .success()
+        .get_output()
+        .stdout
+        .clone();
+    let stdout = String::from_utf8_lossy(&output);
+    assert!(stdout.contains("Recorded in rigger as demo-tool, its hub at"), "{stdout}");
+    let calls = record.calls();
+    for call in [
+        "project add",
+        "--name demo-tool",
+        "project mark demo-tool --form cli",
+        "export demo-tool --hub",
+        "skill demo-tool --install",
+    ] {
+        assert!(calls.contains(call), "no `{call}` in:\n{calls}");
+    }
+    assert!(hubs.path().join("demo-tool").is_dir(), "the hub's directory was not made");
+
+    // Made in a scratch directory instead: the record is not told.
+    let scratch = tempfile::tempdir().unwrap();
+    let record = Record::new(line.path(), hubs.path());
+    let output = lyrn()
+        .env("LYRN_RIGGER", record.program())
+        .env("GIT_AUTHOR_NAME", "Ada Lovelace")
+        .env("GIT_AUTHOR_EMAIL", "ada@example.com")
+        .env("GIT_COMMITTER_NAME", "Ada Lovelace")
+        .env("GIT_COMMITTER_EMAIL", "ada@example.com")
+        .args(["new", "demo-tool", "--yes", "--repo", "owner/demo-tool", "--template"])
+        .arg(&template)
+        .arg("--path")
+        .arg(scratch.path().join("demo-tool"))
+        .assert()
+        .success()
+        .get_output()
+        .stdout
+        .clone();
+    let stdout = String::from_utf8_lossy(&output);
+    assert!(stdout.contains("Not recorded in rigger: the line's repositories are in"), "{stdout}");
+    assert!(!record.calls().contains("project add"), "{}", record.calls());
+}

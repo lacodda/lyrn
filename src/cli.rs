@@ -532,7 +532,7 @@ pub struct ProjectArgs {
     #[arg(long)]
     pub dry_run: bool,
 
-    /// Skip the hooks that install dependencies and start the repository, and the registration with turnout
+    /// Skip the hooks that install dependencies and start the repository, and the registration with turnout and rigger
     #[arg(long)]
     pub no_hooks: bool,
 }

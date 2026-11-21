@@ -128,6 +128,90 @@ fn same_place(a: &Path, b: &Path) -> bool {
     parts(&a) == parts(&b)
 }
 
+/// Where the record keeps the line: the profile in use says which
+/// directories hold its repositories and which one its hubs.
+#[derive(Debug, Clone, PartialEq, Eq, Default)]
+pub struct Profile {
+    pub roots: Vec<PathBuf>,
+    pub hubs: Option<PathBuf>,
+}
+
+/// The profile rigger is using.
+pub fn profile() -> Result<Profile, String> {
+    parse_profile(&ask(&["--json", "profile", "list"])?)
+}
+
+fn parse_profile(json: &str) -> Result<Profile, String> {
+    let profiles: Value = serde_json::from_str(json).map_err(|e| format!("rigger's profiles are not JSON: {e}"))?;
+    let current = profiles
+        .as_array()
+        .into_iter()
+        .flatten()
+        .find(|p| p.get("current").and_then(Value::as_bool) == Some(true))
+        .and_then(|p| p.get("profile"))
+        .ok_or("rigger names no profile in use")?;
+    Ok(Profile {
+        roots: current
+            .get("roots")
+            .and_then(Value::as_array)
+            .into_iter()
+            .flatten()
+            .filter_map(Value::as_str)
+            .map(PathBuf::from)
+            .collect(),
+        hubs: current.get("hubs").and_then(Value::as_str).map(PathBuf::from),
+    })
+}
+
+impl Profile {
+    /// Whether `root` sits where the record keeps the line's repositories:
+    /// directly in one of its roots, beside the others.
+    pub fn holds(&self, root: &Path) -> bool {
+        let Some(parent) = std::fs::canonicalize(root).ok().and_then(|r| r.parent().map(Path::to_path_buf)) else {
+            return false;
+        };
+        self.roots.iter().any(|r| same_place(r, &parent))
+    }
+}
+
+/// What the record was told about a new project, step by step.
+#[derive(Debug, Default)]
+pub struct Recorded {
+    /// The hub it was written to, when the profile keeps hubs.
+    pub hub: Option<PathBuf>,
+    /// What did not go through, each with why: the project is recorded
+    /// either way, and each is one command away.
+    pub missed: Vec<String>,
+}
+
+/// Records a new repository of the line: the project, the shape it has,
+/// its hub written out of the record, and its skill. Only the first step
+/// failing fails the whole: the rest is said and left.
+pub fn record(root: &Path, name: &str, form: Option<&str>, profile: &Profile) -> Result<Recorded, String> {
+    let path = root.display().to_string();
+    ask(&["project", "add", &path, "--name", name])?;
+    let mut recorded = Recorded::default();
+    if let Some(form) = form
+        && let Err(reason) = ask(&["project", "mark", name, "--form", form])
+    {
+        recorded.missed.push(format!("its form: {reason}"));
+    }
+    if let Some(hubs) = &profile.hubs {
+        let hub = hubs.join(name);
+        match std::fs::create_dir_all(&hub)
+            .map_err(|e| format!("cannot make {}: {e}", hub.display()))
+            .and_then(|()| ask(&["export", name, "--hub", &hub.display().to_string()]))
+        {
+            Ok(_) => recorded.hub = Some(hub),
+            Err(reason) => recorded.missed.push(format!("its hub: {reason}")),
+        }
+    }
+    if let Err(reason) = ask(&["skill", name, "--install"]) {
+        recorded.missed.push(format!("its skill: {reason}"));
+    }
+    Ok(recorded)
+}
+
 /// The stage a project is in, as the record has it.
 #[derive(Debug, Clone, PartialEq, Eq)]
 pub struct Stage {
@@ -271,6 +355,40 @@ mod tests {
         let older = r#"{"session": {"started_at": "2026-11-09T11:09:11Z"}, "entry": ""}"#;
         assert_eq!(parse_diary(older, line).unwrap(), Diary::Apart);
         assert!(parse_diary("not json", line).is_err());
+    }
+
+    #[test]
+    fn the_profile_in_use_says_where_the_line_lives() {
+        let json = r#"[
+            {"current": false, "name": "work", "profile": {"kind": "tickets", "roots": ["/elsewhere"]}},
+            {"current": true, "name": "line", "profile": {"hubs": "/notes/Projects", "kind": "line", "roots": ["/src", "/more"]}}
+        ]"#;
+        assert_eq!(
+            parse_profile(json).unwrap(),
+            Profile {
+                roots: vec![PathBuf::from("/src"), PathBuf::from("/more")],
+                hubs: Some(PathBuf::from("/notes/Projects")),
+            }
+        );
+        assert!(parse_profile("[]").is_err());
+    }
+
+    /// A project made beside the line's repositories is the line's; one made
+    /// in a scratch directory, or deeper inside a root, is not.
+    #[test]
+    fn a_root_holds_what_sits_directly_in_it() {
+        let dir = tempfile::tempdir().unwrap();
+        let project = dir.path().join("demo");
+        let deeper = dir.path().join("scratch").join("demo");
+        std::fs::create_dir_all(&project).unwrap();
+        std::fs::create_dir_all(&deeper).unwrap();
+        let profile = Profile {
+            roots: vec![dir.path().to_path_buf()],
+            hubs: None,
+        };
+        assert!(profile.holds(&project));
+        assert!(!profile.holds(&deeper));
+        assert!(!profile.holds(&dir.path().join("gone")));
     }
 
     #[test]

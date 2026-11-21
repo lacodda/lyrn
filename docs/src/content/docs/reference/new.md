@@ -42,7 +42,7 @@ error: the name starts with `D`; it has to start with a lowercase letter
 | `--with <addon,...>` | none | Optional pieces, per form, and dowel's screens as `block:<name>`; see [Forms](/reference/forms/) |
 | `-y`, `--yes` | — | Accept the defaults instead of asking |
 | `--dry-run` | — | Show the tree that would be written, and write nothing |
-| `--no-hooks` | — | Skip installing dependencies, starting the repository and registering with turnout |
+| `--no-hooks` | — | Skip installing dependencies, starting the repository, and registering with turnout and rigger |
 
 ## Before anything is written
 
@@ -223,3 +223,26 @@ The port is the first of `8100-8199` no stand the machine knows holds - see
 [the port](/reference/stand/#the-port). turnout missing, or not set up, is said
 and is not fatal: `lyrn stand up` registers the project once it is. An app of
 the same name elsewhere is left alone, and named. `--no-hooks` skips this too.
+
+## rigger
+
+A repository made where the line keeps its repositories joins
+[rigger's](https://lacodda.github.io/rigger/) record the moment it exists: the
+project is recorded, with the shape the form gives it, its hub is written out
+of the record, and its skill is installed - so the next sitting can start on
+it, rather than on a directory someone has to remember to record.
+
+```console
+Recorded in rigger as my-app, its hub at ~/notes/Projects/my-app.
+```
+
+Where it is made decides, not a flag: rigger's profile names the directories
+the line's repositories sit in, and a project made directly in one of them is
+the line's. One made in a scratch directory to try something is not recorded,
+and the line says how to record it by hand. The shape is a guess at birth -
+`web` for a spa, and for a service with its web UI; `cli`, `desktop`,
+`service`, `library` where the form says it; nothing for a workspace or a
+plugin, whose shape the form does not tell - and `rigger project mark` puts
+it right. Without rigger installed nothing is said; `--no-hooks` skips this
+too, and a documentation site is added to a repository the record knows
+already.
