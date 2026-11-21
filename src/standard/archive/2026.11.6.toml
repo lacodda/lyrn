@@ -9,6 +9,7 @@
 changes = [
     "ci.yml ends in one job, `ci`, that needs every other job, runs always and fails if any of them failed: the release tag's ruleset requires it alone, so a matrix that changes no longer makes the next tag wait for a job that does not run. `lyrn repo` requires `ci` alone where the CI has it.",
     "The pull request template asks for CI green on the last commit, rather than the gate green locally: the line's full gate runs in CI.",
+    "In the files a project starts with rather than the standard's: dowel-ui 1.0, and the spa form's sign-in screen (`--with auth`) is dowel's LoginScreen block.",
 ]
 
 # Files written as they are, with no placeholder substituted.
