@@ -70,6 +70,9 @@ jobs:
           - { os: ubuntu-latest, addons: tanstack-query }
           - { os: ubuntu-latest, addons: auth }
           - { os: ubuntu-latest, addons: pwa }
+          # Every block dowel publishes, beside the sign-in screen that is one:
+          # each written with its parts, linted, type-checked and built.
+          - { os: ubuntu-latest, addons: 'auth,block:list-detail,block:settings,block:login,block:empty-dashboard,block:reader' }
     steps:
       - uses: actions/checkout@v7
       - uses: dtolnay/rust-toolchain@stable
@@ -758,3 +761,39 @@ jobs:
           done
           test -s llms-full.txt
           echo "llms.txt, llms-full.txt and every twin are there"
+
+  # The one check a release tag waits for: every job above passed, or was
+  # skipped on purpose. A tag held to the jobs themselves is held to their
+  # names, and the first matrix that changed made GitHub wait for a job that no
+  # longer ran - until `lyrn repo` was run again. `needs` alone would not do: a
+  # job whose dependency failed is skipped, and a required check that was
+  # skipped counts as passed - so this one runs always, and says.
+  ci:
+    name: ci
+    if: always()
+    needs:
+      - check
+      - msrv
+      - template
+      - template-cli
+      - template-desktop
+      - template-service
+      - template-service-stand
+      - template-workspace
+      - template-mono
+      - template-plugin
+      - template-tauri-plugin
+      - template-audit
+      - template-docs
+    runs-on: ubuntu-latest
+    steps:
+      - name: Every job passed
+        env:
+          NEEDS: ${{ toJSON(needs) }}
+        run: |
+          failed="$(jq -r 'to_entries[] | select(.value.result != "success" and .value.result != "skipped") | "\(.key): \(.value.result)"' <<< "$NEEDS")"
+          if [ -n "$failed" ]; then
+            echo "$failed"
+            exit 1
+          fi
+          echo "every job passed"
