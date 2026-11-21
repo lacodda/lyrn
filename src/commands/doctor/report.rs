@@ -84,14 +84,14 @@ impl Report {
 
 /// Every target, examined side by side: the repositories have nothing to
 /// share, and the slowest is a history read end to end.
-pub fn examine_all(targets: &[Target], fix: bool) -> Vec<Report> {
+pub fn examine_all(targets: &[Target], fix: bool, registry: &Result<Vec<crate::rigger::Product>, String>) -> Vec<Report> {
     std::thread::scope(|scope| {
-        let handles: Vec<_> = targets.iter().map(|t| scope.spawn(move || examine(t, fix))).collect();
+        let handles: Vec<_> = targets.iter().map(|t| scope.spawn(move || examine(t, fix, registry))).collect();
         handles.into_iter().map(|h| h.join().expect("examining a repository does not panic")).collect()
     })
 }
 
-fn examine(target: &Target, fix: bool) -> Report {
+fn examine(target: &Target, fix: bool, registry: &Result<Vec<crate::rigger::Product>, String>) -> Report {
     if !target.path.is_dir() {
         return Report {
             name: target.name.clone(),
@@ -104,7 +104,9 @@ fn examine(target: &Target, fix: bool) -> Report {
             written: Vec::new(),
         };
     }
+    let listed = super::line::Listed::of(registry, &target.name);
     let mut repo = Repo::read(&target.path);
+    repo.listed = listed.clone();
     let mut outcomes = check_all(&repo);
     let mut written = Vec::new();
     if fix {
@@ -115,6 +117,7 @@ fn examine(target: &Target, fix: bool) -> Report {
         if !written.is_empty() {
             let paths: Vec<String> = written.iter().filter(|w| w.error.is_none()).map(|w| w.path.clone()).collect();
             repo = Repo::read_with(&target.path, &paths);
+            repo.listed = listed;
             outcomes = check_all(&repo);
         }
     }

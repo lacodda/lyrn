@@ -1,0 +1,22 @@
+Everything that draws the line as a whole reads one registry: the list of
+products `rigger export --line` publishes from the record, with each one's
+mark, colour, shape and the address of its documentation. dowel's product
+switcher and accents, the tiles on a README, a page listing the line - all of
+them take a product's colour and its address from there, while the product's
+own buttons take theirs from lyrn.toml and its site is built for whatever
+astro.config.mjs says.
+
+When the two disagree, neither file looks wrong on its own: the switcher shows
+the product in one colour and the product opens in another, or sends a reader
+to an address its site is not built for. So the doctor reads the registry once
+and holds each repository to its entry: the colour against [project] accent in
+lyrn.toml, and the address against the site's `site` and `base`. The shape the
+registry gives a product is not held to its form: the form is how the
+repository is built, the shape what the product is to whoever uses it - a
+service with a web UI is a web product.
+
+Only what both sides say is compared. A product recorded before its mark was
+drawn is not wrong for having no colour yet, and a machine without rigger has
+no registry to hold anything to: the rule is skipped and says why. Put right
+whichever side is wrong - lyrn.toml and the site in the repository, or the
+record with `rigger project mark <name> --accent` and `--docs`.

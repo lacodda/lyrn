@@ -42,6 +42,17 @@ impl Site {
     pub fn reference_dir(&self) -> String {
         format!("{}/src/content/docs/reference", self.dir)
     }
+
+    /// The address the site is built for: `site`, and under it `base` -
+    /// `https://lacodda.github.io/kasl/`, or a domain's root.
+    pub fn address(&self) -> Option<String> {
+        let site = trim_slashes(self.site.as_deref()?);
+        let base = self.base.as_deref().map(|b| b.trim_matches('/')).filter(|b| !b.is_empty());
+        Some(match base {
+            Some(base) => format!("{site}/{base}/"),
+            None => format!("{site}/"),
+        })
+    }
 }
 
 fn parse(dir: String, text: &str) -> Site {

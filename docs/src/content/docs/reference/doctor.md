@@ -55,8 +55,9 @@ lyrn doctor: ~/word-count, a `cli` project on standard 2026.11
         if it is somebody else, name them there: `ada <ada@old-laptop.local>`
     why: lyrn doctor --explain authors
 ✓ identity   commits as `Ada Lovelace <ada@example.com>`, the global identity; the global excludes file keeps assistant files out
+✓ line       the registry and the repository agree on its colour and documentation
 
-5 failed, 1 to look at, 8 passed; `lyrn doctor --fix` puts 2 findings right
+5 failed, 1 to look at, 9 passed; `lyrn doctor --fix` puts 2 findings right
 stack: edition 2024 · msrv 1.99 · node 22 · pnpm 10.33.0 (the standard is on 10.34.9) · actions 1 behind · updated 9 days ago, due
 ```
 
@@ -275,6 +276,23 @@ assistant block; it fails when there is no identity at all. `lyrn new` takes
 the author for LICENSE and the manifests from the global identity for the same
 reason. On CI this rule is not applicable.
 
+### line
+
+The line's registry - what [`rigger export --line`](https://lacodda.github.io/rigger/reference/export/)
+publishes from the record - and the repository say the same about the product:
+its colour is `[project] accent` in `lyrn.toml`, and its documentation is
+where the site's `site` and `base` build it for. Everything that draws the line
+as a whole reads the registry - dowel's product switcher, the tiles on a
+README, a page listing the products - while the product's buttons take their
+colour from `lyrn.toml`; when the two disagree, neither file looks wrong on its
+own.
+
+The registry is read once for the run. Only what both sides say is compared:
+a product recorded before its mark was drawn is not wrong for it, and without
+rigger the rule is skipped and says why. The shape the registry gives a product
+is not held to its form - the form is how the repository is built, the shape
+what the product is to whoever uses it: a service with a web UI is `web`.
+
 ## Many repositories
 
 Name more than one, and the report is a table: a mark per rule, a row per
@@ -285,9 +303,9 @@ on one of them says what is off and how to put it right.
 $ lyrn doctor ../word-count ../tally
 lyrn doctor: 2 repositories
 
-            standard readme changelog mark assets language private case actions msrv node audit ai-traces authors identity
-word-count  ✓        ✓      ✓         ✓    ✓      ✓        ✗       ✓    ✗       ✗    !    ✗     ✓         ✗       ✓
-tally       ✓        ✓      ✓         ✓    ✓      ✓        ✓       ✓    ✓       ✓    ✓    ✓     ✓         ✓       ✓
+            standard readme changelog mark assets language private case actions msrv node audit ai-traces authors identity line
+word-count  ✓        ✓      ✓         ✓    ✓      ✓        ✗       ✓    ✗       ✗    !    ✗     ✓         ✗       ✓        ✓
+tally       ✓        ✓      ✓         ✓    ✓      ✓        ✓       ✓    ✓       ✓    ✓    ✓     ✓         ✓       ✓        -
 
 1 fails, 1 passes; `lyrn doctor --fix` puts 2 findings right
 `lyrn doctor <path>` says what is off in one of them, how to put it right and why

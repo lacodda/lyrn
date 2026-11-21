@@ -25,6 +25,7 @@ pub mod changelog;
 pub mod git;
 mod identity;
 mod language;
+pub mod line;
 pub mod msrv;
 mod node;
 mod private;
@@ -65,6 +66,7 @@ pub enum Rule {
     AiTraces,
     Authors,
     Identity,
+    Line,
 }
 
 impl Rule {
@@ -86,6 +88,7 @@ impl Rule {
         Rule::AiTraces,
         Rule::Authors,
         Rule::Identity,
+        Rule::Line,
     ];
 
     pub fn name(self) -> &'static str {
@@ -105,6 +108,7 @@ impl Rule {
             Rule::AiTraces => "ai-traces",
             Rule::Authors => "authors",
             Rule::Identity => "identity",
+            Rule::Line => "line",
         }
     }
 
@@ -126,6 +130,7 @@ impl Rule {
             Rule::AiTraces => "No coding assistant's files or stamps in the repository or its history",
             Rule::Authors => "Every author in the history is you, or someone .mailmap names",
             Rule::Identity => "This machine commits as its global identity and ignores assistant files",
+            Rule::Line => "The line's registry and the repository say the same about the product: its colour and its docs",
         }
     }
 
@@ -147,6 +152,7 @@ impl Rule {
             Rule::AiTraces => include_str!("lessons/ai-traces.txt"),
             Rule::Authors => include_str!("lessons/authors.txt"),
             Rule::Identity => include_str!("lessons/identity.txt"),
+            Rule::Line => include_str!("lessons/line.txt"),
         }
     }
 
@@ -167,6 +173,7 @@ impl Rule {
             Rule::AiTraces => ai::check(repo),
             Rule::Authors => authors::check(repo),
             Rule::Identity => identity::check(repo),
+            Rule::Line => line::check(repo),
         }
     }
 }
@@ -314,6 +321,8 @@ pub struct Repo {
     /// A CI runner has no identity and no excludes file of its own: the rules
     /// about the machine have nothing to hold it to.
     pub on_ci: bool,
+    /// What the line's registry says of the product, when the run read it.
+    pub listed: line::Listed,
     /// The text files, read on first use: two rules read every one of them.
     texts: OnceCell<Vec<(String, String)>>,
 }
@@ -348,6 +357,7 @@ impl Repo {
             broken_workflows,
             on_ci: std::env::var_os("CI").is_some_and(|v| !v.is_empty() && v != "false"),
             root,
+            listed: line::Listed::Unread("not asked".to_string()),
             texts: OnceCell::new(),
         }
     }
@@ -369,6 +379,7 @@ impl Repo {
             broken_workflows,
             on_ci: false,
             root: root.to_path_buf(),
+            listed: line::Listed::Unread("not asked".to_string()),
             texts: OnceCell::new(),
         }
     }
@@ -553,7 +564,10 @@ pub fn run(args: DoctorArgs) -> Result<bool, Box<dyn Error>> {
         (paths.into_iter().map(report::Target::path).collect(), Vec::new())
     };
 
-    let reports = report::examine_all(&targets, args.fix);
+    // Once for every repository: the registry is the record's, and asking
+    // for it is a process of rigger's.
+    let registry = crate::rigger::registry();
+    let reports = report::examine_all(&targets, args.fix, &registry);
     let passed = reports.iter().all(report::Report::passed);
     let standard = stack::Standard::read();
     if args.json {

@@ -382,6 +382,7 @@ fn explain_says_why_and_where_to_read_more() {
         "ai-traces",
         "authors",
         "identity",
+        "line",
     ];
     for rule in rules {
         let out = common::lyrn().args(["doctor", "--explain", rule]).output().unwrap();
@@ -567,7 +568,8 @@ fn many_repositories_are_a_table_and_json_is_one_document() {
             "audit",
             "ai-traces",
             "authors",
-            "identity"
+            "identity",
+            "line"
         ]
     );
     let row = |name: &str| report.lines().find(|l| l.starts_with(&format!("{name} "))).unwrap_or_default().to_string();
@@ -594,7 +596,7 @@ fn many_repositories_are_a_table_and_json_is_one_document() {
     assert_eq!(repositories[0]["result"], "pass");
     assert_eq!(repositories[1]["result"], "fail");
     let rules = repositories[1]["rules"].as_array().unwrap();
-    assert_eq!(rules.len(), 15);
+    assert_eq!(rules.len(), 16);
     let assets = rules.iter().find(|r| r["rule"] == "assets").unwrap();
     assert_eq!(assets["result"], "fail");
     let favicon = assets["findings"]

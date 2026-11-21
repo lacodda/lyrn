@@ -128,6 +128,49 @@ fn same_place(a: &Path, b: &Path) -> bool {
     parts(&a) == parts(&b)
 }
 
+/// A product as the line's public registry has it: what `rigger export
+/// --line` publishes from the record, and every generator of the line reads.
+#[derive(Debug, Clone, PartialEq, Eq, Default)]
+pub struct Product {
+    pub name: String,
+    /// The two-letter code of its mark.
+    pub mark: Option<String>,
+    /// The colour it owns, as `#RRGGBB`.
+    pub accent: Option<String>,
+    /// What shape of thing it is: `cli`, `desktop`, `web`, `library`, `service`.
+    pub form: Option<String>,
+    pub repository: Option<String>,
+    /// Where its documentation lives.
+    pub docs: Option<String>,
+}
+
+/// The line's registry, read from the record.
+pub fn registry() -> Result<Vec<Product>, String> {
+    parse_registry(&ask(&["export", "--line"])?)
+}
+
+fn parse_registry(json: &str) -> Result<Vec<Product>, String> {
+    let registry: Value = serde_json::from_str(json).map_err(|e| format!("the line's registry is not JSON: {e}"))?;
+    let products = registry
+        .get("products")
+        .and_then(Value::as_array)
+        .ok_or("the line's registry lists no products")?;
+    Ok(products
+        .iter()
+        .filter_map(|p| {
+            let text = |key: &str| p.get(key).and_then(Value::as_str).map(str::to_string);
+            Some(Product {
+                name: text("name")?,
+                mark: text("mark"),
+                accent: text("accent"),
+                form: text("form"),
+                repository: text("repository"),
+                docs: text("docs"),
+            })
+        })
+        .collect())
+}
+
 /// Where the record keeps the line: the profile in use says which
 /// directories hold its repositories and which one its hubs.
 #[derive(Debug, Clone, PartialEq, Eq, Default)]
@@ -355,6 +398,31 @@ mod tests {
         let older = r#"{"session": {"started_at": "2026-11-09T11:09:11Z"}, "entry": ""}"#;
         assert_eq!(parse_diary(older, line).unwrap(), Diary::Apart);
         assert!(parse_diary("not json", line).is_err());
+    }
+
+    /// A product recorded before its mark was drawn is published with the
+    /// fields it has, and read the same way.
+    #[test]
+    fn the_registry_is_read_with_the_fields_each_product_has() {
+        let json = r##"{"generator": "rigger", "version": "0.50.0", "products": [
+            {"name": "kasl", "about": "Work activity tracker", "mark": "ka", "accent": "#A9C23F", "form": "cli",
+             "repository": "https://github.com/lacodda/kasl.git", "docs": "https://kasl.lacodda.com/"},
+            {"name": "fresh", "repository": "https://github.com/lacodda/fresh.git"},
+            {"about": "no name, so no product"}
+        ]}"##;
+        let products = parse_registry(json).unwrap();
+        assert_eq!(products.len(), 2);
+        assert_eq!(products[0].accent.as_deref(), Some("#A9C23F"));
+        assert_eq!(products[0].docs.as_deref(), Some("https://kasl.lacodda.com/"));
+        assert_eq!(
+            products[1],
+            Product {
+                name: "fresh".into(),
+                repository: Some("https://github.com/lacodda/fresh.git".into()),
+                ..Product::default()
+            }
+        );
+        assert!(parse_registry("{}").is_err());
     }
 
     #[test]
