@@ -169,7 +169,11 @@ pub struct ChangelogArgs {
 }
 
 #[derive(clap::Args)]
-pub struct FormsArgs {}
+pub struct FormsArgs {
+    /// Say which product of the line each form made, from rigger's record, and which forms made none
+    #[arg(long)]
+    pub consumers: bool,
+}
 
 #[derive(clap::Args)]
 pub struct AddArgs {

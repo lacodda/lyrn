@@ -627,6 +627,34 @@ left behind.
 
 The generated project's two checks are the same files that build this site.
 
+## Which products a form made
+
+```console
+$ lyrn forms --consumers
+Which product of the line each form made, from rigger's record of 18:
+
+spa            none
+cli            kasl, lyrn, nitid, rigger, turnout
+desktop        furca, midda, scheda
+service        hilvan, kasl-server, lyrid, rhapsod
+workspace      austeris, efema
+mono           none
+plugin         none
+tauri-plugin   none
+docs           austeris, dowel, efema, furca, kasl, kasl-server, kilna, lyrn, nitid, nooma, rigger, scheda, sefy, turnout
+
+No lyrn.toml, so made from no form: dowel, kilna, nooma, sefy
+
+4 forms no product is made from: spa, mono, plugin, tauri-plugin - a template nobody makes is one only its own CI has built.
+```
+
+A form no product is made from is a template nobody holds to a real product:
+its CI builds a scaffold, and what the scaffold lacks is found the day a product
+is started on it. The list reads the repositories from
+[rigger's](https://lacodda.github.io/rigger/) record and the form from each
+one's `lyrn.toml` - the form it was made or adopted as - rather than guessing
+from its files; a documentation site counts where `docs/astro.config.mjs` is.
+
 ## The release contour
 
 Every form that starts a repository writes the same contour around its code,
