@@ -94,7 +94,8 @@ $ lyrn check --release --install
 ```
 
 For a program - a `release.toml` with `[post.install]` - `taps` reads the
-owner's Homebrew tap and Scoop bucket too.
+owner's Homebrew tap and Scoop bucket too, where the README or the site sends
+a reader to them.
 
 Every check but `live` and `taps` is the engine's own: `furca release verify [tag]
 --install` asks the same questions the same way, and a release that passes one
@@ -250,6 +251,12 @@ manifests are written from by the newest release. The README of the `cli` and
 and without the entry both find nothing. The entry has to name the program as
 the README installs it, the repository it is released from and the program it
 puts on the PATH; a homepage other than the manifests' is one to look at.
+
+A list is held to the program where the shopfronts send a reader to it - a
+`brew install` or a `scoop install` in the README or on a page of the site -
+and nowhere else. A program for Windows alone has nothing to put in a tap, and
+one installed only by its own script has neither: the check says so and is not
+applicable, rather than failing on a list nobody meant it to be in.
 
 The name is the one the release page's archives begin with -
 `relay-server-{tag}-<target>.tar.gz` in `[page] assets` - since that is what

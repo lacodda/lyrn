@@ -5,18 +5,33 @@
 //! manifests are written from a `packages.json` by the newest release. A
 //! program missing from that list is a README line that installs nothing:
 //! `brew install OWNER/tap/NAME` answers that there is no such formula.
+//!
+//! So a list is held to the program where the shopfronts send a reader to
+//! it - a `brew install` or `scoop install` in the README or a page of the
+//! site - and nowhere else. A program for Windows alone has nothing to put in
+//! a tap, and one installed only by its script (nitid, by its owner's
+//! decision) has neither: asking either list for them is a failure nobody can
+//! put right, and the promise the shopfronts make is the fact to hold.
 
 use serde_json::{Value, json};
 
 use super::product::{Kind, Product};
 use crate::commands::doctor::{Finding, Outcome, Repo};
 
-/// The two lists, each with the words a person installs from it with.
-const SHELVES: &[(&str, &str)] = &[("homebrew-tap", "brew install {owner}/tap/{name}"), ("scoop-bucket", "scoop install {name}")];
+/// The two lists: each one's repository, the words a person installs from
+/// it with, and the words the shopfronts promise it by.
+const SHELVES: &[(&str, &str, &str)] = &[
+    ("homebrew-tap", "brew install {owner}/tap/{name}", "brew install "),
+    ("scoop-bucket", "scoop install {name}", "scoop install "),
+];
 
 pub fn check(repo: &Repo, product: &Product) -> Outcome {
     if !installs_a_program(&repo.root) {
         return Outcome::Skip("release.toml has no [post.install]: no program here to install".to_string());
+    }
+    let promised: Vec<&(&str, &str, &str)> = SHELVES.iter().filter(|(_, _, says)| promises(repo, says)).collect();
+    if promised.is_empty() {
+        return Outcome::Skip("the README and the site install it from neither a tap nor a bucket".to_string());
     }
     let Some(slug) = product.github.as_deref() else {
         return Outcome::Found(vec![Finding::fail("no GitHub repository is named here, so there is no owner's tap to look in")]);
@@ -24,15 +39,25 @@ pub fn check(repo: &Repo, product: &Product) -> Outcome {
     let owner = slug.split('/').next().unwrap_or(slug);
     let entry = entry(repo, product, slug);
     let name = entry["name"].as_str().unwrap_or(&product.name).to_string();
-    let lists = SHELVES
-        .iter()
-        .map(|(shelf, install)| {
+    let lists = promised
+        .into_iter()
+        .map(|(shelf, install, _)| {
             let list = format!("{owner}/{shelf}");
             let install = install.replace("{owner}", owner).replace("{name}", &name);
             (list.clone(), install, crate::registries::package_list(&list))
         })
         .collect();
     judge(product, slug, &entry, lists)
+}
+
+/// Whether the README or a page of the site tells a reader to install with
+/// `says`: what a person is sent to is what has to be there.
+fn promises(repo: &Repo, says: &str) -> bool {
+    repo.files
+        .iter()
+        .filter(|path| *path == "README.md" || (path.starts_with("docs/") && (path.ends_with(".md") || path.ends_with(".mdx"))))
+        .filter_map(|path| repo.read_text(path))
+        .any(|text| text.contains(says))
 }
 
 /// Whether release.toml says a program is installed from the release.
@@ -257,6 +282,32 @@ mod tests {
         assert_eq!(entry["name"], "relay-server", "{entry}");
         assert_eq!(entry["bin"], "relay-server");
         assert_eq!(entry["homepage"], "https://owner.github.io/relay/");
+    }
+
+    /// A list is asked for only where the shopfronts send a reader to it:
+    /// a program for Windows alone, or one only its script installs, is not
+    /// failed for a tap it was never meant to be in.
+    #[test]
+    fn only_the_lists_the_shopfronts_promise_are_held_to_the_program() {
+        let dir = tempfile::tempdir().unwrap();
+        let root = dir.path();
+        let write = |path: &str, text: &str| {
+            let path = root.join(path);
+            std::fs::create_dir_all(path.parent().unwrap()).unwrap();
+            std::fs::write(path, text).unwrap();
+        };
+        write("release.toml", "[post.install]\nbin = \"demo\"\n");
+        write("README.md", "Install it with the script:\n\n    irm https://example.org/install.ps1 | iex\n");
+        let repo = Repo::on_disk(root);
+        let product = Product::read(&repo);
+        assert_eq!(
+            check(&repo, &product),
+            Outcome::Skip("the README and the site install it from neither a tap nor a bucket".to_string())
+        );
+        write("docs/src/content/docs/install.md", "```\nscoop install demo\n```\n");
+        let repo = Repo::on_disk(root);
+        assert!(promises(&repo, "scoop install "));
+        assert!(!promises(&repo, "brew install "));
     }
 
     #[test]

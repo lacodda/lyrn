@@ -5,8 +5,12 @@ formulas and manifests are written from a packages.json in each -
 OWNER/homebrew-tap and OWNER/scoop-bucket - by the newest release, so a
 program missing from the list is a README line that installs nothing.
 
-With --release the check reads both lists, for a repository whose
-release.toml has [post.install]: the program has to be there under its own
-name, the repository it is released from and the program it puts on the
-PATH, and its homepage should be the one the manifests give. A program that
-is missing is handed the entry to add.
+With --release the check reads the lists the shopfronts send a reader to -
+a `brew install` or a `scoop install` in the README or on a page of the
+site - for a repository whose release.toml has [post.install]: the program
+has to be there under its own name, the repository it is released from and
+the program it puts on the PATH, and its homepage should be the one the
+manifests give. A program that is missing is handed the entry to add. A
+program the shopfronts install from neither - one for Windows alone has
+nothing to put in a tap, and one its owner installs only by its script has
+neither - is not held to them.
