@@ -23,7 +23,13 @@ use crate::templates::dowel::Catalogue;
 
 pub fn run(args: FormsArgs) -> Result<(), Box<dyn Error>> {
     if args.consumers {
-        let (repositories, _) = crate::rigger::line()?;
+        let (repositories, _) = crate::rigger::line().map_err(|e| {
+            if e.to_string().contains("not installed") {
+                "`--consumers` reads the line's repositories from rigger's record, and rigger is not installed here".to_string()
+            } else {
+                e.to_string()
+            }
+        })?;
         print!("{}", consumers(&repositories));
         return Ok(());
     }
