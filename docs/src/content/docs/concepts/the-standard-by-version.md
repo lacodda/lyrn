@@ -19,6 +19,12 @@ the newest, merging each change into the files as they are now, and
 never changes once a release of lyrn has carried it: a later change to a file of
 the standard is a new version, and a second one in a month is `2026.11.1`.
 
+## 2026.11.6
+
+- ci.yml ends in one job, `ci`, that needs every other job, runs always and fails if any of them failed: the release tag's ruleset requires it alone, so a matrix that changes no longer makes the next tag wait for a job that does not run. `lyrn repo` requires `ci` alone where the CI has it.
+- The pull request template asks for CI green on the last commit, rather than the gate green locally: the line's full gate runs in CI.
+- In the files a project starts with rather than the standard's: dowel-ui 1.0, and the spa form's sign-in screen (`--with auth`) is dowel's LoginScreen block.
+
 ## 2026.11.5
 
 - The cli and workspace forms' README installs the program with Homebrew from the owner's tap and with Scoop from the owner's bucket, before cargo and the installers: the line's programs go out through OWNER/homebrew-tap and OWNER/scoop-bucket, and `lyrn check --release` holds both lists to the program.

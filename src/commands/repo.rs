@@ -623,15 +623,29 @@ fn checks_of(api: &Api, slug: &str, workflow: &str, branch: &str) -> Result<Opti
     };
     let id = run["id"].as_u64().unwrap_or_default();
     let jobs = api.get(&format!("repos/{slug}/actions/runs/{id}/jobs?per_page=100"))?;
-    let mut names: Vec<String> = jobs["jobs"]
+    let names: Vec<String> = jobs["jobs"]
         .as_array()
         .into_iter()
         .flatten()
         .filter_map(|j| j["name"].as_str().map(str::to_string))
         .collect();
+    Ok(Some(required_of(names)))
+}
+
+/// The job that answers for every other one, in the CI the line's standard
+/// writes from 2026.11.6: it needs them all and fails if any did.
+pub const SUMMARY_JOB: &str = "ci";
+
+/// The checks a tag waits for, out of the jobs a green run had: the summary
+/// alone where there is one - held to one name, a tag never waits for a job
+/// a changed matrix no longer runs - else every job.
+fn required_of(mut names: Vec<String>) -> Vec<String> {
+    if names.iter().any(|n| n == SUMMARY_JOB) {
+        return vec![SUMMARY_JOB.to_string()];
+    }
     names.sort();
     names.dedup();
-    Ok(Some(names))
+    names
 }
 
 /// The two rules: on the version tags, and on the default branch.
@@ -864,6 +878,13 @@ mod tests {
         let kinds: Vec<&str> = rules["rules"].as_array().unwrap().iter().map(|r| r["type"].as_str().unwrap()).collect();
         assert_eq!(kinds, ["deletion", "non_fast_forward"]);
         assert_eq!(rules["conditions"]["ref_name"]["include"], json!(["~DEFAULT_BRANCH"]));
+    }
+
+    #[test]
+    fn a_ci_with_a_summary_is_held_to_it_alone() {
+        let jobs = |names: &[&str]| names.iter().map(|n| n.to_string()).collect::<Vec<_>>();
+        assert_eq!(required_of(jobs(&["ubuntu-latest", "ci", "msrv"])), ["ci"]);
+        assert_eq!(required_of(jobs(&["ubuntu-latest", "msrv", "msrv"])), ["msrv", "ubuntu-latest"]);
     }
 
     #[test]

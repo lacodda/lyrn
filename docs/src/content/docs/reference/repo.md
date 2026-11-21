@@ -26,7 +26,7 @@ lyrn repo: ~/lyrn, lacodda/lyrn
 → topics          cli, scaffold, template, vite, react, tailwind, starter, rust, scaffolding, project-template - the keywords of Cargo.toml and npm/package.json; were cli, project-template, react, rust, scaffolding, vite
 → pages           built by the workflow that deploys them, at lyrn.lacodda.com; were built from a branch
 ✓ reports         a vulnerability is reported in private, where SECURITY.md sends it
-→ tags            v* are created only on a commit ci.yml passed - its 66 checks: macos-latest, msrv, template audit (cli), template audit (desktop) and 62 more; never moved or deleted
+→ tags            v* are created only on a commit ci.yml passed - its check ci; never moved or deleted
 → main            never force-pushed or deleted
 ! social preview  GitHub shows another picture than assets/social-preview.png
     → upload assets/social-preview.png at https://github.com/lacodda/lyrn/settings → Social preview: GitHub has no API for it
@@ -79,9 +79,14 @@ spelt the way GitHub reports them only there. A repository whose CI has not
 passed yet gets the rule without the checks, and is told to run `lyrn repo`
 again once it has.
 
-When the CI's jobs change, run `lyrn repo` again before the next tag: the rule
-still asks for the old ones, and GitHub refuses a tag whose commit never
-reported one of them.
+A CI that ends in the job `ci` - the one the line's standard writes from
+2026.11.6, which needs every other job and fails if any of them did - is held to
+that one check alone. A rule that names every job is a rule that names a
+matrix: the first time a job was added or renamed, GitHub refused the next tag
+for a check the commit never reported, until `lyrn repo` was run again. With
+`ci` the rule names one job that never changes, and the CI can grow under it.
+Where the CI has no `ci` job yet, the rule names them all, and changing them
+still asks for `lyrn repo` before the next tag.
 
 The default branch is not held to the checks. The line pushes to `main` and lets
 CI judge the push, and a branch that waits for checks refuses every push of a

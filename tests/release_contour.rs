@@ -303,3 +303,32 @@ fn the_unix_installer_is_a_script_sh_accepts() {
         assert!(text.contains("${DEMO_TOOL_VERSION:-}"), "{form}: the pinned version is not read:\n{text}");
     }
 }
+
+/// The summary job answers for every other one: a job added without being
+/// named in its `needs` is one a release tag would never wait for.
+fn assert_ci_answers_for_every_job(workflow: &Yaml, whose: &str) {
+    let jobs = jobs(workflow);
+    let (_, ci) = jobs.iter().find(|(id, _)| id == "ci").unwrap_or_else(|| panic!("{whose}: no `ci` job"));
+    assert_eq!(ci["name"].as_str(), Some("ci"), "{whose}: the check is named `ci`");
+    assert_eq!(ci["if"].as_str(), Some("always()"), "{whose}: a skipped summary would count as passed");
+    let mut wanted: Vec<String> = jobs.iter().map(|(id, _)| id.clone()).filter(|id| id != "ci").collect();
+    let mut named = needs(ci);
+    wanted.sort();
+    named.sort();
+    assert_eq!(named, wanted, "{whose}: `ci` needs every other job");
+}
+
+/// One check for a release tag to wait for, in every form and in lyrn's own
+/// CI: the ruleset names `ci`, and no matrix changing breaks the next tag.
+#[test]
+fn one_job_answers_for_the_whole_ci() {
+    for form in forms() {
+        for addons in common::combinations(form) {
+            let (_dir, root) = generate(form, &addons);
+            let ci = workflow(&root, "ci.yml").unwrap_or_else(|| panic!("{form}: no ci.yml"));
+            assert_ci_answers_for_every_job(&ci, &format!("{form} {addons:?}"));
+        }
+    }
+    let own = fs::read_to_string(Path::new(env!("CARGO_MANIFEST_DIR")).join(".github/workflows/ci.yml")).unwrap();
+    assert_ci_answers_for_every_job(&YamlLoader::load_from_str(&own).unwrap()[0], "lyrn");
+}
