@@ -8,6 +8,12 @@ last release, which follow [Conventional Commits](https://www.conventionalcommit
 $ git cliff --unreleased --tag vX.Y.Z --prepend CHANGELOG.md
 ```
 
+## 🎉 [2.22.1] - 2026-11-21
+
+### 🛠️ Bug Fixes
+
+- Unpack the Windows archive with tar by its full path
+
 ## 🎉 [2.22.0] - 2026-11-21
 
 ### Build
