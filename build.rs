@@ -33,9 +33,7 @@ fn catalogue() {
         let items: Vec<String> = field.split(',').filter(|s| !s.is_empty()).map(|s| format!("{s:?}")).collect();
         format!("&[{}]", items.join(", "))
     };
-    let mut out = String::from(
-        "/// Each registry item the binary carries: name, kind, target, the items it needs, the packages it needs, its text.\nstatic CATALOGUE: &[(&str, &str, &str, &[&str], &[&str], &str)] = &[\n",
-    );
+    let mut out = String::from("/// Each registry item the binary carries.\nstatic CATALOGUE: &[Entry] = &[\n");
     for line in tsv.lines().filter(|l| !l.trim().is_empty()) {
         let fields: Vec<&str> = line.split('\t').collect();
         let [name, kind, target, needs, packages] = fields[..] else {
@@ -46,7 +44,7 @@ fn catalogue() {
         let file = dir.join(folder).join(base).display().to_string();
         writeln!(
             out,
-            "    ({name:?}, {kind:?}, {target:?}, {}, {}, include_str!({file:?})),",
+            "    Entry {{ name: {name:?}, kind: {kind:?}, target: {target:?}, needs: {}, packages: {}, text: include_str!({file:?}) }},",
             list(needs),
             list(packages)
         )

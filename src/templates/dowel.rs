@@ -54,6 +54,20 @@ pub fn version() -> &'static str {
     include_str!("dowel/VERSION").trim()
 }
 
+/// A registry item as the binary carries it, one line of `catalogue.tsv`.
+struct Entry {
+    name: &'static str,
+    /// `ui` or `block`.
+    kind: &'static str,
+    /// Where the registry puts its file: `@ui/button.tsx`.
+    target: &'static str,
+    /// The items of the registry it is made of.
+    needs: &'static [&'static str],
+    /// The npm packages it imports.
+    packages: &'static [&'static str],
+    text: &'static str,
+}
+
 include!(concat!(env!("OUT_DIR"), "/catalogue.rs"));
 
 /// One registry item as a template carries it.
@@ -82,16 +96,16 @@ impl Primitive {
 /// copy `tools/vendor-dowel.mjs` was never told to take - a mistake in lyrn,
 /// which every test of the form that asks finds.
 pub fn copy(name: &str) -> Primitive {
-    let (_, _, target, _, _, contents) = CATALOGUE
+    let entry = CATALOGUE
         .iter()
-        .find(|(item, ..)| *item == name)
+        .find(|e| e.name == name)
         .unwrap_or_else(|| panic!("lyrn carries no copy of dowel's `{name}` - add it to PRIMITIVES in tools/vendor-dowel.mjs"));
     let path = SPA_PLACES
         .iter()
-        .find(|(t, _)| *t == *target)
+        .find(|(t, _)| *t == entry.target)
         .map(|(_, path)| *path)
-        .unwrap_or_else(|| panic!("`{target}` has no place in the spa form listed in SPA_PLACES"));
-    Primitive { path, contents }
+        .unwrap_or_else(|| panic!("`{}` has no place in the spa form listed in SPA_PLACES", entry.target));
+    Primitive { path, contents: entry.text }
 }
 
 /// Where the spa form puts the copies its files are written with. Listed,
@@ -152,12 +166,12 @@ impl Catalogue {
     pub fn builtin() -> Catalogue {
         let items = CATALOGUE
             .iter()
-            .map(|(name, kind, target, needs, packages, text)| Item {
-                name: name.to_string(),
-                kind: if *kind == "block" { Kind::Block } else { Kind::Ui },
-                file: Some((target.to_string(), text.to_string())),
-                needs: needs.iter().map(|s| s.to_string()).collect(),
-                packages: packages.iter().map(|s| s.to_string()).collect(),
+            .map(|e| Item {
+                name: e.name.to_string(),
+                kind: if e.kind == "block" { Kind::Block } else { Kind::Ui },
+                file: Some((e.target.to_string(), e.text.to_string())),
+                needs: e.needs.iter().map(|s| s.to_string()).collect(),
+                packages: e.packages.iter().map(|s| s.to_string()).collect(),
             })
             .collect();
         Catalogue {
@@ -417,8 +431,8 @@ mod tests {
 
     #[test]
     fn every_copy_is_a_component() {
-        for (name, .., text) in CATALOGUE {
-            assert!(text.contains("export "), "{name} exports nothing");
+        for entry in CATALOGUE {
+            assert!(entry.text.contains("export "), "{} exports nothing", entry.name);
         }
     }
 
