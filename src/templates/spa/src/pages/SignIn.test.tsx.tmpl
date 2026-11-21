@@ -5,8 +5,9 @@ import { noContent, serve, unauthorized, withSession } from '@/test/session'
 
 function signInAs(email: string, password: string) {
   render(withSession(<SignIn />))
-  fireEvent.change(screen.getByLabelText(/email/i), { target: { value: email } })
-  fireEvent.change(screen.getByLabelText(/password/i), { target: { value: password } })
+  // `input`: the button that shows the password is named after it too.
+  fireEvent.change(screen.getByLabelText(/email/i, { selector: 'input' }), { target: { value: email } })
+  fireEvent.change(screen.getByLabelText(/password/i, { selector: 'input' }), { target: { value: password } })
   fireEvent.click(screen.getByRole('button', { name: 'Sign in' }))
 }
 

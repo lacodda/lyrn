@@ -1,15 +1,16 @@
 // Copies what lyrn takes from dowel out of a published dowel-ui: the registry
-// primitives the templates carry, and the line's accents.
+// items the templates carry, the blocks `lyrn new --with block:<x>` writes,
+// and the line's accents.
 //
 //   node tools/vendor-dowel.mjs            # the version already vendored
-//   node tools/vendor-dowel.mjs 0.34.0     # move to another version
+//   node tools/vendor-dowel.mjs 1.0.0      # move to another version
 //
 // A generated project presses dowel's Button rather than a `<button>` - since
-// dowel-ui 0.33 its lint says so - and its sign-in screen is made of Field,
-// Input, Panel and Alert. Those are registry components: copied into a
-// product, never imported from the package. So the template has to carry the
-// copies, and `lyrn new` has to work offline, which rules out fetching them
-// while generating.
+// dowel-ui 0.33 its lint says so - and its sign-in screen is dowel's
+// LoginScreen block. Those are registry items: copied into a product, never
+// imported from the package. So the template has to carry the copies, and
+// `lyrn new` has to work offline, which rules out fetching them while
+// generating.
 //
 // The copies are taken from the registry catalogue inside the npm package,
 // the same file the generated project's `tools/check-registry.mjs` compares
@@ -17,6 +18,12 @@
 // the template pins fails that gate in lyrn's CI, and `tests` in lyrn fail
 // when a template pins a dowel-ui other than the one vendored here - so moving
 // the pin and forgetting this script is caught twice.
+//
+// What is taken is a closure: the items named below and everything their
+// `registryDependencies` reach, each written once. `catalogue.tsv` says, for
+// each, what kind of item it is, where the registry puts it and what it
+// needs - the part of the registry `lyrn new` resolves a block with, so the
+// order of the copies is the registry's and not a list kept here by hand.
 import { execFileSync } from 'node:child_process'
 import { mkdirSync, mkdtempSync, readFileSync, readdirSync, rmSync, writeFileSync } from 'node:fs'
 import { tmpdir } from 'node:os'
@@ -28,7 +35,17 @@ const DOWEL = join(ROOT, 'src/templates/dowel')
 
 /** The registry components some template writes. Adding a name here is half
  * the work; the other half is a `SourceFile` in the form that uses it. */
-const PRIMITIVES = ['button', 'field', 'input', 'panel', 'alert']
+const PRIMITIVES = ['button', 'field', 'input', 'panel', 'alert', 'password-field']
+
+/** Every block dowel publishes is one `--with block:<x>` away: a block is
+ * taken whole, the day dowel has it, rather than the day it is listed here.
+ * The names are read from the catalogue - every item of type
+ * `registry:block` - and this is only what a block's name must look like. */
+const BLOCK = /^[a-z0-9-]+-screen$/
+
+/** `https://lacodda.github.io/dowel/r/<name>.json` is how an item names
+ * another of the same registry. */
+const dependencyName = (url) => url.match(/\/r\/([a-z0-9-]+)\.json$/)?.[1] ?? url
 
 const version = process.argv[2] ?? readFileSync(join(DOWEL, 'VERSION'), 'utf8').trim()
 if (!/^\d+\.\d+\.\d+$/.test(version)) {
@@ -65,22 +82,49 @@ try {
   const registry = JSON.parse(readFileSync(join(scratch, 'package/dist/registry.json'), 'utf8'))
   const byName = new Map(registry.items.map((item) => [item.name, item]))
 
-  mkdirSync(join(DOWEL, 'ui'), { recursive: true })
-  for (const name of readdirSync(join(DOWEL, 'ui'))) rmSync(join(DOWEL, 'ui', name))
-
-  for (const name of PRIMITIVES) {
-    const item = byName.get(name)
-    if (!item) throw new Error(`dowel-ui ${version} has no registry item \`${name}\``)
-    const missing = (item.registryDependencies ?? []).filter((dependency) => !PRIMITIVES.includes(dependency))
-    if (missing.length > 0) {
-      throw new Error(`\`${name}\` needs ${missing.join(', ')} - add them to PRIMITIVES`)
-    }
-    for (const file of item.files) {
-      const target = join(DOWEL, 'ui', file.path.replace(/^.*\//, ''))
-      writeFileSync(target, file.content)
-      console.log(`${name}: ${file.path}`)
-    }
+  const blocks = registry.items.filter((item) => item.type === 'registry:block').map((item) => item.name)
+  for (const name of blocks) {
+    if (!BLOCK.test(name)) throw new Error(`dowel-ui ${version}: the block \`${name}\` is not named <x>-screen`)
   }
+  if (blocks.length === 0) throw new Error(`dowel-ui ${version} carries no blocks`)
+
+  // The closure, dependencies before what needs them, each item once.
+  const taken = []
+  const seen = new Set()
+  const take = (name, path) => {
+    if (seen.has(name)) return
+    if (path.includes(name)) throw new Error(`a cycle in the registry: ${[...path, name].join(' -> ')}`)
+    const item = byName.get(name)
+    if (!item) throw new Error(`dowel-ui ${version} has no registry item \`${name}\`, which ${path.at(-1) ?? 'lyrn'} needs`)
+    for (const dependency of item.registryDependencies ?? []) take(dependencyName(dependency), [...path, name])
+    seen.add(name)
+    taken.push(item)
+  }
+  for (const name of [...PRIMITIVES, ...blocks]) take(name, [])
+
+  for (const dir of ['ui', 'blocks']) {
+    mkdirSync(join(DOWEL, dir), { recursive: true })
+    for (const name of readdirSync(join(DOWEL, dir))) rmSync(join(DOWEL, dir, name))
+  }
+
+  // One line per item: its name, its kind, where the registry puts its one
+  // file, what it needs of the registry and of npm.
+  const catalogue = []
+  for (const item of taken) {
+    const kind = { 'registry:ui': 'ui', 'registry:block': 'block' }[item.type]
+    if (!kind) throw new Error(`\`${item.name}\` is a ${item.type}, and lyrn carries only ui items and blocks`)
+    if (item.files?.length !== 1) throw new Error(`\`${item.name}\` has ${item.files?.length ?? 0} files, and lyrn carries items of one`)
+    const [file] = item.files
+    const base = file.path.replace(/^.*\//, '')
+    const dir = kind === 'ui' ? 'ui' : 'blocks'
+    writeFileSync(join(DOWEL, dir, base), file.content)
+    const needs = (item.registryDependencies ?? []).map(dependencyName).join(',')
+    const packages = (item.dependencies ?? []).join(',')
+    catalogue.push([item.name, kind, file.target ?? file.path, needs, packages].join('\t'))
+    console.log(`${item.name}: ${dir}/${base}`)
+  }
+  writeFileSync(join(DOWEL, 'catalogue.tsv'), `${catalogue.join('\n')}\n`)
+  console.log(`catalogue: ${taken.length} items, ${blocks.length} of them blocks`)
   // The line's products and their accents, from the same catalogue: dowel
   // publishes one `accent-<product>` item per mark in the brand registry, so
   // `--accent hilvan` knows hilvan the day dowel does - rather than the day
@@ -131,7 +175,7 @@ try {
   console.log(`masters: ${masters.length}, three for each mark`)
 
   writeFileSync(join(DOWEL, 'VERSION'), `${version}\n`)
-  console.log(`vendored ${PRIMITIVES.length} primitives from dowel-ui ${version}`)
+  console.log(`vendored ${taken.length} registry items from dowel-ui ${version}`)
 } finally {
   rmSync(scratch, { recursive: true, force: true })
 }

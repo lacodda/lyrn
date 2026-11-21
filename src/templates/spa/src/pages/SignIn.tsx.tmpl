@@ -1,87 +1,40 @@
-import { useState, type FormEvent } from 'react'
-import { Alert } from '@/components/ui/alert'
-import { Button } from '@/components/ui/button'
-import { Field } from '@/components/ui/field'
-import { Input } from '@/components/ui/input'
-import { Panel } from '@/components/ui/panel'
+import { LoginScreen, type LoginCredentials, type LoginScreenWords } from '@/components/blocks/login-screen'
 import { ApiError } from '@/lib/api'
 import { useSession } from '@/lib/session'
 
-/**
- * iOS Safari zooms the page into any field whose text is under 16px and does
- * not zoom back out, leaving the form at 130% with the password off the side
- * of the screen. dowel's Input is `text-sm`, right on a desktop, so the size is
- * lifted here and handed back from `sm` up - on this screen, not in the copy
- * of the primitive, which stays dowel's.
- *
- * `text-lg`, not `text-base`: on dowel's scale `base` is 14px and `lg` is the
- * 16px step. Measured in a phone-sized viewport, not assumed.
- */
-const FIELD_ON_A_PHONE = 'text-lg sm:text-sm'
+/** Every word the screen shows: the block has none of its own. */
+const WORDS: LoginScreenWords = {
+  identifier: 'Email',
+  password: 'Password',
+  show: 'Show password',
+  hide: 'Hide password',
+  submit: 'Sign in',
+  submitting: 'Signing in...',
+  failed: 'The server cannot be reached. Try again in a moment.',
+}
 
+/**
+ * The page a visitor signs in on: dowel's LoginScreen block, told what this
+ * product's server answers. The block is the screen - the fields a password
+ * manager can tell apart, one attempt at a time, a field a phone does not
+ * zoom into - and it is this project's copy to change from here on.
+ *
+ * The server refuses an unknown address and a wrong password with the same
+ * answer on purpose, so the screen does not guess which it was. Anything else
+ * is the server out of reach: thrown on, so the block says `failed`, which is
+ * more use than "wrong password" to someone whose password is right.
+ */
 export function SignIn() {
   const { signIn } = useSession()
-  const [email, setEmail] = useState('')
-  const [password, setPassword] = useState('')
-  const [failure, setFailure] = useState<string | null>(null)
-  const [pending, setPending] = useState(false)
 
-  async function submit(event: FormEvent) {
-    event.preventDefault()
-    setFailure(null)
-    setPending(true)
+  async function submit({ identifier, password }: LoginCredentials) {
     try {
-      await signIn(email, password)
+      await signIn(identifier, password)
     } catch (error: unknown) {
-      // The server refuses an unknown address and a wrong password with the
-      // same answer on purpose, so the form does not guess which it was.
-      // Anything else is the server being out of reach, and saying so is
-      // more use than "wrong password" to someone whose password is right.
-      setFailure(
-        error instanceof ApiError && error.isUnauthorized
-          ? 'That email and password do not match.'
-          : 'The server cannot be reached. Try again in a moment.',
-      )
-      setPending(false)
+      if (error instanceof ApiError && error.isUnauthorized) return 'That email and password do not match.'
+      throw error
     }
   }
 
-  return (
-    <main className="flex min-h-full items-center justify-center p-4">
-      <Panel className="w-full max-w-sm p-6">
-        <h1 className="text-lg font-semibold text-text">Sign in to {{ title }}</h1>
-        <form onSubmit={(event) => void submit(event)} className="mt-6 flex flex-col gap-4">
-          <Field label="Email" required>
-            <Input
-              className={FIELD_ON_A_PHONE}
-              type="email"
-              autoComplete="username"
-              required
-              value={email}
-              onChange={(event) => setEmail(event.target.value)}
-            />
-          </Field>
-          <Field label="Password" required>
-            <Input
-              className={FIELD_ON_A_PHONE}
-              type="password"
-              autoComplete="current-password"
-              required
-              value={password}
-              onChange={(event) => setPassword(event.target.value)}
-            />
-          </Field>
-          {/* `role="alert"`, so the failure is announced and not only drawn. */}
-          {failure ? (
-            <Alert tone="bad" role="alert">
-              {failure}
-            </Alert>
-          ) : null}
-          <Button type="submit" variant="primary" disabled={pending}>
-            {pending ? 'Signing in...' : 'Sign in'}
-          </Button>
-        </form>
-      </Panel>
-    </main>
-  )
+  return <LoginScreen title="Sign in to {{ title }}" onSubmit={submit} words={WORDS} />
 }

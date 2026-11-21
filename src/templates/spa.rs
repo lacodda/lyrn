@@ -129,12 +129,15 @@ pub fn sources() -> Vec<SourceFile> {
             executable: false,
             addon: Some(Addon::Auth),
         },
-        // The sign-in screen is made of these; nothing else in a new project
-        // is, so they come with the add-on and not before.
-        dowel::FIELD.source(Some(Addon::Auth)),
-        dowel::INPUT.source(Some(Addon::Auth)),
-        dowel::PANEL.source(Some(Addon::Auth)),
-        dowel::ALERT.source(Some(Addon::Auth)),
+        // The sign-in screen is dowel's LoginScreen block and what it is made
+        // of; nothing else in a new project is, so they come with the add-on
+        // and not before.
+        dowel::copy("login-screen").source(Some(Addon::Auth)),
+        dowel::copy("field").source(Some(Addon::Auth)),
+        dowel::copy("input").source(Some(Addon::Auth)),
+        dowel::copy("password-field").source(Some(Addon::Auth)),
+        dowel::copy("panel").source(Some(Addon::Auth)),
+        dowel::copy("alert").source(Some(Addon::Auth)),
         SourceFile {
             path: "src/styles.css",
             contents: Contents::Text(include_str!("spa/src/styles.css.tmpl")),
@@ -144,7 +147,7 @@ pub fn sources() -> Vec<SourceFile> {
         // The one primitive the starting screen presses. A raw `<button>` is
         // refused by dowel's lint outside `components/ui/`, and a copy is how
         // every product of the line gets its Button.
-        dowel::BUTTON.source(None),
+        dowel::copy("button").source(None),
         // The favicon: the line's umbrella mark at level S, until the product
         // has a mark of its own - a copy of dowel-ui's `lacodda-S.svg`, held
         // to the package by `tools/check-registry.mjs`.

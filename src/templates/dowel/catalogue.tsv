@@ -1,0 +1,23 @@
+button	ui	@ui/button.tsx		@base-ui/react,class-variance-authority,dowel-ui@^1.0.0
+field	ui	@ui/field.tsx		@base-ui/react,dowel-ui@^1.0.0
+input	ui	@ui/input.tsx		dowel-ui@^1.0.0
+panel	ui	@ui/panel.tsx		class-variance-authority,dowel-ui@^1.0.0
+alert	ui	@ui/alert.tsx		class-variance-authority,dowel-ui@^1.0.0
+password-field	ui	@ui/password-field.tsx	input	dowel-ui@^1.0.0
+scroll-area	ui	@ui/scroll-area.tsx		@base-ui/react,class-variance-authority,dowel-ui@^1.0.0
+frame	ui	@ui/frame.tsx	button,scroll-area	dowel-ui@^1.0.0
+page-header	ui	@ui/page-header.tsx		class-variance-authority,dowel-ui@^1.0.0
+progress	ui	@ui/progress.tsx		@base-ui/react,class-variance-authority,dowel-ui@^1.0.0
+stat-tile	ui	@ui/stat-tile.tsx		class-variance-authority,dowel-ui@^1.0.0
+empty-dashboard-screen	block	@components/blocks/empty-dashboard-screen.tsx	frame,page-header,progress,stat-tile	dowel-ui@^1.0.0
+empty-state	ui	@ui/empty-state.tsx		class-variance-authority,dowel-ui@^1.0.0
+list-row	ui	@ui/list-row.tsx		@base-ui/react,dowel-ui@^1.0.0
+shortcut	ui	@ui/shortcut.tsx		
+commands	ui	@ui/commands.tsx	shortcut	
+kbd	ui	@ui/kbd.tsx	shortcut	dowel-ui@^1.0.0
+search-field	ui	@ui/search-field.tsx	commands,input,kbd	dowel-ui@^1.0.0
+list-detail-screen	block	@components/blocks/list-detail-screen.tsx	button,empty-state,frame,list-row,page-header,search-field	
+login-screen	block	@components/blocks/login-screen.tsx	alert,button,field,input,panel,password-field	dowel-ui@^1.0.0
+reader-screen	block	@components/blocks/reader-screen.tsx	progress	dowel-ui@^1.0.0
+section-nav	ui	@ui/section-nav.tsx		@base-ui/react,dowel-ui@^1.0.0
+settings-screen	block	@components/blocks/settings-screen.tsx	frame,page-header,section-nav	dowel-ui@^1.0.0

@@ -8,16 +8,19 @@ standard = "2026.11.5"
 # those alone by itself, so workflows do not belong here.
 #
 # The dowel copies under `src/components/ui/` are the registry's text, byte for
-# byte, and `tools/check-registry.mjs` holds them to it: nothing in them is
-# lyrn's to substitute.
+# byte, and `tools/check-registry.mjs` holds them to it; the block under
+# `src/components/blocks/` starts as the registry's text too. Nothing in them
+# is lyrn's to substitute.
 verbatim = [
   "cliff.toml",
   "public/favicon.svg",
   "src/components/ui/button.tsx",
   "src/components/ui/field.tsx",
   "src/components/ui/input.tsx",
+  "src/components/ui/password-field.tsx",
   "src/components/ui/panel.tsx",
   "src/components/ui/alert.tsx",
+  "src/components/blocks/login-screen.tsx",
 ]
 
 [[hooks]]

@@ -1,4 +1,4 @@
-Would create 64 files in `demo-tool`:
+Would create 66 files in `demo-tool`:
 
   ├── .github/
   │   ├── ISSUE_TEMPLATE/
@@ -30,12 +30,15 @@ Would create 64 files in `demo-tool`:
   │   └── sw.js
   ├── src/
   │   ├── components/
+  │   │   ├── blocks/
+  │   │   │   └── login-screen.tsx
   │   │   └── ui/
   │   │       ├── alert.tsx
   │   │       ├── button.tsx
   │   │       ├── field.tsx
   │   │       ├── input.tsx
-  │   │       └── panel.tsx
+  │   │       ├── panel.tsx
+  │   │       └── password-field.tsx
   │   ├── lib/
   │   │   ├── api.ts
   │   │   ├── session.tsx

@@ -14,6 +14,47 @@ fn main() {
 
     archive();
     marks();
+    catalogue();
+}
+
+/// The registry items the binary carries, from the catalogue
+/// `tools/vendor-dowel.mjs` writes beside their files: each one's name, kind,
+/// target, what it needs of the registry and of npm, and its text.
+fn catalogue() {
+    use std::fmt::Write as _;
+    use std::path::Path;
+
+    let dir = Path::new(env!("CARGO_MANIFEST_DIR")).join("src").join("templates").join("dowel");
+    println!("cargo:rerun-if-changed=src/templates/dowel/catalogue.tsv");
+    println!("cargo:rerun-if-changed=src/templates/dowel/ui");
+    println!("cargo:rerun-if-changed=src/templates/dowel/blocks");
+    let tsv = std::fs::read_to_string(dir.join("catalogue.tsv")).unwrap_or_else(|e| panic!("cannot read the catalogue: {e}"));
+    let list = |field: &str| -> String {
+        let items: Vec<String> = field.split(',').filter(|s| !s.is_empty()).map(|s| format!("{s:?}")).collect();
+        format!("&[{}]", items.join(", "))
+    };
+    let mut out = String::from(
+        "/// Each registry item the binary carries: name, kind, target, the items it needs, the packages it needs, its text.\nstatic CATALOGUE: &[(&str, &str, &str, &[&str], &[&str], &str)] = &[\n",
+    );
+    for line in tsv.lines().filter(|l| !l.trim().is_empty()) {
+        let fields: Vec<&str> = line.split('\t').collect();
+        let [name, kind, target, needs, packages] = fields[..] else {
+            panic!("catalogue.tsv: `{line}` is not five fields");
+        };
+        let folder = if kind == "block" { "blocks" } else { "ui" };
+        let base = target.rsplit('/').next().expect("a target names a file");
+        let file = dir.join(folder).join(base).display().to_string();
+        writeln!(
+            out,
+            "    ({name:?}, {kind:?}, {target:?}, {}, {}, include_str!({file:?})),",
+            list(needs),
+            list(packages)
+        )
+        .unwrap();
+    }
+    out.push_str("];\n");
+    let target = Path::new(&std::env::var("OUT_DIR").expect("cargo sets OUT_DIR")).join("catalogue.rs");
+    std::fs::write(target, out).expect("cannot write the catalogue table");
 }
 
 /// Every product's masters as a table of `include_str!`s, from the directory
